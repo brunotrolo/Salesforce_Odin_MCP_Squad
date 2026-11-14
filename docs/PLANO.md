@@ -1,6 +1,7 @@
 # Odin MCP Squad: plano de arquitetura
 
 > **Status:** plano, nada foi desenvolvido. Primeiro uso: prova de conceito pessoal num projeto Google Cloud do mantenedor, já com **todas** as skills. Depois, o time (cerca de 20 devs, mais POs).
+> **Arquitetura detalhada:** [solução](arquitetura/01-arquitetura-de-solucao.md) · [funcional](arquitetura/02-arquitetura-funcional.md) · [técnica](arquitetura/03-arquitetura-tecnica.md) · [portal e perfilamento](arquitetura/04-portal-e-perfilamento.md). Em caso de diferença de detalhe, valem os documentos de arquitetura.
 > **Convenção:** **[VERIFICAR]** marca o que depende de um comportamento do Claude Code, do Google Cloud ou do LiteLLM que não foi confirmado na documentação; esses pontos são os primeiros testes da prova de conceito (seção 16). **[CONFIRMADO]** marca o que foi conferido na documentação oficial do Claude Code (code.claude.com/docs, páginas `mcp`, `hooks`, `sub-agents` e `plugins`). Confirmado em documentação não dispensa o teste prático em F0.
 
 ## 1. Objetivo
@@ -111,7 +112,7 @@ A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não 
 |---|---|---|---|
 | C1 | **MCP Odin** | Cloud Run, Node/TypeScript, SDK oficial de MCP, transporte Streamable HTTP | Autenticar, autorizar, rotear, entregar skills, agentes e referências, buscar conhecimento, auditar |
 | C2 | **Portal** | Cloud Run, Next.js (ou similar), Identity Platform | Login, dispositivos e tokens, autoatendimento; console de administração (usuários, perfis, catálogo, conhecimento, auditoria) |
-| C3 | **Serviço de identidade** | Identity Platform (OIDC: Google ou Microsoft Entra) + emissor de tokens próprio (JWT assinado no KMS) | Device login, credencial de dispositivo, tokens de acesso curtos, revogação |
+| C3 | **Serviço de identidade** | Identity Platform com **login GitHub** (Google ou Microsoft opcionais) + emissor de tokens próprio `odin-sts` (JWT assinado no KMS) | Device login, credencial de dispositivo ligada a chave do dispositivo, tokens de acesso curtos, revogação |
 | C4 | **odin CLI** | Node ≥ 20, binário único por plataforma | `setup`, `login`, `token` (headersHelper), `ensure`, `doctor`, `guard-ping`, `update`, `logout` |
 | C5 | **odin-guard** | Node, um hook `PreToolUse` (e `PostToolUse` quando preciso) | Despachante das políticas de segurança de todas as skills, fail-closed |
 | C6 | **Gatilho e manual do Odin** | Instruções do servidor MCP + `~/.claude/skills/odin/SKILL.md` + `~/.odin/ODIN.md` | Fazer o Claude Code chamar o roteador em qualquer pedido coberto pelo Odin; explicar como o Odin funciona sem sobrepor o `CLAUDE.md` do projeto (7.6, 22.2) |
@@ -154,7 +155,8 @@ sequenceDiagram
 ```
 
 - **Credencial de dispositivo:** uma por máquina, rotativa a cada uso e revogável no portal. Nunca aparece na tela nem em arquivo de texto: fica no cofre do sistema.
-- **Token de acesso:** JWT assinado com chave do Cloud KMS, com 15 min de validade, `aud=odin-mcp` e as claims `sub`, `email`, `perfis`, `projetos`, `device_id` e `ver_politica`. O MCP valida localmente pela chave pública e consulta uma lista de revogação em cache de 30 s.
+- **Token de acesso:** JWT assinado com chave do Cloud KMS, com 15 min de validade, `aud=odin-mcp` e as claims `sub`, id do GitHub, dispositivo e versão de política. **Os perfis não vão no token:** o MCP resolve os direitos no servidor a cada chamada, com cache de 30 s, e assim uma mudança no portal vale na hora (arquitetura técnica, 5.4).
+- **Credencial de dispositivo ligada a chave:** o CLI gera um par de chaves no cofre do sistema; renovar exige uma assinatura com essa chave. Credencial roubada sem a chave não renova (arquitetura técnica, 5.3).
 - **Renovação transparente:** o servidor é registrado no **escopo do usuário** (`claude mcp add --transport http --scope user odin <url>` com `"headersHelper": "odin token"`), e o Claude Code chama `odin token` para obter os cabeçalhos. **[CONFIRMADO]** O helper roda a cada conexão (início de sessão e reconexão) e de novo quando o servidor responde `401` ou `403`, repetindo a chamada uma vez. O Claude Code não guarda o resultado, então o cache fica no CLI. O helper tem até 10 s e deve imprimir um objeto JSON de cabeçalhos. No escopo do usuário ele roda sem depender da confiança da pasta, que só é exigida para servidores de projeto (`.mcp.json`) ou de escopo local. Consequência: quando o JWT expira no meio da sessão, o MCP responde `401`, o Claude Code chama o helper de novo e a chamada é repetida, sem nada visível para o usuário. **[VERIFICAR]** o mesmo comportamento na extensão do VS Code.
 - **Plano B (portal):** o portal tem uma página **"Gerar token"** para o usuário logado, para clientes ou situações sem o CLI: token pessoal de no máximo 90 dias, escopo reduzido, exibido uma vez, usado como `claude mcp add ... --header "Authorization: Bearer <token>"`. Como esse token fica em texto no `~/.claude.json`, é exceção auditada, com validade curta e alerta de uso fora do padrão; o caminho normal é o device login, que também passa pelo portal.
 - **Plano C (alternativa nativa):** **[CONFIRMADO]** o Claude Code suporta OAuth 2.0 em servidores HTTP: o login abre no navegador via `/mcp` ou `claude mcp login odin`, com registro dinâmico de cliente, documento de metadados de cliente (CIMD) ou cliente pré-registrado (`--client-id`, `--client-secret`, `--callback-port`). Exige que o portal funcione como servidor de autorização OAuth compatível com MCP. Fica como evolução: só vale a troca se dispensar o login separado do CLI, e o CLI continua necessário para o runtime. Decidir depois de F0.
@@ -295,7 +297,7 @@ Só os caminhos declarados em `skills`, `agentes`, `regras` e `runtime` são emp
 
 ### 8.2 Catálogo central (`catalog/` neste repositório)
 - `catalog/skills.yaml`: cada skill com `repo`, **SHA fixado**, canal e estado (`ativa`, `beta`, `aposentada`).
-- `catalog/perfis.yaml`: perfis iniciais (o portal edita a cópia operacional no Firestore e o pipeline compara as duas para detectar deriva).
+- `catalog/perfis.yaml`: só a **semente** dos perfis iniciais. Depois disso, **acesso é governado no portal** (quem usa o quê, com aprovação e auditoria), e **conteúdo no Git** (o que existe e em que versão). Ver ADR-11 da arquitetura de solução.
 - Mudança no catálogo = **pull request** com revisão de um mantenedor e CI verde. Não existe "publicar direto".
 
 ### 8.3 Pipeline de publicação (a cada merge no catálogo)
@@ -536,7 +538,7 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | R8 | Redistribuição de skills de terceiros | Seção 15 |
 | R9 | Custo do GCP crescer com o time | Orçamento e alertas; escala até zero; revisar o Cloud SQL depois da prova de conceito |
 | R10 | Identidade do LiteLLM separada da do Odin | Correlacionar por cabeçalho ou unificar as chaves virtuais (13) |
-| D1 | Provedor de login no time (Google ou Microsoft Entra) | O desenho aceita os dois (OIDC); decidir antes de F10 |
+| D1 | Provedor de login | **Decidido: GitHub** (SSO), via Identity Platform; Google ou Microsoft podem ser ligados depois. Times do GitHub viram squads quando houver organização GitHub |
 | D2 | Conhecimento por projeto: quem é dono em cada cliente | Definir antes de F7 |
 | D3 | Um repositório por skill (como hoje) ou um monorepo de skills | Plano assume repositórios separados + catálogo; rever se a manutenção pesar |
 
@@ -566,7 +568,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por oito rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento e consistência geral). O que cada rodada mudou:
+O plano passou por nove rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral e arquitetura detalhada). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -605,6 +607,12 @@ O plano passou por oito rodadas de revisão contra os objetivos (fricção, gove
 | 8 | Consistência | A rodada 6 dizia que, sem a busca de ferramentas, o gatilho falharia; na verdade só aumenta o custo de contexto | Texto corrigido (7.6) |
 | 8 | Consistência | Origem do hash do conteúdo confusa (o CLI não entrega o conteúdo das skills) | O MCP só serve conteúdo cujo hash confere com o manifesto (9.1) |
 | 8 | Fricção | Hooks novos exigiam reinício segundo a seção 3.3, em contradição com a 7.4 | Reinício só quando o `guard-ping` falha (3.3) |
+| 9 | Arquitetura | Faltavam as arquiteturas de solução, funcional e técnica e o portal | Quatro documentos em `docs/arquitetura/` |
+| 9 | Governança | Perfis dentro do token atrasariam revogações e mudanças de acesso | Direitos resolvidos no servidor, cache de 30 s (5.1) |
+| 9 | Segurança | Credencial de dispositivo roubada poderia ser renovada em outra máquina | Credencial ligada à chave do dispositivo, com detecção de reuso (5.1) |
+| 9 | Identidade | Provedor de login em aberto | GitHub decidido; id numérico do GitHub como chave da pessoa (D1) |
+| 9 | Segurança | Revogação global exigiria permissão de KMS no portal | Revogação por carimbo de tempo; troca de chave só por runbook (arquitetura técnica, 5.5) |
+| 9 | Governança | Duplicidade de onde se editam perfis (Git e portal) | Acesso no portal, conteúdo no Git (8.2, ADR-11) |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
