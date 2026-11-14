@@ -69,7 +69,7 @@ flowchart LR
 |---|---|---|
 | `odin-mcp` | `sa-mcp` | `datastore.user`; `cloudsql.client` + usuário IAM no banco (somente leitura no RAG); `storage.objectViewer` no bucket de pacotes; `iam.serviceAccountTokenCreator` **em si mesma** (para gerar URLs assinadas); `kms` **verificador** na chave `jwt-signing` (ou JWKS em cache); `aiplatform.user` (embedding da consulta) |
 | `odin-sts` | `sa-sts` | `datastore.user`; `cloudkms.signerVerifier` **só** na chave `jwt-signing` |
-| `odin-portal` | `sa-portal` | `datastore.user`; `firebaseauth.admin` (verificar ID tokens e cookies de sessão); `bigquery.dataViewer` + `jobUser` no conjunto de auditoria (para a tela do auditor); `secretmanager.secretAccessor` em `session-secret` e `github-app-key` |
+| `odin-portal` | `sa-portal` | `datastore.user`; `firebaseauth.admin` (verificar ID tokens e cookies de sessão); `bigquery.dataViewer` + `jobUser` nos conjuntos de auditoria e de métricas (auditor e consumo); `secretmanager.secretAccessor` em `session-secret` e `github-app-key` |
 | `odin-webhooks` | `sa-webhooks` | `secretmanager.secretAccessor` em `github-webhook-secret`; `pubsub.publisher` em `github-events` |
 | `odin-publisher` | `sa-publisher` | `datastore.user` (só coleção do catálogo, imposto pelas regras da aplicação); `pubsub.publisher` em `catalog-published` |
 | `odin-indexer` | `sa-indexer` | `cloudsql.client` + usuário IAM com escrita no RAG; `aiplatform.user`; `storage.objectAdmin` no bucket de snapshots; `secretmanager.secretAccessor` em `github-app-key` |
@@ -120,6 +120,10 @@ pats/{id}                      userId, hash, escopos[], expiraEm, ultimoUso
 revocations/{id}               tipo (usuario|dispositivo|familia|jti|global), alvo, ate (TTL)
 catalog_skills/{skillId}       nome, dominio, estado, canais {beta: versao, stable: versao}
 catalog_versions/{skillId@ver} sha, manifestoUri, manifestoHash, assinatura, publicadoEm, publicadoPor (run do CI)
+catalog_events/{id}            ciclo de vida das skills (portal 07): incorporada, versão, promoção, rollback, perfil, depreciação, retirada, proibição
+mcp_tools/{versaoServidor}     metadados das ferramentas MCP (gravado pelo odin-mcp; lido pelo guia do portal)
+quotas/{userId}/{dia}          contador diário de requisições (incremento atômico)
+quota_rules/{id}               cotas por perfil, squad ou pessoa (portal 06)
 proposals/{id}                 colecao, projeto, texto, fonte, origem (skill|pessoa), status, curador, prUrl?
 settings/global                ttls, limites, provedores habilitados, mensagem de manutenção
 ```
@@ -281,7 +285,7 @@ flowchart LR
 ```
 - **Transporte:** Streamable HTTP em modo **sem estado** (sem `Mcp-Session-Id` com afinidade), para escalar no Cloud Run sem sessão. [VERIFICAR] a compatibilidade do modo sem estado com o Claude Code.
 - **Instruções do servidor:** até 4.096 caracteres (o gatilho do plano, seção 7.6), versionadas com o catálogo.
-- **Limite de taxa:** 120 chamadas/min por pessoa (em memória por instância, como proteção; o Cloud Armor cuida do volume por IP). Em produção, se necessário, um Memorystore para limite global.
+- **Limite de taxa e cota:** limite por minuto conforme o perfil (em memória por instância) e cota diária por pessoa (contador no Firestore), definidos em [portal 06](../portal/06-consumo-cotas-e-metricas.md). O Cloud Armor cuida do volume por IP. Em produção, se necessário, um Memorystore para limite global.
 
 ### 6.2 Ferramentas MCP (contratos)
 | Ferramenta | Entrada (resumo) | Saída (resumo) | Autorização |
@@ -347,7 +351,8 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 |---|---|---|
 | Metadata | leitura | Obrigatória |
 | Contents | leitura | Ler `odin-knowledge` (indexer) e conferir conteúdo |
-| Pull requests | escrita | Abrir PR de conhecimento aprovado no portal (curadoria) |
+| Pull requests | escrita | Abrir PR de conhecimento aprovado no portal (curadoria) e PRs de catálogo (promover, rollback, depreciar, retirar) a partir do portal |
+| Contents (repositório Odin) | escrita, **só branches `portal/*`** (regra de proteção) | Criar a branch do PR de catálogo; a `main` continua protegida, com revisão humana e CI |
 | Members (organização) | leitura | Sincronizar times → squads |
 | Eventos de webhook | `push`, `create` (tags), `membership`, `organization` (membro removido), `team` | Atualização de conhecimento, sincronização de acesso, saída de pessoas |
 

@@ -188,6 +188,9 @@ erDiagram
 | RF-18 | Revogação em massa (por pessoa, squad, dispositivo ou geral) | 5 |
 | RF-19 | Consulta e exportação da auditoria pelo auditor | 5 |
 | RF-20 | Conta de emergência com alerta | 5 |
+| RF-21 | Medir consumo de requisições (por pessoa, squad, projeto, skill, ferramenta, resultado) e aplicar cotas por perfil, squad ou pessoa | 5, 6 |
+| RF-22 | Registrar e mostrar o ciclo de vida das skills (incorporação, versões, promoções, rollbacks, mudanças de acesso, depreciação, retirada, proibição) | 3, 6 |
+| RF-23 | Guia do MCP no portal (ferramentas, skills permitidas, conexão, autenticação, consumo, problemas comuns) | 6 |
 
 ## 8. Requisitos não funcionais
 

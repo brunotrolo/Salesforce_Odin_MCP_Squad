@@ -1,6 +1,7 @@
 # Odin MCP Squad: plano de arquitetura
 
 > **Status:** plano, nada foi desenvolvido. Primeiro uso: prova de conceito pessoal num projeto Google Cloud do mantenedor, já com **todas** as skills. Depois, o time (cerca de 20 devs, mais POs).
+> **Portal:** pasta [`docs/portal/`](portal/README.md) (área do usuário, guia do MCP, console de administração, consumo e cotas, ciclo de vida das skills, UX, API e critérios de aceite).
 > **Segurança:** pasta [`docs/seguranca/`](seguranca/README.md) (modelo de ameaças, autenticação e MFA, tokens, autorização, cadeia de suprimentos, endpoint, infraestrutura, LGPD, resposta a incidentes, controles e runbooks). Para segurança, vale a pasta.
 > **Arquitetura detalhada:** [solução](arquitetura/01-arquitetura-de-solucao.md) · [funcional](arquitetura/02-arquitetura-funcional.md) · [técnica](arquitetura/03-arquitetura-tecnica.md) · [portal e perfilamento](arquitetura/04-portal-e-perfilamento.md). Em caso de diferença de detalhe, valem os documentos de arquitetura.
 > **Convenção:** **[VERIFICAR]** marca o que depende de um comportamento do Claude Code, do Google Cloud ou do LiteLLM que não foi confirmado na documentação; esses pontos são os primeiros testes da prova de conceito (seção 16). **[CONFIRMADO]** marca o que foi conferido na documentação oficial do Claude Code (code.claude.com/docs, páginas `mcp`, `hooks`, `sub-agents` e `plugins`). Confirmado em documentação não dispensa o teste prático em F0.
@@ -297,7 +298,7 @@ usa: []                                           # pacotes de biblioteca compar
 Só os caminhos declarados em `skills`, `agentes`, `regras` e `runtime` são empacotados: **é a lista do que pode ser entregue** (22.1). `CLAUDE.md`, `AGENTS.md`, `settings.json` e `.mcp.json` nunca entram, mesmo se declarados.
 
 ### 8.2 Catálogo central (`catalog/` neste repositório)
-- `catalog/skills.yaml`: cada skill com `repo`, **SHA fixado**, canal e estado (`ativa`, `beta`, `aposentada`).
+- `catalog/skills.yaml`: cada skill com `repo`, **SHA fixado**, canal e estado (`beta`, `ativa`, `depreciada`, `retirada`). Cada mudança gera um evento de ciclo de vida, visível no portal ([portal 07](portal/07-ciclo-de-vida-das-skills.md)).
 - `catalog/perfis.yaml`: só a **semente** dos perfis iniciais. Depois disso, **acesso é governado no portal** (quem usa o quê, com aprovação e auditoria), e **conteúdo no Git** (o que existe e em que versão). Ver ADR-11 da arquitetura de solução.
 - Mudança no catálogo = **pull request** com revisão de um mantenedor e CI verde. Não existe "publicar direto".
 
@@ -569,7 +570,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por dez rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada e cibersegurança). O que cada rodada mudou:
+O plano passou por onze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança e portal). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -619,6 +620,11 @@ O plano passou por dez rodadas de revisão contra os objetivos (fricção, gover
 | 10 | Tokens | Inatividade de dispositivo em 90 dias era longa demais | Revogação após 30 dias sem uso; ativação vale no máximo 90 dias |
 | 10 | Resposta | Não havia como bloquear uma versão já instalada | Lista assinada de versões proibidas, aplicada pelo CLI e pelo guard |
 | 10 | Ameaças | Phishing de device code não estava tratado | MFA na aprovação, dados do dispositivo na tela, alerta de IP divergente |
+| 11 | Portal | Faltava detalhar o portal para consumidores e administradores | Pasta `docs/portal/` com 11 documentos |
+| 11 | Governança | Não havia medição de consumo nem cotas | Requisições por pessoa, squad, skill e ferramenta; cota diária e limite por minuto por perfil (portal 06) |
+| 11 | Governança | Não havia histórico de quando uma skill entrou, mudou ou saiu | Eventos de ciclo de vida, estados `depreciada` e `retirada`, comparação de versões (portal 07) |
+| 11 | Consistência | O guia do portal dependia de chamada ao MCP | O MCP grava os metadados das ferramentas no Firestore |
+| 11 | Segurança | O GitHub App precisava abrir PRs de catálogo | Escrita só em branches `portal/*`; `main` protegida (arquitetura técnica 7.2) |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 

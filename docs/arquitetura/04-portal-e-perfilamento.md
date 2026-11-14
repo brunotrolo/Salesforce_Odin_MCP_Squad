@@ -1,5 +1,6 @@
 # 04. Portal e perfilamento
 
+> **Detalhamento completo do portal na pasta [`docs/portal/`](../portal/README.md)** (vale a pasta em caso de diferença).
 > Série: [01 Solução](01-arquitetura-de-solucao.md) · [02 Funcional](02-arquitetura-funcional.md) · [03 Técnica](03-arquitetura-tecnica.md) · **04 Portal e perfilamento**. Base: [plano](../PLANO.md).
 
 ## 1. Objetivo do portal

@@ -11,6 +11,7 @@ Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as s
 | 🧩 [02 Arquitetura funcional](docs/arquitetura/02-arquitetura-funcional.md) | Atores, capacidades, casos de uso, modelo de acesso, regras, requisitos |
 | ⚙️ [03 Arquitetura técnica](docs/arquitetura/03-arquitetura-tecnica.md) | Recursos do Google Cloud, onde fica cada dado, autenticação, orquestrador, integração com o GitHub, segurança, IaC, custos |
 | 🔐 [04 Portal e perfilamento](docs/arquitetura/04-portal-e-perfilamento.md) | Portal do usuário e console de administração, papéis, matriz de permissões, fluxos |
+| 🖥️ [Portal](docs/portal/README.md) | Área do usuário, guia do MCP (ferramentas, conexão, autenticação, consumo), console de administração, consumo e cotas, ciclo de vida das skills, UX, API e critérios de aceite |
 | 🛡️ [Segurança](docs/seguranca/README.md) | Modelo de ameaças, autenticação e MFA, tokens e refresh, autorização, cadeia de suprimentos, máquina do usuário, infraestrutura, LGPD, resposta a incidentes, controles e runbooks |
 
 **Em uma frase:** a pessoa entra com o GitHub, ativa o CLI uma vez e passa a pedir em linguagem natural; o Odin identifica quem é, escolhe a skill que ela pode usar, entrega a versão aprovada mais recente, garante o runtime e os hooks de segurança atualizados na máquina, e responde com conhecimento citado.
