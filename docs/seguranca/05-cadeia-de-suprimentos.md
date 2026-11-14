@@ -24,7 +24,7 @@ flowchart LR
 | Elo | Controle |
 |---|---|
 | Contas do GitHub | 2FA obrigatório (organização); chaves SSH ou de assinatura por pessoa; revisão trimestral de quem tem escrita |
-| Repositórios | `main` protegida: PR obrigatório, **1 aprovação de outra pessoa** (2 em `catalog/`, `policies/`, `infra/` e no CLI), checagens obrigatórias, sem push direto, sem force-push, histórico linear; **CODEOWNERS** por pasta; commits assinados nos merges |
+| Repositórios | `main` protegida: PR obrigatório, **1 aprovação de outra pessoa** (na PoC, com mantenedor único, a aprovação humana fica suspensa em `catalog/` e os demais controles continuam obrigatórios: CI, assinatura, canal `beta`; volta a valer com um segundo mantenedor, [decisão 31](../DECISOES.md)) (2 em `catalog/`, `policies/`, `infra/` e no CLI), checagens obrigatórias, sem push direto, sem force-push, histórico linear; **CODEOWNERS** por pasta; commits assinados nos merges |
 | Tags e releases | Tags protegidas; só o CI cria releases |
 | GitHub Actions | Ações de terceiros fixadas por **SHA completo** (não por tag); permissões do `GITHUB_TOKEN` mínimas por workflow (`contents: read` por padrão); `pull_request_target` proibido; ambientes com aprovação para `deploy` e `infra` |
 | Identidade do CI | Workload Identity Federation com condição por dono, repositório e ref (07); quem implanta (`sa-ci-deploy`) não assina (`sa-ci-signer`) |

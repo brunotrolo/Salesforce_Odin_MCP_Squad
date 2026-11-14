@@ -194,7 +194,7 @@ flowchart LR
 
 ### 7.3 Disponibilidade e continuidade
 - Meta inicial: 99,5% (prova de conceito); 99,9% em produção, com uma instância quente por serviço público.
-- Se o Odin estiver fora, o runtime já instalado continua funcionando para skills em uso (o guard usa o cache de direitos por até 24 h). Novas skills e conhecimento ficam indisponíveis.
+- Se o Odin estiver fora, as skills já usadas continuam funcionando pela **cópia local assinada por até 7 dias** (decisão 14; arquitetura técnica 4.3.2). Skills novas e conhecimento ficam indisponíveis até a volta.
 - Backups: Firestore com recuperação a um ponto no tempo e exportação diária; Cloud SQL com backup automático e PITR; Cloud Storage versionado. Metas: RPO de 1 h e RTO de 4 h.
 
 ## 8. Ambientes e evolução

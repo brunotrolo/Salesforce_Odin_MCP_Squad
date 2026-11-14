@@ -7,6 +7,7 @@ Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as s
 | Documento | Conteúdo |
 |---|---|
 | 📐 [Plano](docs/PLANO.md) | Visão geral, fases de construção, riscos, revisões |
+| ✅ [Decisões](docs/DECISOES.md) | As 40 decisões do mantenedor que fecham as lacunas (valem sobre o resto) |
 | 🧭 [01 Arquitetura de solução](docs/arquitetura/01-arquitetura-de-solucao.md) | Princípios, contexto, contêineres, decisões (ADRs), fluxos, escala, ambientes |
 | 🧩 [02 Arquitetura funcional](docs/arquitetura/02-arquitetura-funcional.md) | Atores, capacidades, casos de uso, modelo de acesso, regras, requisitos |
 | ⚙️ [03 Arquitetura técnica](docs/arquitetura/03-arquitetura-tecnica.md) | Recursos do Google Cloud, onde fica cada dado, autenticação, orquestrador, integração com o GitHub, segurança, IaC, custos |

@@ -16,7 +16,7 @@
 | Troca de skill | Outra skill carregada em até 2 min após o roteamento | skill |
 | Busca sem resultado | `odin_conhecimento_buscar` com zero trechos | coleção, projeto |
 
-**O que não é medido:** o texto dos pedidos, o código, as respostas do modelo e os tokens de modelo (que ficam no LiteLLM). Uma correlação opcional com o LiteLLM está prevista na [arquitetura técnica](../arquitetura/03-arquitetura-tecnica.md) (custo de modelo por pessoa), mas fica fora do portal nesta versão.
+**O que não é medido:** o texto dos pedidos, o código, as respostas do modelo e os tokens de modelo (que ficam no LiteLLM). O Odin mede **só o consumo do próprio MCP**; as chaves e o consumo do LiteLLM são controlados pela empresa, fora do Odin ([decisão 27](../DECISOES.md)).
 
 ## 2. De onde vêm os números
 

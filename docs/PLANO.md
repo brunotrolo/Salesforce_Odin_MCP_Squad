@@ -1,6 +1,7 @@
 # Odin MCP Squad: plano de arquitetura
 
 > **Status:** plano, nada foi desenvolvido. Primeiro uso: prova de conceito pessoal num projeto Google Cloud do mantenedor, já com **todas** as skills. Depois, o time (cerca de 20 devs, mais POs).
+> **Decisões do mantenedor:** [`docs/DECISOES.md`](DECISOES.md) (40 respostas; valem sobre o que estiver diferente).
 > **Portal:** pasta [`docs/portal/`](portal/README.md) (área do usuário, guia do MCP, console de administração, consumo e cotas, ciclo de vida das skills, UX, API e critérios de aceite).
 > **Segurança:** pasta [`docs/seguranca/`](seguranca/README.md) (modelo de ameaças, autenticação e MFA, tokens, autorização, cadeia de suprimentos, endpoint, infraestrutura, LGPD, resposta a incidentes, controles e runbooks). Para segurança, vale a pasta.
 > **Arquitetura detalhada:** [solução](arquitetura/01-arquitetura-de-solucao.md) · [funcional](arquitetura/02-arquitetura-funcional.md) · [técnica](arquitetura/03-arquitetura-tecnica.md) · [portal e perfilamento](arquitetura/04-portal-e-perfilamento.md). Em caso de diferença de detalhe, valem os documentos de arquitetura.
@@ -455,7 +456,7 @@ Mudanças, iguais para todas:
 
 - **Auditoria** (BigQuery, partição diária, retenção de 1 ano, somente acréscimo): emissão e revogação de tokens; cada chamada MCP (pessoa, dispositivo, ferramenta, skill, versão, resultado e latência), sem o conteúdo do pedido por padrão (LGPD) e com amostragem opcional mascarada; publicações; mudanças de perfil.
 - **Painéis:** uso por skill, perfil e projeto; acerto do roteamento (feedback e trocas de skill logo após o roteamento); versões de runtime em uso (deriva); erros de `ensure`; consultas sem resultado no RAG (lacunas de conhecimento); tempo até o primeiro valor no onboarding.
-- **Custo:** o custo de modelo fica no LiteLLM. Para cruzar, o CLI envia um `X-Odin-User` opcional ao LiteLLM ou se usa a mesma identidade na chave virtual do LiteLLM. **[VERIFICAR]** os recursos do LiteLLM em uso.
+- **Custo:** o Odin mede **só o consumo do próprio MCP** (requisições). As chaves e o custo de modelo no LiteLLM são da empresa e ficam fora do Odin (decisão 27).
 - **Alertas:** pico de recusas de autorização, publicação fora do pipeline, assinatura inválida reportada pelo CLI, erro acima de 2% no MCP, orçamento do projeto GCP.
 
 ---
@@ -469,7 +470,7 @@ Mudanças, iguais para todas:
 | Cloud Run: `odin-mcp`, `odin-portal` | Serviços | Mínimo de 0 instâncias na prova de conceito (custo perto de zero); 1 instância quente em produção para evitar partida a frio |
 | Identity Platform | Login com **GitHub** (Google e Microsoft opcionais) e segundo fator (TOTP) | Faixa gratuita ampla para poucos usuários **[VERIFICAR]** os preços e o MFA com login federado |
 | Firestore (nativo) | Catálogo, usuários, perfis, dispositivos, revogações | Sem servidor |
-| Cloud SQL Postgres + pgvector | RAG | Menor instância na prova de conceito; AlloyDB só se o volume exigir |
+| Firestore (busca vetorial) → Cloud SQL Postgres + pgvector | RAG | **PoC no Firestore** (faixa gratuita, atrás de uma interface); **Cloud SQL** quando o orçamento for liberado, antes de conhecimento confidencial ou do time (decisão 7); AlloyDB só se o volume exigir |
 | Vertex AI (embeddings) | Roteamento e RAG | Custo por chamada, baixo |
 | Cloud Storage | Pacotes assinados (versionados, retenção) | URL assinada por pessoa e de curta duração |
 | Cloud KMS | Chave de assinatura dos pacotes e chave dos JWT | Rotação anual |
@@ -509,6 +510,25 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
 | **F10 Preparação para o time** | Guia de onboarding de uma página, página de status, termos de uso, perfis reais, canal `beta` com 2 ou 3 pessoas | 3 pessoas fazem o onboarding sozinhas em menos de 10 min |
 
+### 16.1 Estimativa (mantenedor + Claude, tempo integral; decisão 35)
+
+| Fase | Duração estimada |
+|---|---|
+| F0 Verificações e ferramentas de manutenção | 1 semana |
+| F1 Fundação | 0,5 semana |
+| F2 Identidade (com MFA e passkeys) | 1,5 semana |
+| F3 Catálogo e publicação | 1,5 semana |
+| F4 MCP | 1,5 semana |
+| F5 Runtime local (prioridade Windows nativo e extensão do VS Code) | 2 semanas |
+| F6 Adaptação das 5 skills | 2 semanas |
+| F7 Conhecimento (Firestore na PoC) | 1 semana |
+| F8 Operação | 1 semana |
+| F9 Validação pessoal | 2 semanas |
+| F10 Preparação para o time (inclui organização GitHub, domínio, Cloud SQL, segundo super-admin, jurídico) | 1,5 semana |
+| **Total** | **cerca de 15,5 semanas (± 30%)** |
+
+Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (dependem do comportamento real do Claude Code no Windows e na extensão do VS Code). Revisar a estimativa ao fim da F0.
+
 ---
 
 ## 17. Critérios de sucesso
@@ -540,10 +560,13 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | R7 | Qualidade do RAG (conhecimento desatualizado erra com confiança) | Vigência, `substitui`, curadoria, avaliação automática, painel de lacunas |
 | R8 | Redistribuição de skills de terceiros | Seção 15 |
 | R9 | Custo do GCP crescer com o time | Orçamento e alertas; escala até zero; revisar o Cloud SQL depois da prova de conceito |
-| R10 | Identidade do LiteLLM separada da do Odin | Correlacionar por cabeçalho ou unificar as chaves virtuais (13) |
+| R10 | ~~Identidade do LiteLLM separada da do Odin~~ | **Encerrado:** o Odin não correlaciona com o LiteLLM (decisão 27) |
+| R15 | Pessoa única na PoC (administração, aprovação de skills, curadoria e suporte) | Segundo super-admin obrigatório antes do time; runbooks escritos (decisões 26 e 31) |
+| R16 | Migração por corte único (decisão 29) | Ensaio do corte, guia de uma página, plano de volta com as cópias arquivadas por 30 dias |
+| R17 | Sem jurídico ou DPO (decisão 37) | Bloqueio formal: o time não entra sem validação de LGPD, termos e licenças |
 | D1 | Provedor de login | **Decidido: GitHub** (SSO), via Identity Platform; Google ou Microsoft podem ser ligados depois. Times do GitHub viram squads quando houver organização GitHub |
-| D2 | Conhecimento por projeto: quem é dono em cada cliente | Definir antes de F7 |
-| D3 | Um repositório por skill (como hoje) ou um monorepo de skills | Plano assume repositórios separados + catálogo; rever se a manutenção pesar |
+| D2 | Conhecimento por projeto: quem é dono em cada cliente | **PoC: o mantenedor cura tudo** (decisão 20); definir por projeto antes do time |
+| D3 | Um repositório por skill (como hoje) ou um monorepo de skills | **Decidido: um repositório por skill** + catálogo (decisão 8) |
 
 ---
 
@@ -571,7 +594,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por doze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
+O plano passou por treze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -632,6 +655,7 @@ O plano passou por doze rodadas de revisão contra os objetivos (fricção, gove
 | 12 | Consistência | Modelo do Firestore sem as coleções do portal | `policy_versions`, `notifications`, `review_campaigns` acrescentadas |
 | 12 | Precisão | O login com GitHub era descrito como "com PKCE" sem confirmação | Marcado [VERIFICAR] (depende do provedor e do SDK) |
 | 12 | Consistência | MFA ausente no onboarding da arquitetura de solução; ADRs fora de ordem | Corrigidos |
+| 13 | Decisões | 40 perguntas abertas | Respondidas em `docs/DECISOES.md`: PoC perto de zero com Firestore, modo degradado de 7 dias, versão fixa por sessão, Windows e VS Code como prioridade, sem correlação com LiteLLM, corte único, estimativa de 15,5 semanas; riscos R15 a R17 |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 

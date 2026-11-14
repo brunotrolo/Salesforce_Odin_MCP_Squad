@@ -23,7 +23,8 @@
 | Cloud DNS | `odin-<dominio>` | `odin.`, `mcp.`, `auth.`, `hooks.` | Domínios |
 | **Identity Platform** | — | Provedor **GitHub** (OAuth App do GitHub), opcional Google e Microsoft; domínios autorizados | Login das pessoas |
 | **Firestore** (nativo) | `(default)` | Modo nativo, `southamerica-east1`, PITR ligado, CMEK [VERIFICAR suporte de CMEK no Firestore na região] | Identidade, acesso, catálogo, revogações |
-| **Cloud SQL** | `odin-kb-<amb>` | PostgreSQL 16, **IP privado apenas**, extensão `vector`, autenticação IAM, backups + PITR; poc: menor instância de núcleo compartilhado, prod: 2 vCPU com alta disponibilidade | RAG e roteamento |
+| **Firestore (busca vetorial)** — só PoC | coleções `kb_chunks_<projeto>`, `routing_intents` | Índice vetorial, filtros por coleção e projeto; isolamento na aplicação (coleção por projeto); **sem conhecimento confidencial** | RAG e roteamento na PoC (decisão 7) |
+| **Cloud SQL** (a partir da liberação de orçamento) | `odin-kb-<amb>` | PostgreSQL 16, **IP privado apenas**, extensão `vector`, autenticação IAM, backups + PITR; poc: menor instância de núcleo compartilhado, prod: 2 vCPU com alta disponibilidade | RAG e roteamento |
 | VPC | `odin-vpc` | Sub-rede regional; Cloud Run com **saída direta para VPC** | Acesso privado ao Cloud SQL |
 | **Cloud Storage** | `odin-bundles-<amb>` | Versionamento, retenção de 365 dias, acesso uniforme, prevenção de acesso público, CMEK | Pacotes assinados |
 | Cloud Storage | `odin-kb-snapshots-<amb>` | Versionamento, ciclo de vida de 180 dias | Cópia do que foi ingerido |
@@ -173,6 +174,21 @@ CREATE TABLE routing_intents (
 - **Busca híbrida:** combinação da similaridade vetorial com a busca textual (`ts_rank`) por fusão de ranking (RRF), depois o filtro de vigência e precedência (autoridade, `substituido_por`).
 - **Usuários do banco:** `odin_mcp` (só `SELECT`, sujeito à política de linha, **sem** `BYPASSRLS`) e `odin_indexer` (escrita). Os dois por autenticação IAM, sem senha.
 - **Teste obrigatório:** no CI, uma consulta com os projetos de A não pode retornar nenhuma linha de B.
+
+### 4.3.1 RAG na PoC (Firestore) e troca para o Cloud SQL
+- O `odin-mcp` e o `odin-indexer` falam com o RAG por uma interface única (`KnowledgeStore`: `upsert`, `search`, `purgeProject`). Na PoC a implementação é o **Firestore com busca vetorial**; depois, o **Cloud SQL** do esquema acima.
+- Na PoC: uma coleção por projeto (`kb_chunks_<projeto>`), filtro obrigatório de coleção e projeto na aplicação, só busca vetorial (sem a textual), e **nenhum conhecimento confidencial**.
+- Troca: configuração (`ODIN_KB_BACKEND=cloudsql`) + cópia dos trechos e vetores pelo `odin-indexer` + reexecução da avaliação de recuperação e dos testes de isolamento. Sem mudança no código das ferramentas MCP.
+
+### 4.3.2 Cópia local para o modo degradado (decisão 14)
+- O pacote assinado do runtime passa a incluir também o **conteúdo** da skill (`SKILL.md`, referências, regras).
+- Se o Odin estiver indisponível, o CLI entrega o conteúdo local à skill **por até 7 dias** desde o último contato bem-sucedido, só para skills que a pessoa tinha direito de usar nesse contato.
+- Ao reconectar, o direito é conferido de novo e as cópias de skills revogadas são apagadas.
+
+### 4.3.3 Versão fixa por sessão (decisão 15)
+- A primeira chamada de uma skill numa sessão do Claude Code fixa a versão (conteúdo e runtime) para aquela sessão (`session_id` do Claude Code repassado pelo CLI quando disponível [VERIFICAR]; senão, por processo).
+- Versões antigas do runtime ficam em disco enquanto houver sessão usando; o `odin ensure` limpa as sem uso há 24 h.
+- Versão proibida bloqueia **imediatamente**, mesmo no meio da sessão.
 
 ### 4.4 BigQuery: auditoria
 Tabela `odin_audit.eventos` (a partir do coletor): `ts`, `servico`, `ator` (userId ou conta de serviço), `dispositivo`, `acao` (por exemplo `mcp.rotear`, `mcp.carregar_skill`, `sts.token`, `admin.grant.create`), `alvo`, `resultado` (`ok`|`negado`|`erro`), `motivo`, `ip`, `ua`, `latencia_ms`, `skill`, `versao`, `request_id`, `antes`/`depois` (ações administrativas). **Sem** o texto do pedido (RN-13).
@@ -486,7 +502,8 @@ Metas: RPO de 1 h e RTO de 4 h. Exercício de restauração a cada semestre.
 | Item | Ordem de grandeza |
 |---|---|
 | Cloud Run (escala até zero, uso de 3 pessoas) | perto de zero (faixa gratuita) |
-| Cloud SQL (menor instância, IP privado) | a maior parte do custo (dezenas de dólares) |
+| Cloud SQL | **não usado na PoC** (decisão 7); quando entrar: dezenas de dólares |
+| Firestore com busca vetorial (RAG na PoC) | dentro da faixa gratuita no volume da PoC |
 | Firestore, Pub/Sub, Scheduler, Secret Manager | centavos a poucos dólares |
 | Cloud KMS (poucas chaves e operações) | poucos dólares |
 | Vertex AI (embeddings) | centavos |
@@ -494,9 +511,10 @@ Metas: RPO de 1 h e RTO de 4 h. Exercício de restauração a cada semestre.
 | Load Balancer + Cloud Armor | dezenas de dólares; **adiar na poc** e usar `run.app` |
 | BigQuery | perto de zero no volume da poc |
 
-Total esperado com o Load Balancer adiado: algumas dezenas de dólares por mês. Confirmar na calculadora de preços do Google Cloud antes de criar os recursos.
+**Total esperado na PoC: US$ 1 a 3 por mês** (KMS e embeddings), com alerta de orçamento em US$ 5. O custo sobe por etapas, conforme o mantenedor liberar: Cloud SQL, depois Load Balancer e Cloud Armor. Confirmar na calculadora de preços do Google Cloud antes de criar os recursos.
 
 ## 14. Pontos a verificar na prova de conceito
+0. **Prioridade da F0** (decisões 23 e 24): **Windows nativo** e **extensão do VS Code** primeiro.
 1. Modo sem estado do Streamable HTTP com o Claude Code (6.1).
 2. Disponibilidade em `southamerica-east1` de Identity Platform, Vertex AI (modelo de embeddings) e CMEK no Firestore.
 3. Nome e dimensão do modelo de embeddings multilíngue atual.
