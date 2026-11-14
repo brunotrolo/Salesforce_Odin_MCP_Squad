@@ -66,6 +66,11 @@
 | 38 | **Uma região** em produção, backup e restauração em até 4 h | Sem réplica em outra região |
 | 39 | Ferramenta de empacotamento do CLI **escolhida pelo Claude na F0** | Registrada como ADR |
 
+## F2. Complemento
+| # | Decisão | Consequência |
+|---|---|---|
+| 41 | **GitHub Free sempre** na organização | Repositórios privados sem proteção de branch, revisão obrigatória, tags protegidas, ambientes com aprovação e atestação de origem [VERIFICAR nos planos atuais]. **Só o mantenedor escreve**; o time lê o `odin-suporte` e abre issues. Compensações permanentes em [segurança 05](seguranca/05-cadeia-de-suprimentos.md) e na [arquitetura técnica, 7.1](arquitetura/03-arquitetura-tecnica.md); risco R18 |
+
 ## G. Entregáveis
 | # | Decisão | Consequência |
 |---|---|---|

@@ -564,6 +564,7 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 | R10 | ~~Identidade do LiteLLM separada da do Odin~~ | **Encerrado:** o Odin não correlaciona com o LiteLLM (decisão 27) |
 | R15 | Pessoa única na PoC (administração, aprovação de skills, curadoria e suporte) | Segundo super-admin obrigatório antes do time; runbooks escritos (decisões 26 e 31) |
 | R16 | Migração por corte único (decisão 29) | Ensaio do corte, guia de uma página, plano de volta com as cópias arquivadas por 30 dias |
+| R18 | GitHub Free em repositório privado: sem proteção de branch, revisão obrigatória, tags protegidas, ambientes com aprovação nem atestação (decisão 41) | Só o mantenedor escreve; 2FA; condições da identidade federada por `actor_id` e `main`; checagens no próprio workflow; assinatura no KMS como garantia principal |
 | R17 | Sem jurídico ou DPO (decisão 37) | Bloqueio formal: o time não entra sem validação de LGPD, termos e licenças |
 | D1 | Provedor de login | **Decidido: GitHub** (SSO), via Identity Platform; Google ou Microsoft podem ser ligados depois. Times do GitHub viram squads quando houver organização GitHub |
 | D2 | Conhecimento por projeto: quem é dono em cada cliente | **PoC: o mantenedor cura tudo** (decisão 20); definir por projeto antes do time |
@@ -663,6 +664,7 @@ O plano passou por catorze rodadas de revisão contra os objetivos (fricção, g
 | 14 | Fechamento | Faltavam critérios objetivos para começar e para liberar ao time | Portões 1 e 2, corte único e suporte (seção 23) |
 | 14 | Operação | Corte único sem plano de volta e suporte sem lugar definido | `odin restore-copias` por 30 dias; repositório `odin-suporte` (23.3, 23.4) |
 | 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
+| 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
@@ -776,7 +778,7 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 | Domínio próprio + Load Balancer + Cloud Armor, ingress só pela borda (decisão 6) | Borda de segurança |
 | RAG migrado para Cloud SQL, testes de isolamento no banco verdes (decisão 7) | Antes de qualquer conhecimento confidencial |
 | Segundo super-admin nomeado e com passkey (decisão 26, R15) | Pessoa única |
-| Segunda pessoa para aprovar PRs em `catalog/` ou exceção registrada (decisão 31) | Quatro olhos no catálogo |
+| Exceção registrada do quatro olhos no catálogo (decisões 31 e 41: só o mantenedor escreve) e revisão das compensações do GitHub Free | Integridade da distribuição |
 | Jurídico: base legal LGPD, termos de uso, aviso de privacidade, licenças de terceiros (decisão 37, R17) | Conformidade |
 | E-mail das notificações escolhido (decisão 36) | Avisos de segurança às pessoas |
 | Pentest externo sem achado crítico ou alto em aberto ([segurança 10](seguranca/10-controles-e-testes.md)) | Segurança |

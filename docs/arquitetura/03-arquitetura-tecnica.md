@@ -360,14 +360,16 @@ resource "google_iam_workload_identity_pool_provider" "github_oidc" {
   }
   # Só repositórios do dono do Odin
   attribute_condition = "assertion.repository_owner == '<dono-github>'"
+  # GitHub Free (decisão 41): as condições por conta de serviço também exigem
+  # assertion.actor_id == '<id-numerico-do-mantenedor>' e assertion.ref == 'refs/heads/main'
 }
 ```
 Vínculos (quem pode virar qual conta de serviço):
 | Conta de serviço | Só pode ser usada por |
 |---|---|
 | `sa-ci-signer` | Workflow `publish.yml` do **repositório Odin**, em `refs/heads/main` |
-| `sa-ci-deploy` | Workflow `deploy.yml` do repositório Odin, em `main` ou tags `v*`, com aprovação de ambiente |
-| `sa-ci-infra` | Workflow `infra.yml` do repositório Odin, em `main`, com aprovação de ambiente |
+| `sa-ci-deploy` | Workflow `deploy.yml` do repositório Odin, em `main` ou tags `v*`, **disparado pelo mantenedor** (condição no `actor_id` do token OIDC do GitHub) |
+| `sa-ci-infra` | Workflow `infra.yml` do repositório Odin, em `main`, **disparado manualmente pelo mantenedor** (condição no `actor_id`) |
 
 Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só publicam código e tags. Quem publica no Odin é o pipeline do repositório Odin, a partir do catálogo, que fixa o SHA de cada skill.
 
@@ -392,7 +394,7 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 - `push` em `odin-knowledge` `main`: dispara o `odin-indexer`.
 
 ### 7.4 Pipelines (GitHub Actions, no repositório Odin)
-> Repositórios privados (decisão 5): o `publish.yml` lê os repositórios das skills com um **token de instalação do GitHub App** gerado no próprio workflow (o `GITHUB_TOKEN` só lê o repositório onde roda). A chave do app usada pelo CI fica num segredo do ambiente `publish`, com aprovação.
+> Repositórios privados (decisão 5): o `publish.yml` lê os repositórios das skills com um **token de instalação do GitHub App** gerado no próprio workflow (o `GITHUB_TOKEN` só lê o repositório onde roda). A chave do app usada pelo CI fica num segredo do repositório Odin (no Free não há segredo de ambiente com aprovação em repositório privado).
 | Workflow | Gatilho | Faz |
 |---|---|---|
 | `ci.yml` | Todo PR | Lint, testes, testes de política, testes de autorização do RAG, `terraform plan` |
@@ -400,7 +402,7 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 | `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII e injeção, roda a avaliação de recuperação; no merge, o webhook dispara o indexer |
 | `deploy.yml` | Tag `v*` | Build das imagens, SBOM, atestação de origem, envio ao Artifact Registry, deploy no Cloud Run (prod com Binary Authorization) |
 | `cli-release.yml` | Tag `cli-v*` | Binários do CLI por plataforma, checksums, **assinatura no KMS** (`cli-signing`), envio ao bucket privado `odin-cli-<amb>`, atualização do script de instalação servido pelo portal com o checksum fixado; atestação de origem do GitHub quando disponível no plano [VERIFICAR para repositório privado] |
-| `infra.yml` | Merge em `infra/` | `terraform apply` com aprovação de ambiente |
+| `infra.yml` | Disparo manual do mantenedor após merge em `infra/` | `terraform apply` (no Free não há ambientes com aprovação em repositório privado; a condição da identidade federada exige o mantenedor) |
 
 ## 8. Segurança
 
