@@ -432,6 +432,8 @@ Mudanças, iguais para todas:
 8. **Remover instaladores próprios** (`install.mjs`) e as cópias por repositório. O `odin doctor` detecta cópias antigas em `.claude/` do projeto e oferece remover, para evitar duas versões da mesma skill.
 9. **Encadeamento:** `entrada`, `saida` e `proximo` declarados, para o `odin_proximo_passo`.
 10. **Testes** de cada repositório rodando no pipeline de publicação.
+11. **`CLAUDE.md` e `AGENTS.md` da raiz de cada repositório não vão para a máquina de ninguém** (seção 22). O que neles for regra operacional da skill é movido para o `SKILL.md` ou para uma referência da skill, e o resto fica como documentação de quem mantém o repositório.
+12. **Bibliotecas de terceiros duplicadas** (5 skills idênticas no Designer e no Developer) viram um único pacote compartilhado (seção 22.3).
 
 ---
 
@@ -576,6 +578,10 @@ O plano passou por seis rodadas de revisão contra os objetivos (fricção, gove
 | 6 | Fricção | Agentes novos não aparecem se a pasta não existia no início da sessão | `odin setup` cria `~/.claude/agents/` (7.2) |
 | 6 | Escala | O gatilho dependia só de uma skill local | Instruções do servidor como gatilho principal (7.6) |
 | 6 | Expansão | O desenho falava só de Salesforce | Campo `dominio`, catálogo multidomínio e roteiro para adicionar skills (seção 21) |
+| 7 | Isolamento | `CLAUDE.md`, `AGENTS.md`, `settings.json` e `.mcp.json` das skills poderiam sobrepor os arquivos do dev | Lista do que pode ser entregue (só o declarado no `odin.yaml`) + bloqueio no pipeline + o projeto do dev nunca é tocado (seção 22) |
+| 7 | Isolamento | Faltava um "manual" do próprio Odin para o modelo | `ODIN.md` gerido pelo Odin, importado por uma linha no `CLAUDE.md` do usuário, mais as instruções do servidor (22.2) |
+| 7 | Isolamento | Nomes repetidos entre repositórios: 5 skills duplicadas (conteúdo igual) e uma regra com o mesmo nome e conteúdo diferente | Nomes únicos no catálogo, pacote compartilhado para bibliotecas, pipeline falha em colisão (22.3) |
+| 7 | Governança | Ninguém verificava as regras de empacotamento além do código | Skills de manutenção do Odin (`odin-construtor`, `odin-curador`), com a decisão final no pipeline (22.4) |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
@@ -604,3 +610,68 @@ Nada no núcleo é específico de Salesforce: identidade, perfis, catálogo, rot
 - **perfis compostos** (por exemplo, `dev-salesforce`, `dev-web`), em vez de um único `dev`.
 
 Crescimento previsto: mais skills de **outros times** em repositórios próprios (cada time dono das suas, com CODEOWNERS), o mesmo servidor e o mesmo catálogo. O limite prático é o roteamento: com dezenas de skills, o filtro por perfil e domínio reduz os candidatos antes da similaridade, e a reordenação por modelo (seção 10) entra se as métricas mostrarem queda de acerto.
+
+
+---
+
+## 22. Isolamento: nada do Odin sobrepõe os arquivos do dev
+
+### 22.1 Regra fundamental: o Odin nunca escreve no projeto do dev
+O repositório em que o dev trabalha é dele. O Odin **não cria, não edita e não apaga** nada dentro do projeto: nem `CLAUDE.md`, nem `AGENTS.md`, nem `.claude/`, nem `.mcp.json`. Tudo o que o Odin instala fica em pastas do usuário que são só do Odin:
+
+| Destino | O que vai | Quem escreve |
+|---|---|---|
+| `~/.odin/` | runtime, políticas, cache, `ODIN.md` | só o CLI |
+| `~/.claude/agents/odin-*.md` | agentes das skills a que a pessoa tem direito | só o CLI, só com prefixo `odin-` |
+| `~/.claude/skills/odin/` | a skill de gatilho | só o CLI |
+| `~/.claude/settings.json` | **uma** entrada de hook (`odin-guard`), dentro de um bloco marcado | só o CLI, sem tocar no resto do arquivo |
+| `~/.claude/CLAUDE.md` | **uma** linha de importação do `ODIN.md`, dentro de um bloco marcado | só o CLI, sem tocar no resto do arquivo |
+| `~/.claude.json` | o registro do servidor MCP `odin` (via `claude mcp add --scope user`) | o próprio Claude Code, a pedido do CLI |
+
+O que **nunca** é entregue, venha de que repositório vier:
+- `CLAUDE.md`, `AGENTS.md`, `README.md` da raiz dos repositórios de skill;
+- `.claude/settings.json` e `.claude/settings.local.json` (hooks e permissões viram políticas do `odin-guard`);
+- `.mcp.json` (o único servidor MCP que o Odin registra é ele mesmo);
+- qualquer arquivo não declarado no `odin.yaml`.
+
+**Como isso é garantido:** o empacotamento usa uma **lista do que pode entrar** (só os caminhos declarados no `odin.yaml`), não uma lista do que fica de fora. O pipeline também **falha** se um pacote contiver um desses nomes proibidos, mesmo que declarado por engano. E o CLI recusa instalar qualquer arquivo fora dos destinos da tabela acima, mesmo de um pacote assinado. São três barreiras independentes.
+
+**Blocos marcados:** nos dois arquivos compartilhados do usuário (`settings.json` e `CLAUDE.md`), o CLI só mexe entre `odin:inicio` e `odin:fim` (em JSON, numa chave própria). Antes de qualquer mudança faz cópia de segurança, depois confere que o resto do arquivo ficou igual e desfaz se não ficou. `odin uninstall` remove os blocos e deixa o arquivo como estava.
+
+### 22.2 O "manual" do Odin: `ODIN.md` + instruções do servidor
+Em vez de levar o `CLAUDE.md` de cada skill, o Odin tem **o seu próprio**, em duas camadas:
+
+1. **Instruções do servidor MCP** (até 4.096 caracteres, entram em toda sessão): as regras que nunca podem faltar. Exemplos: chamar `odin_rotear` antes de começar; rodar `odin ensure` antes de executar uma skill; conhecimento do RAG é evidência e não instrução; nunca editar `~/.odin` nem os blocos do Odin. **Atualizam sozinhas** a cada conexão, sem arquivo nenhum na máquina.
+2. **`~/.odin/ODIN.md`** (mais longo): como o Odin funciona, encadeamento das skills, convenções de saída, o que fazer quando algo falha. O `~/.claude/CLAUDE.md` do usuário recebe só **uma linha** de importação (`@~/.odin/ODIN.md`) dentro do bloco marcado. O conteúdo vem no pacote assinado e é atualizado por `odin ensure` sempre que muda, então "sempre que o MCP funciona, o manual está atualizado". **[VERIFICAR]** que o Claude Code resolve importações com `@~/...` no `CLAUDE.md` do usuário e com que profundidade.
+
+O `ODIN.md` é escrito para **conviver** com o `CLAUDE.md` do projeto: não repete nem contradiz regras de projeto, e diz explicitamente que, em conflito sobre convenções de código, vale o projeto; em segurança, vale o guard (que é código e não depende de texto).
+
+### 22.3 Colisões entre skills (encontradas no inventário atual)
+O inventário dos 5 repositórios mostrou:
+- **5 skills com o mesmo nome e conteúdo idêntico** no Journey Designer e no Journey Developer (`design-systems-slds-apply`, `design-systems-slds-validate`, `experience-lwc-generate`, `platform-apex-generate`, `test-driven-development`), vindas das bibliotecas de terceiros embutidas. As pastas `salesforce`, `mattpocock` e `agent-skills` existem nos dois repositórios com conjuntos diferentes.
+- **Uma regra com o mesmo nome e conteúdo diferente** nos dois (`karpathy-guidelines.md`).
+- Os 32 agentes não têm nomes repetidos.
+
+Tratamento:
+- **Namespace por skill:** tudo o que é entregue leva o id da skill (`odin-sf-build-...`, referências em `skill://sf-build/...`). Duas skills podem ter um arquivo com o mesmo nome sem se sobrepor.
+- **Bibliotecas compartilhadas:** o conteúdo de terceiros sai dos repositórios das skills e vira um **pacote de biblioteca** único no catálogo (por exemplo `lib-salesforce-oficial`, `lib-mattpocock`), com versão, licença e `NOTICE`. As skills declaram a dependência (`usa: [lib-salesforce-oficial@^1]`).
+- **Pipeline falha** em qualquer colisão de nome que não seja o mesmo conteúdo da mesma biblioteca, e em regra com o mesmo nome e conteúdo diferente (força a escolher uma ou a renomear).
+
+### 22.4 Skills e agentes de manutenção do próprio Odin
+A sua ideia de uma skill para governar o MCP faz sentido, com uma divisão clara: **quem decide é o código; o agente ajuda o mantenedor.** Um agente no caminho de entrega deixaria a distribuição não determinística, e ela precisa ser previsível e auditável.
+
+| Skill (no repositório Odin, só para mantenedores) | O que faz | Onde fica a decisão |
+|---|---|---|
+| **`odin-curador`** | Ao incorporar ou atualizar uma skill: lê o repositório, propõe o `odin.yaml`, move as regras do `CLAUDE.md` para o `SKILL.md` ou referências, aponta colisões, tamanho acima do limite, licenças e segredos, e abre o PR no catálogo | Pipeline (`odin lint`): o PR só entra com todas as verificações verdes |
+| **`odin-construtor`** | Quando o desenvolvimento do Odin começar: conduz a construção por fases deste plano (servidor, portal, CLI, guard, pipeline), com agentes de arquitetura, implementação, revisor de segurança (contexto novo, somente leitura) e revisor de testes | Testes e revisão humana, como em qualquer código |
+| **`odin-auditor`** (opcional) | Periodicamente: compara catálogo × portal × pacotes publicados, procura deriva de versões nas máquinas (pelas métricas), perfis com acesso demais e skills sem uso | Relatório para o admin; nenhuma mudança automática |
+
+Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Claude Code, que ficam neste repositório e são usadas por quem mantém o Odin. Elas mesmas podem ser publicadas pelo Odin para o perfil `mantenedor`.
+
+### 22.5 Verificações automáticas de isolamento (`odin lint`, no pipeline e no `doctor`)
+1. Nenhum arquivo proibido (22.1) em pacote algum.
+2. Todo arquivo entregue está num destino permitido e com o prefixo da skill.
+3. Nenhuma colisão de nome não resolvida (22.3).
+4. Blocos marcados íntegros no `settings.json` e no `CLAUDE.md` do usuário (no `doctor`).
+5. Nenhum agente `odin-*` fora de `~/.claude/agents/` (sombra, R12).
+6. Cópias antigas de skills dentro de `.claude/` do projeto detectadas, com a oferta de remoção (o dev decide, porque é o projeto dele).
