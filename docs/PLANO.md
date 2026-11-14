@@ -80,10 +80,10 @@ Três planos:
 2. Instalar o CLI: **um comando** copiado do portal.
    - macOS/Linux: `curl -fsSL https://odin.<dominio>/install.sh | sh`
    - Windows: `irm https://odin.<dominio>/install.ps1 | iex`
-   - O instalador baixa o CLI da release do GitHub e confere o checksum e a atestação de origem (seção 9.3).
+   - O instalador baixa o CLI da release do GitHub e confere o checksum e a atestação de origem (seção 9.1).
 3. `odin setup`. Abre o navegador, a pessoa entra com a conta corporativa e o resto é automático:
    - registra o MCP Odin no Claude Code no escopo do usuário;
-   - instala o `odin-guard` (hook) e a skill local `odin`;
+   - instala o `odin-guard` (hook), a skill local `odin`, o `~/.odin/ODIN.md` e a linha que o importa no `CLAUDE.md` do usuário, e cria `~/.claude/agents/` (seção 22);
    - instala o runtime das skills a que a pessoa tem direito e confere os pré-requisitos (Node, git, `sf` CLI, Playwright quando aplicável);
    - termina com `odin doctor` verde, ou com a correção exata do que faltou.
 
@@ -95,12 +95,12 @@ A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não 
 |---|---|
 | Skill nova liberada para o perfil dele | Passa a ser roteada; o runtime instala no primeiro uso (`odin ensure`) |
 | Versão nova de uma skill | Nada: o conteúdo vem do servidor; o runtime se atualiza no primeiro uso |
-| Mudança nos hooks de segurança | Uma mensagem: "atualização de segurança instalada; reinicie a sessão" (seção 7.4) |
+| Mudança nos hooks de segurança | Normalmente nada (o Claude Code capta a mudança); só se o `guard-ping` falhar aparece "reinicie a sessão" (seção 7.4) |
 | Acesso revogado | A próxima chamada responde "sem acesso a X; fale com o administrador" |
 | Token expirado | Nada: o `headersHelper` renova sozinho; só pede login de novo se a credencial de longa duração for revogada |
 
 ### 3.4 Exemplos de ponta a ponta
-- **PO:** "Quero detalhar o discovery da R02." → a skill local `odin` chama `odin_rotear` → o Odin responde "Discovery-to-Backlog, 0,91" → `odin_carregar_skill` → `odin ensure sf-discover` (runtime ok) → a skill roda, consulta a base de regras de negócio, grava `discovery/R02/` no disco e sugere o próximo passo ("Journey Designer: spec").
+- **PO:** "Quero detalhar o discovery da R02." → o Claude Code, guiado pelas instruções do servidor Odin, chama `odin_rotear` → o Odin responde "Discovery-to-Backlog, 0,91" → `odin_carregar_skill` → `odin ensure sf-discover` (runtime ok) → a skill roda, consulta a base de regras de negócio, grava `discovery/R02/` no disco e sugere o próximo passo ("Journey Designer: spec").
 - **Dev:** "Cria a classe de teste do `CaseRouter`." → roteado para o Journey Developer (subskill de cobertura Apex) → busca padrões técnicos na base ("padrões de teste Apex, mocking de callout") → gera e roda os testes localmente → o hook impede deploy fora de sandbox.
 
 ---
@@ -114,12 +114,14 @@ A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não 
 | C3 | **Serviço de identidade** | Identity Platform (OIDC: Google ou Microsoft Entra) + emissor de tokens próprio (JWT assinado no KMS) | Device login, credencial de dispositivo, tokens de acesso curtos, revogação |
 | C4 | **odin CLI** | Node ≥ 20, binário único por plataforma | `setup`, `login`, `token` (headersHelper), `ensure`, `doctor`, `guard-ping`, `update`, `logout` |
 | C5 | **odin-guard** | Node, um hook `PreToolUse` (e `PostToolUse` quando preciso) | Despachante das políticas de segurança de todas as skills, fail-closed |
-| C6 | **Skill local `odin`** | `~/.claude/skills/odin/SKILL.md` | Gatilho: faz o Claude Code chamar o roteador sempre que o pedido for do ciclo de vida Salesforce |
+| C6 | **Gatilho e manual do Odin** | Instruções do servidor MCP + `~/.claude/skills/odin/SKILL.md` + `~/.odin/ODIN.md` | Fazer o Claude Code chamar o roteador em qualquer pedido coberto pelo Odin; explicar como o Odin funciona sem sobrepor o `CLAUDE.md` do projeto (7.6, 22.2) |
 | C7 | **Catálogo** | `catalog/` neste repositório (YAML) → Firestore | Quais skills existem, a versão fixada (commit SHA) de cada uma, perfis, canais |
 | C8 | **Pipeline de publicação** | GitHub Actions + Workload Identity Federation (sem chave de serviço) | Validar, testar, empacotar, assinar e publicar skills e conhecimento |
 | C9 | **Base de conhecimento (RAG)** | Repositório `odin-knowledge` (markdown) → Cloud SQL Postgres + pgvector, embeddings Vertex AI | Conhecimento funcional, técnico e de regra de negócio, com citação, vigência e controle de acesso |
 | C10 | **Observabilidade e auditoria** | Cloud Logging → BigQuery, Cloud Monitoring, Error Reporting | Trilha de auditoria imutável, métricas de uso e de roteamento, alertas |
 | C11 | **Infraestrutura como código** | Terraform (`infra/`) | Recriar o ambiente inteiro; isolar dev/poc e produção |
+| C12 | **`odin lint`** | Node, no pipeline e no `odin doctor` | Regras de isolamento, colisão, tamanho, licença e segredo (22.5) |
+| C13 | **Skills de manutenção** | `odin-curador`, `odin-construtor`, `odin-auditor` (neste repositório) | Ajudar os mantenedores a incorporar skills, construir e auditar o Odin; a decisão fica no código (22.4) |
 
 ---
 
@@ -154,7 +156,7 @@ sequenceDiagram
 - **Credencial de dispositivo:** uma por máquina, rotativa a cada uso e revogável no portal. Nunca aparece na tela nem em arquivo de texto: fica no cofre do sistema.
 - **Token de acesso:** JWT assinado com chave do Cloud KMS, com 15 min de validade, `aud=odin-mcp` e as claims `sub`, `email`, `perfis`, `projetos`, `device_id` e `ver_politica`. O MCP valida localmente pela chave pública e consulta uma lista de revogação em cache de 30 s.
 - **Renovação transparente:** o servidor é registrado no **escopo do usuário** (`claude mcp add --transport http --scope user odin <url>` com `"headersHelper": "odin token"`), e o Claude Code chama `odin token` para obter os cabeçalhos. **[CONFIRMADO]** O helper roda a cada conexão (início de sessão e reconexão) e de novo quando o servidor responde `401` ou `403`, repetindo a chamada uma vez. O Claude Code não guarda o resultado, então o cache fica no CLI. O helper tem até 10 s e deve imprimir um objeto JSON de cabeçalhos. No escopo do usuário ele roda sem depender da confiança da pasta, que só é exigida para servidores de projeto (`.mcp.json`) ou de escopo local. Consequência: quando o JWT expira no meio da sessão, o MCP responde `401`, o Claude Code chama o helper de novo e a chamada é repetida, sem nada visível para o usuário. **[VERIFICAR]** o mesmo comportamento na extensão do VS Code.
-- **Plano B (portal):** o portal tem uma página **"Gerar token"** para o usuário logado, para clientes ou situações sem o CLI: token pessoal de no máximo 90 dias, escopo reduzido, exibido uma vez, usado como `claude mcp add ... --header "Authorization: Bearer <token>"`. É exceção auditada; o caminho normal é o device login, que também passa pelo portal.
+- **Plano B (portal):** o portal tem uma página **"Gerar token"** para o usuário logado, para clientes ou situações sem o CLI: token pessoal de no máximo 90 dias, escopo reduzido, exibido uma vez, usado como `claude mcp add ... --header "Authorization: Bearer <token>"`. Como esse token fica em texto no `~/.claude.json`, é exceção auditada, com validade curta e alerta de uso fora do padrão; o caminho normal é o device login, que também passa pelo portal.
 - **Plano C (alternativa nativa):** **[CONFIRMADO]** o Claude Code suporta OAuth 2.0 em servidores HTTP: o login abre no navegador via `/mcp` ou `claude mcp login odin`, com registro dinâmico de cliente, documento de metadados de cliente (CIMD) ou cliente pré-registrado (`--client-id`, `--client-secret`, `--callback-port`). Exige que o portal funcione como servidor de autorização OAuth compatível com MCP. Fica como evolução: só vale a troca se dispensar o login separado do CLI, e o CLI continua necessário para o runtime. Decidir depois de F0.
 
 ### 5.2 Ciclo de vida da pessoa
@@ -208,16 +210,20 @@ O MCP entrega **instruções**. Scripts (validadores, motor Playwright, geradore
   runtime/<skill>/current -> <versão>
   policies/<versão>/               políticas do guard (de todas as skills a que tem direito)
   cache/                           manifestos, token, direitos (cifrados)
+  ODIN.md                          manual do Odin para o modelo (22.2)
 ~/.claude/skills/odin/SKILL.md     gatilho
 ~/.claude/agents/odin-*.md         agentes materializados (só das skills a que tem direito)
-~/.claude/settings.json            1 entrada de hook → odin-guard (gerida só pelo instalador)
+~/.claude/settings.json            1 entrada de hook → odin-guard, num bloco marcado (só o CLI mexe)
+~/.claude/CLAUDE.md                1 linha de importação do ODIN.md, num bloco marcado (só o CLI mexe)
+(projeto do dev)                   NADA: o Odin nunca escreve no repositório do dev (22.1)
 ```
 
 ### 7.2 `odin ensure <skill>` (o "verifica, instala e usa")
 É o primeiro passo obrigatório de toda skill (vem escrito no texto que o MCP entrega):
 1. Lê o manifesto da skill pela **API REST do Odin** (o mesmo serviço do MCP, em `/v1/manifest/<skill>`, com o mesmo token; o CLI não é cliente MCP): versão, `runtime_sha256`, pré-requisitos, agentes, políticas.
 2. Compara com o que está instalado.
-3. Se faltar ou estiver desatualizado: baixa, **verifica a assinatura** contra a chave pública embutida no CLI, extrai numa pasta nova, instala dependências com `npm ci` usando o lockfile do pacote e troca `current` de forma atômica. A versão anterior fica guardada para rollback.
+3. Se faltar ou estiver desatualizado: baixa, **verifica a assinatura** contra a chave pública embutida no CLI, extrai numa pasta nova e troca `current` de forma atômica. A versão anterior fica guardada para rollback.
+   - **Dependências:** as dependências JavaScript vão **dentro do pacote assinado** (`node_modules` gerado no pipeline), sem `npm install` na máquina. Assim a assinatura cobre também as dependências e o uso não depende do registro do npm. Exceções nativas grandes (os navegadores do Playwright) usam o instalador oficial da ferramenta, na versão fixada no manifesto.
 4. Confere os pré-requisitos (`node`, `git`, `sf`, navegadores do Playwright). Se faltar algo instalável sem privilégio, instala; senão, para com a correção exata (por exemplo, "instale o Salesforce CLI: <comando>").
 5. Materializa os agentes da skill em `~/.claude/agents/`. **[CONFIRMADO]** O Claude Code observa `~/.claude/agents/` e usa um agente novo ou editado na delegação seguinte, sem reiniciar, **desde que a pasta já existisse quando a sessão começou**. Por isso o `odin setup` cria a pasta no onboarding.
 6. Confirma o guard ativo (7.4).
@@ -230,7 +236,7 @@ O modelo **nunca monta comando de instalação**. Ele só roda `odin ensure <ski
 - **Políticas globais** (sempre ativas): negar leitura de `.env*` e de chaves, negar `rm -rf` fora do projeto, negar `git push --force` e negar deploy para produção.
 - **Políticas de skill:** ativas quando a skill está em uso. Ficam como gatilho por diretório de execução (por exemplo `.sf-test/`) ou pelo marcador de sessão criado por `odin ensure`.
 - **Fail-closed:** se o guard falhar, a política estiver corrompida ou a assinatura não conferir, o comando é **negado**, com uma mensagem orientando `odin doctor`.
-- **O agente não altera o guard:** a política global nega editar `~/.claude/settings.json`, `~/.odin/` e `~/.claude/agents/odin-*`. Só o CLI (fora da sessão do modelo, ou via `odin ensure`, que verifica assinatura) mexe neles.
+- **O agente não altera o guard nem o Odin:** a política global nega editar `~/.odin/`, `~/.claude/agents/odin-*`, `~/.claude/skills/odin/` e qualquer edição de `~/.claude/settings.json` ou `~/.claude/CLAUDE.md` que altere os blocos do Odin (o resto desses arquivos continua livre para o dev). Só o CLI (fora da sessão do modelo, ou via `odin ensure`, que verifica assinatura) mexe neles.
 
 ### 7.4 Confirmar que o guard está ativo nesta sessão
 **[CONFIRMADO]** A documentação diz que edições de hooks nos arquivos de configuração "normalmente" são captadas pelo observador de arquivos, sem reinício, e que os hooks disparam igual no terminal, nas extensões de IDE, no app desktop e na nuvem. Um hook de `PreToolUse` bloqueia com código de saída 2 ou com `permissionDecision: "deny"`, e ficar em silêncio não aprova a chamada. Como a palavra é "normalmente", o plano não depende disso e **comprova** que o guard está ativo:
@@ -249,7 +255,7 @@ O modelo **nunca monta comando de instalação**. Ele só roda `odin ensure <ski
 ### 7.6 Gatilho: instruções do servidor + skill local `odin`
 **[CONFIRMADO]** Com a busca de ferramentas (ligada por padrão), só os **nomes das ferramentas e as instruções do servidor** entram no contexto no início da sessão; as definições completas são carregadas sob demanda. As instruções do servidor são cortadas em 4.096 caracteres, e a descrição de uma ferramenta carregada pela busca em 16.384. Então:
 1. **Instruções do servidor Odin (principal):** até 4.096 caracteres, começando pelo essencial: "para qualquer tarefa do ciclo de desenvolvimento de software coberto pelo Odin (discovery, backlog, spec, protótipo, desenvolvimento Salesforce, dados, testes), chame `odin_rotear` antes de começar". É o gatilho nativo, e se atualiza sozinho com o servidor.
-2. **Skill local `odin` (reforço):** curta, sem segredo, com a mesma regra. Cobre o caso em que a busca de ferramentas está desligada (seção 18, R11) ou as instruções do servidor não foram suficientes.
+2. **Skill local `odin` (reforço):** curta, sem segredo, com a mesma regra. Cobre o caso em que o modelo não associa o pedido às instruções do servidor (R4). Se a busca de ferramentas estiver desligada (R11), o gatilho continua funcionando; o que muda é o custo de contexto.
 3. As descrições das ferramentas começam pelas palavras que o modelo buscaria, porque a busca lê primeiro o início do texto.
 
 ---
@@ -283,7 +289,9 @@ runtime:
 politicas: [guard-qa]
 conhecimento: [tecnico, negocio, licoes]          # coleções que a skill consulta
 licenca_terceiros: []                             # skills de terceiros embutidas (seção 15)
+usa: []                                           # pacotes de biblioteca compartilhados, ex.: [lib-salesforce-oficial@^1] (22.3)
 ```
+Só os caminhos declarados em `skills`, `agentes`, `regras` e `runtime` são empacotados: **é a lista do que pode ser entregue** (22.1). `CLAUDE.md`, `AGENTS.md`, `settings.json` e `.mcp.json` nunca entram, mesmo se declarados.
 
 ### 8.2 Catálogo central (`catalog/` neste repositório)
 - `catalog/skills.yaml`: cada skill com `repo`, **SHA fixado**, canal e estado (`ativa`, `beta`, `aposentada`).
@@ -294,10 +302,11 @@ licenca_terceiros: []                             # skills de terceiros embutida
 1. Baixa cada repositório de skill no SHA fixado.
 2. Valida: `odin.yaml`, frontmatter dos `SKILL.md` e dos agentes, e caminhos referenciados existentes. Aplica a regra "nada de alias de org, nome real ou segredo" (varredura de segredos e PII).
 3. Roda os testes do repositório da skill (os que já existem, como os 71 do Test Automator).
-4. **Reescreve caminhos** para o contrato Odin (8.5) e gera o **pacote de conteúdo** (servido pelo MCP) e o **pacote de runtime** (`tar.zst`).
-5. Calcula o SHA-256 de cada pacote e assina o manifesto com chave assimétrica no **Cloud KMS**. O CI só tem permissão de *assinar*, nunca de exportar a chave.
-6. Publica no Cloud Storage (versionado, com retenção) e atualiza o índice no Firestore, além dos embeddings de roteamento.
-7. Smoke test pós-publicação: `odin_rotear` com as intenções de exemplo de cada skill tem de devolver a skill certa no topo.
+4. Roda o **`odin lint`** (22.5): arquivos proibidos, destinos, colisões de nome, tamanho de cada `SKILL.md` e referência (≤ 8.000 tokens), licenças de terceiros.
+5. **Reescreve caminhos** para o contrato Odin (8.5) e gera o **pacote de conteúdo** (servido pelo MCP) e o **pacote de runtime** (`tar.zst`, com as dependências).
+6. Calcula o SHA-256 de cada pacote e assina o manifesto com chave assimétrica no **Cloud KMS**. O CI só tem permissão de *assinar*, nunca de exportar a chave.
+7. Publica no Cloud Storage (versionado, com retenção) e atualiza o índice no Firestore, além dos embeddings de roteamento.
+8. Smoke test pós-publicação: `odin_rotear` com as intenções de exemplo de cada skill tem de devolver a skill certa no topo.
 
 ### 8.4 Canais e rollback
 - `beta` → mantenedores (e quem receber o canal); `stable` → todos.
@@ -317,7 +326,7 @@ As skills hoje referenciam `.claude/skills/<skill>/scripts/...` relativo ao proj
 |---|---|---|
 | CLI | Release do GitHub com **atestação de origem** (artifact attestation do GitHub Actions) + checksum | Espelhos, cópias |
 | Runtime, políticas e agentes | **Assinatura do KMS**, verificada contra a chave pública embutida no CLI | O MCP (ele só aponta *qual* versão usar) |
-| Conteúdo das skills | Hash no manifesto assinado (o CLI confere quando entrega referências locais) | Texto montado dinamicamente |
+| Conteúdo das skills | Hash no manifesto assinado: o MCP só serve conteúdo cujo hash confere, e o `odin doctor` compara amostras com o manifesto | Texto montado dinamicamente |
 | Conhecimento (RAG) | Origem curada (PR aprovado) | Contribuições não revisadas |
 
 Quem compromete o MCP consegue sugerir uma versão, mas **não consegue forjar** um pacote assinado. A rotação da chave de assinatura é feita por uma versão nova do CLI com duas chaves aceitas durante a transição.
@@ -483,13 +492,13 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 
 | Fase | Entrega | Critério de aceite |
 |---|---|---|
-| **F0 Verificações** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa | Planilha de resultado; o desenho é ajustado antes de F1 |
+| **F0 Verificações e ferramentas de manutenção** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; importação `@~/.odin/ODIN.md` no `CLAUDE.md` do usuário (R13); **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa. Também: as skills `odin-construtor` e `odin-curador` (são markdown e agentes, e ajudam a construir as fases seguintes) | Planilha de resultado; o desenho é ajustado antes de F1 |
 | **F1 Fundação** | Projeto GCP, Terraform, WIF, orçamento, Cloud Run vazio, domínio (ou `run.app`) | `terraform apply` do zero em menos de 15 min; CI publica uma imagem sem chave |
 | **F2 Identidade** | Identity Platform, emissor de JWT (KMS), device flow, portal mínimo (login, dispositivos, revogar), lista de revogação | Login no navegador → credencial no cofre → `odin token` emite JWT; revogar invalida em ≤ 30 s |
-| **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, pipeline completo (validar, testar, reescrever caminhos, empacotar, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI |
+| **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md` ou colisão de nome é recusado pelo pipeline |
 | **F4 MCP** | Ferramentas da seção 10, autorização por perfil e projeto, auditoria | PO de teste vê só Discovery e Designer; dev vê Developer, Data e Test; 100% das chamadas auditadas |
-| **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`), `odin-guard` com as políticas migradas, skill local `odin`, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; Windows, macOS e Linux |
-| **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios | Os testes atuais de cada skill passam rodando a partir do runtime Odin; uma tarefa real de cada skill completa ponta a ponta |
+| **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
+| **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; uma tarefa real de cada skill completa ponta a ponta |
 | **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, pgvector, segurança em nível de linha, avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
 | **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
 | **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
@@ -505,6 +514,7 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 - **Segurança:** pacote adulterado sempre recusado; guard ausente sempre bloqueia; nenhuma skill com segredo ou dado de cliente (varredura no CI).
 - **Roteamento:** ≥ 90% de acerto no conjunto de intenções de teste; "não sei" em vez de chute abaixo do limiar.
 - **Conhecimento:** toda resposta com citação; meta de recuperação por coleção atingida; nenhuma injeção aceita na ingestão (casos de teste).
+- **Isolamento:** 0 arquivos escritos pelo Odin dentro de projetos; 0 colisões de nome não resolvidas no catálogo; `odin uninstall` devolve os arquivos do usuário idênticos ao que eram.
 
 ---
 
@@ -516,6 +526,8 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | R2 | A extensão do VS Code ter comportamento diferente do terminal. A documentação de MCP não cobre a configuração de servidores na extensão, e as "tarefas MCP" não existem nela; os hooks disparam igual | Testar o servidor de escopo do usuário, o `headersHelper` e os prompts na extensão em F0 |
 | R11 | **Busca de ferramentas através do LiteLLM** [CONFIRMADO o requisito]: com `ANTHROPIC_BASE_URL` apontando para um gateway, o Claude Code espera que ele repasse os campos `defer_loading`, os blocos `tool_reference` e o cabeçalho `anthropic-beta`. Se o LiteLLM não repassar, a chamada falha ou (v2.1.305+) é refeita sem busca de ferramentas, e aí todas as definições do Odin entram no contexto | Teste em F0 com o LiteLLM real; manter o Odin com **poucas ferramentas** (7) e descrições curtas para que o custo seja pequeno mesmo sem busca; a skill local `odin` garante o gatilho |
 | R12 | Agente de projeto com o mesmo nome sombreando um agente `odin-*` | Alerta do guard e do doctor + conferência de hash antes de delegar (7.5) |
+| R13 | Importação `@~/.odin/ODIN.md` não suportada ou limitada no `CLAUDE.md` do usuário | Teste em F0; alternativa: o CLI escreve o conteúdo do `ODIN.md` direto no bloco marcado (mais texto, mesma garantia de não sobrepor) |
+| R14 | Dependências de terceiros dos scripts (cadeia de suprimentos do npm) | Dependências empacotadas e assinadas no pipeline, com Dependabot e varredura de vulnerabilidades; nada de `npm install` na máquina do usuário (7.2) |
 | R3 | Paridade Windows (hooks, cofre de credencial, caminhos, `npm ci`) | Matriz de CI com Windows desde F5 |
 | R4 | Escolha de skill pelo modelo: o Claude Code pode não chamar o roteador | Skill local `odin` (7.6) + métrica de "pedido sem roteamento" |
 | R5 | Revogação não apaga o que já está no disco | Aceito para conteúdo de método; segredo e dado de cliente nunca em skill |
@@ -539,6 +551,10 @@ packages/cli/           odin CLI
 packages/guard/         odin-guard + módulos de política (migrados das skills)
 packages/manifest/      schema do odin.yaml e do manifesto assinado
 packages/router/        roteamento (embeddings + regras)
+packages/lint/          odin lint (isolamento, colisões, tamanho, licença, segredo)
+policies/               módulos de política do guard, com testes
+skills/                 odin-curador, odin-construtor, odin-auditor (para mantenedores)
+libs/                   pacotes de biblioteca de terceiros compartilhados, com LICENSE e NOTICE
 catalog/                skills.yaml, perfis.yaml
 pipeline/               validação, empacotamento, assinatura, publicação
 infra/                  Terraform (poc e prod)
@@ -550,7 +566,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por sete rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação e isolamento). O que cada rodada mudou:
+O plano passou por oito rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento e consistência geral). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -581,7 +597,14 @@ O plano passou por sete rodadas de revisão contra os objetivos (fricção, gove
 | 7 | Isolamento | `CLAUDE.md`, `AGENTS.md`, `settings.json` e `.mcp.json` das skills poderiam sobrepor os arquivos do dev | Lista do que pode ser entregue (só o declarado no `odin.yaml`) + bloqueio no pipeline + o projeto do dev nunca é tocado (seção 22) |
 | 7 | Isolamento | Faltava um "manual" do próprio Odin para o modelo | `ODIN.md` gerido pelo Odin, importado por uma linha no `CLAUDE.md` do usuário, mais as instruções do servidor (22.2) |
 | 7 | Isolamento | Nomes repetidos entre repositórios: 5 skills duplicadas (conteúdo igual) e uma regra com o mesmo nome e conteúdo diferente | Nomes únicos no catálogo, pacote compartilhado para bibliotecas, pipeline falha em colisão (22.3) |
-| 7 | Governança | Ninguém verificava as regras de empacotamento além do código | Skills de manutenção do Odin (`odin-construtor`, `odin-curador`), com a decisão final no pipeline (22.4) |
+| 7 | Governança | Ninguém verificava as regras de empacotamento além do código | Skills de manutenção do Odin (`odin-curador`, `odin-construtor`), com a decisão final no pipeline (22.4) |
+| 8 | Consistência | Componentes, árvore de arquivos, onboarding, fases e critérios não refletiam `ODIN.md`, blocos marcados, `odin lint` e as skills de manutenção | C6, C12 e C13 (4); árvore (7.1); onboarding (3.1); F0, F3, F5 e F6 (16); critério de isolamento (17); estrutura do repositório (19) |
+| 8 | Segurança | `npm ci` na máquina deixava as dependências fora da assinatura | Dependências empacotadas no pacote assinado (7.2) e novo risco R14 |
+| 8 | Segurança | O guard negava editar todo o `settings.json` e não protegia o `CLAUDE.md` do usuário | Guard protege só os blocos e as pastas do Odin; o resto continua livre para o dev (7.3) |
+| 8 | Segurança | O token do plano B fica em texto no `~/.claude.json` | Registrado como exceção, com validade curta e alerta (5.1) |
+| 8 | Consistência | A rodada 6 dizia que, sem a busca de ferramentas, o gatilho falharia; na verdade só aumenta o custo de contexto | Texto corrigido (7.6) |
+| 8 | Consistência | Origem do hash do conteúdo confusa (o CLI não entrega o conteúdo das skills) | O MCP só serve conteúdo cujo hash confere com o manifesto (9.1) |
+| 8 | Fricção | Hooks novos exigiam reinício segundo a seção 3.3, em contradição com a 7.4 | Reinício só quando o `guard-ping` falha (3.3) |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
