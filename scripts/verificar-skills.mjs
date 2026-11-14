@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export function frontmatter(t) {
+  t = t.replace(/\r\n/g, '\n');
   const m = t.match(/^---\n([\s\S]*?)\n---\n/);
   if (!m) return null;
   const fm = {};

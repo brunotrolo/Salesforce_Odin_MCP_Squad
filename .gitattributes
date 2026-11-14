@@ -1,0 +1,4 @@
+# Quebra de linha LF em todo o repositório (Windows incluído), para scripts, frontmatter e hooks lerem igual.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

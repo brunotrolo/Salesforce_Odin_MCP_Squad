@@ -29,7 +29,7 @@ export function gravarMarcador(raiz, numero) {
 export function novo(raiz, titulo) {
   if (!titulo || titulo.length < 5) throw new Error('informe um título com pelo menos 5 caracteres');
   const numero = proximoNumero(raiz);
-  const modelo = readFileSync(join(raiz, 'docs/adr/0000-modelo.md'), 'utf8');
+  const modelo = readFileSync(join(raiz, 'docs/adr/0000-modelo.md'), 'utf8').replace(/\r\n/g, '\n');
   const texto = modelo
     .replace(/^#\s+.*$/m, `# ${numero}. ${titulo}`)
     .replace(/^\*\*Status:\*\*.*$/m, '**Status:** Proposto')
@@ -44,7 +44,7 @@ function mudarStatus(raiz, n, status, extra = '') {
   const adr = listarAdrs(raiz).find((a) => a.numero === String(n).padStart(4, '0'));
   if (!adr) throw new Error(`ADR ${n} não encontrado`);
   const p = join(raiz, adr.arquivo);
-  const t = readFileSync(p, 'utf8').replace(/^\*\*Status:\*\*.*$/m, `**Status:** ${status}${extra}`);
+  const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n').replace(/^\*\*Status:\*\*.*$/m, `**Status:** ${status}${extra}`);
   writeFileSync(p, t);
   return adr.arquivo;
 }

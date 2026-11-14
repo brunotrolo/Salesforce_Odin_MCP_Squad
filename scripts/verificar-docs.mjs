@@ -35,7 +35,7 @@ export function verificar(raiz, { base = null } = {}) {
 
   for (const abs of arquivos) {
     const rel = relative(raiz, abs).split('\\').join('/');
-    const t = readFileSync(abs, 'utf8');
+    const t = readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
     const linhas = t.split('\n');
     // links
     for (const m of t.matchAll(/\]\(([^)#\s]+\.md)(#[^)]*)?\)/g)) {

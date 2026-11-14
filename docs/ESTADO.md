@@ -10,7 +10,7 @@
 - Ainda **não há código** do Odin (servidor, portal, CLI, guard).
 
 ## Feito (resumo, mais recente primeiro)
-- 2026-11-14 · ADR 0016: skills, agentes, hook, scripts de verificação, testes e CI.
+- 2026-11-14 · ADR 0016: skills, agentes, hook, scripts de verificação, testes e CI. O CI no Windows pegou leitura de CRLF: scripts normalizam e `.gitattributes` fixa LF.
 - 2026-11-14 · Apresentação interativa (`apresentacao/`).
 - 2026-11-14 · Rodadas 13 a 15: decisões do mantenedor integradas; GitHub Free (decisão 41).
 

@@ -37,7 +37,7 @@ export function listarAdrs(raiz) {
     .filter((f) => /^\d{4}-.+\.md$/.test(f))
     .sort()
     .map((f) => {
-      const t = readFileSync(join(dir, f), 'utf8');
+      const t = readFileSync(join(dir, f), 'utf8').replace(/\r\n/g, '\n');
       const titulo = (t.match(/^#\s+(.+)$/m) || [, f])[1].trim();
       const status = ((t.match(/^\*\*Status:\*\*\s*(\w+)/mi) || t.match(/^Status:\s*(\w+)/mi) || [, 'Desconhecido'])[1]).trim();
       return { numero: f.slice(0, 4), arquivo: `docs/adr/${f}`, titulo, status };

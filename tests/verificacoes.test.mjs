@@ -79,3 +79,20 @@ test('repositório real: documentação íntegra, skills e agentes válidos, con
   assert.ok(s.skills >= 4 && s.agentes >= 5);
   assert.deepEqual(avaliar(RAIZ).filter((x) => x.resultado === 'violação'), []);
 });
+
+test('Windows: arquivos com quebra de linha CRLF são lidos como LF (skills, agentes, ADR, ESTADO e documentos)', async () => {
+  const crlf = (s) => s.replace(/\n/g, '\r\n');
+  const r = repoTemp({
+    '.claude/skills/boa/SKILL.md': crlf('---\nname: boa\ndescription: Faz algo útil.\n---\n\nCorpo.\n'),
+    '.claude/agents/odin-revisor-y.md': crlf('---\nname: odin-revisor-y\ndescription: revisa\ntools: Read, Grep\n---\n'),
+    'docs/adr/0016-x.md': crlf(ADR('0016', 'Aceito')),
+    'docs/ESTADO.md': crlf('# E\n## Agora\nF0\n## Próximo passo\nRoteiro\n'),
+    'docs/a.md': crlf('# A\n## 1. Um\nVer (seção 1).\n| a | b |\n'),
+  });
+  assert.deepEqual(verificarSkills(r).erros, []);
+  assert.deepEqual(verificarDocs(r).erros, []);
+  const { listarAdrs } = await import('../scripts/lib/protegidos.mjs');
+  assert.match(listarAdrs(r).find((a) => a.numero === '0016').status, /Aceito/);
+  const { secaoEstado } = await import('../scripts/sessao.mjs');
+  assert.equal(secaoEstado(r, 'Agora'), 'F0');
+});

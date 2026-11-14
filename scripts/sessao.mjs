@@ -12,7 +12,7 @@ const git = (raiz, args) => { try { return execFileSync('git', args, { cwd: raiz
 export function secaoEstado(raiz, titulo) {
   const p = join(raiz, 'docs/ESTADO.md');
   if (!existsSync(p)) return null;
-  const t = readFileSync(p, 'utf8');
+  const t = readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
   const i = t.indexOf(`## ${titulo}`);
   if (i < 0) return null;
   const resto = t.slice(i + titulo.length + 3);
