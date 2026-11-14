@@ -550,7 +550,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por seis rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade e verificação na documentação). O que cada rodada mudou:
+O plano passou por sete rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação e isolamento). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
