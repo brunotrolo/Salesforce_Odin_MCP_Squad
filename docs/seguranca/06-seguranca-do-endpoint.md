@@ -37,11 +37,19 @@ O Claude Code roda com acesso total à máquina. O Odin acrescenta skills e scri
 
 **Limite honesto:** o guard intercepta as ferramentas do Claude Code (Bash, Edit, Write, Read e outras). Um script já permitido que, por dentro, faça algo indevido não é visto pelo guard. Por isso os scripts das skills são revisados e assinados (05), e os scripts do projeto do dev são do dev.
 
-### 3.1 Token do Jira (e outras credenciais de terceiros)
-- O token do Jira fica **na máquina do usuário**, na configuração do MCP do Jira. Ele nunca passa pelo Odin.
-- **Recomendado:** guardar o token no cofre do sistema e deixar a configuração do MCP só referenciá-lo, quando o MCP do Jira usado permitir [VERIFICAR o MCP do Jira adotado]. Senão, em arquivo com permissão `0600`, fora de qualquer repositório.
-- O `odin doctor` avisa se encontrar um token do Jira (ou de outro serviço) em arquivo de projeto, em `.env` versionado ou com permissão aberta.
+### 3.1 Token do Jira (MCP oficial da Atlassian) e outras credenciais de terceiros
+O time usa o **servidor MCP remoto oficial da Atlassian** (`https://mcp.atlassian.com/v2/mcp`). A credencial fica **na máquina do usuário**, configurada no Claude Code, e nunca passa pelo Odin. O servidor aceita dois modos:
+
+| Modo | Como fica na máquina | Recomendação |
+|---|---|---|
+| **OAuth 2.1** (padrão: `claude mcp add --transport http atlassian https://mcp.atlassian.com/v2/mcp` e depois `/mcp` para entrar) | O Claude Code guarda o token OAuth, limitado às permissões da pessoa no Jira [VERIFICAR onde o Claude Code guarda o token em cada sistema] | **Preferido:** sem token de longa duração em arquivo, com consentimento e escopo da pessoa |
+| **Token de API** (sem tela de consentimento; precisa ser habilitado pelo administrador da Atlassian; necessário para as ferramentas do Jira Service Management) | Cabeçalho `Authorization` (Basic com e-mail:token, ou Bearer para chave de conta de serviço) | Usar **só com `headersHelper`** que lê o token do **cofre do sistema** (o próprio `odin` CLI pode oferecer o helper). **Nunca** como cabeçalho fixo no `~/.claude.json`, onde ficaria em texto |
+
+- Houve relato (março de 2026) de o Claude Code não abrir o fluxo OAuth com esse servidor. Se o `/mcp` não iniciar o login, o modo token de API com `headersHelper` é a alternativa [VERIFICAR na F0].
+- O guard nega ao modelo a leitura desses locais (PG-01). Quem usa a credencial é o próprio Claude Code ao chamar o MCP da Atlassian.
+- O `odin doctor` avisa se encontrar um token da Atlassian (ou de outro serviço) em arquivo de projeto, em `.env` versionado, com permissão aberta ou como cabeçalho fixo no `~/.claude.json`.
 - A escrita no Jira continua sujeita à política de skill do Discovery (`guard-jira-write`: só com plano aprovado, sem exclusão nem mudança de status).
+- Fontes: [repositório oficial atlassian-mcp-server](https://github.com/atlassian/atlassian-mcp-server), [primeiros passos](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/), [autenticação por token de API](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/configuring-authentication-via-api-token/), [relato do problema de OAuth no Claude Code](https://github.com/anthropics/claude-code/issues/36374).
 
 ## 4. Políticas de skill (ativas quando a skill está em uso)
 Migradas das skills atuais, com testes: `guard-qa` (Test Automator: só sandbox, ação destrutiva só em registro criado pela execução, sem XPath), `guard-deploy` (Journey Developer), proteção de escrita no Jira (Discovery), políticas do Data Architect, verificação do protótipo (Designer).
