@@ -23,7 +23,7 @@ decidir(pessoa, acao, alvo):
   caso contrário                                     → NEGAR (sem_acesso)
   sempre: auditar(decisão, motivo)
 ```
-- **Duas barreiras no conhecimento:** a aplicação filtra e o banco filtra de novo (política de linha com os projetos e as coleções da pessoa). Um erro na aplicação não vaza dados de outro cliente.
+- **Duas barreiras no conhecimento** (em produção, com Cloud SQL; na PoC com Firestore só a primeira, por isso sem conhecimento confidencial): a aplicação filtra e o banco filtra de novo (política de linha com os projetos e as coleções da pessoa). Um erro na aplicação não vaza dados de outro cliente.
 - **Política versionada:** toda mudança administrativa incrementa o `policyVersion` das pessoas afetadas, o que invalida o cache delas na hora.
 
 ## 3. Princípios aplicados

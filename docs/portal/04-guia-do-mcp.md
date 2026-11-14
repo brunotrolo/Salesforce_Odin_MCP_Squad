@@ -29,7 +29,7 @@ O trabalho continua **na sua máquina**: o Odin não vê o seu código nem o que
 - **não escreve nada no seu projeto.**
 
 ### 2.2 Conferir no Claude Code
-- No Claude Code, `/mcp` lista os servidores: `odin` deve aparecer **conectado**.
+- No Claude Code, `/mcp` lista os servidores: `odin` deve aparecer **conectado**. Na extensão do VS Code, a lista de servidores MCP fica no painel do Claude [VERIFICAR o caminho exato na extensão].
 - Os atalhos das skills aparecem como comandos: digite `/` e procure por `odin` (por exemplo, `/odin:discovery`).
 
 ### 2.3 Alternativa sem CLI (exceção)

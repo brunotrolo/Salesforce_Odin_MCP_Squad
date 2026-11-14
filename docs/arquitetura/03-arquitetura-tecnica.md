@@ -29,6 +29,8 @@
 | **Cloud Storage** | `odin-bundles-<amb>` | Versionamento, retenção de 365 dias, acesso uniforme, prevenção de acesso público, CMEK | Pacotes assinados |
 | Cloud Storage | `odin-kb-snapshots-<amb>` | Versionamento, ciclo de vida de 180 dias | Cópia do que foi ingerido |
 | Cloud Storage | `odin-tfstate-<amb>` | Versionamento, acesso só do CI de infraestrutura | Estado do Terraform |
+| Cloud Storage | `odin-cli-<amb>` | **Privado** (prevenção de acesso público mantida), escrita só pelo CI, versionamento | Binários do CLI. O download é servido pelo **portal** (`/download/cli/<versao>/<plataforma>`), sem login, porque o binário não é segredo e os repositórios são privados (decisão 5) |
+| Cloud KMS | chave `cli-signing` | Assimétrica P-256 | Assinatura dos binários do CLI (autoatualização) |
 | **Cloud KMS** | chaveiro `odin` | `bundle-signing` (assimétrica, `EC_SIGN_P256_SHA256`, HSM em prod); `jwt-signing` (assimétrica, `EC_SIGN_P256_SHA256`); `cmek` (simétrica, rotação de 90 dias) | Assinatura de pacotes, JWT e criptografia |
 | **Secret Manager** | `github-app-key`, `github-webhook-secret`, `github-oauth-client-secret`, `session-secret` | Replicação na região, versões com rotação | Segredos |
 | Artifact Registry | `odin-images` | Docker, varredura de vulnerabilidades | Imagens dos serviços |
@@ -60,7 +62,7 @@ flowchart LR
 ```
 
 - **Domínios:** `odin.<dominio>` (portal), `mcp.<dominio>` (MCP e `/v1`), `auth.<dominio>` (STS), `hooks.<dominio>` (webhooks). Na prova de conceito, os endereços `run.app` servem; a borda entra antes de chamar o time.
-- **Ingress:** os serviços públicos aceitam tráfego **só do Load Balancer** (configuração de ingress do Cloud Run), para que o Cloud Armor não possa ser contornado. O `odin-publisher` é interno e exige IAM.
+- **Ingress:** em produção, os serviços públicos aceitam tráfego **só do Load Balancer** (configuração de ingress do Cloud Run), para que o Cloud Armor não possa ser contornado. **Na PoC** (sem Load Balancer, decisão 6) os serviços usam o endereço `run.app` com ingress público; a proteção fica na autenticação, nos limites por pessoa no próprio serviço e, nos webhooks, na assinatura HMAC. O `odin-publisher` é interno e exige IAM nos dois casos.
 - **Cloud Armor:** regras OWASP (injeção de SQL, XSS, LFI, RCE); limite de 300 requisições/min por IP no MCP e de 30/min nos endpoints de token e ativação; `hooks.` aceita apenas as faixas de IP do GitHub (publicadas em `api.github.com/meta`, atualizadas por job) além da assinatura HMAC.
 - **TLS:** 1.2+ com política moderna; HSTS no portal.
 
@@ -70,7 +72,7 @@ flowchart LR
 |---|---|---|
 | `odin-mcp` | `sa-mcp` | `datastore.user`; `cloudsql.client` + usuário IAM no banco (somente leitura no RAG); `storage.objectViewer` no bucket de pacotes; `iam.serviceAccountTokenCreator` **em si mesma** (para gerar URLs assinadas); `kms` **verificador** na chave `jwt-signing` (ou JWKS em cache); `aiplatform.user` (embedding da consulta) |
 | `odin-sts` | `sa-sts` | `datastore.user`; `cloudkms.signerVerifier` **só** na chave `jwt-signing` |
-| `odin-portal` | `sa-portal` | `datastore.user`; `firebaseauth.admin` (verificar ID tokens e cookies de sessão); `bigquery.dataViewer` + `jobUser` nos conjuntos de auditoria e de métricas (auditor e consumo); `secretmanager.secretAccessor` em `session-secret` e `github-app-key` |
+| `odin-portal` | `sa-portal` | `datastore.user`; `firebaseauth.admin` (verificar ID tokens e cookies de sessão); `bigquery.dataViewer` + `jobUser` nos conjuntos de auditoria e de métricas (auditor e consumo); `secretmanager.secretAccessor` em `session-secret` e `github-app-key`; `storage.objectViewer` no bucket `odin-cli-<amb>` (download do CLI) |
 | `odin-webhooks` | `sa-webhooks` | `secretmanager.secretAccessor` em `github-webhook-secret`; `pubsub.publisher` em `github-events` |
 | `odin-publisher` | `sa-publisher` | `datastore.user` (só coleção do catálogo, imposto pelas regras da aplicação); `pubsub.publisher` em `catalog-published` |
 | `odin-indexer` | `sa-indexer` | `cloudsql.client` + usuário IAM com escrita no RAG; `aiplatform.user`; `storage.objectAdmin` no bucket de snapshots; `secretmanager.secretAccessor` em `github-app-key` |
@@ -373,7 +375,7 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 | Permissão | Nível | Para quê |
 |---|---|---|
 | Metadata | leitura | Obrigatória |
-| Contents | leitura | Ler `odin-knowledge` (indexer) e conferir conteúdo |
+| Contents | leitura | Ler `odin-knowledge` (indexer) e os **repositórios privados das skills** (pipeline de publicação, por token de instalação gerado no próprio workflow) |
 | Pull requests | escrita | Abrir PR de conhecimento aprovado no portal (curadoria) e PRs de catálogo (promover, rollback, depreciar, retirar) a partir do portal |
 | Contents (repositório Odin) | escrita, **só branches `portal/*`** (regra de proteção) | Criar a branch do PR de catálogo; a `main` continua protegida, com revisão humana e CI |
 | Members (organização) | leitura | Sincronizar times → squads |
@@ -390,13 +392,14 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 - `push` em `odin-knowledge` `main`: dispara o `odin-indexer`.
 
 ### 7.4 Pipelines (GitHub Actions, no repositório Odin)
+> Repositórios privados (decisão 5): o `publish.yml` lê os repositórios das skills com um **token de instalação do GitHub App** gerado no próprio workflow (o `GITHUB_TOKEN` só lê o repositório onde roda). A chave do app usada pelo CI fica num segredo do ambiente `publish`, com aprovação.
 | Workflow | Gatilho | Faz |
 |---|---|---|
 | `ci.yml` | Todo PR | Lint, testes, testes de política, testes de autorização do RAG, `terraform plan` |
 | `publish.yml` | Merge em `catalog/` na `main` | Baixa skills no SHA, valida, testa, `odin lint`, empacota com dependências, **assina (KMS)**, envia ao bucket, chama o publisher, smoke test de roteamento |
 | `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII e injeção, roda a avaliação de recuperação; no merge, o webhook dispara o indexer |
 | `deploy.yml` | Tag `v*` | Build das imagens, SBOM, atestação de origem, envio ao Artifact Registry, deploy no Cloud Run (prod com Binary Authorization) |
-| `cli-release.yml` | Tag `cli-v*` | Binários do CLI por plataforma, checksums, **atestação de origem do GitHub** |
+| `cli-release.yml` | Tag `cli-v*` | Binários do CLI por plataforma, checksums, **assinatura no KMS** (`cli-signing`), envio ao bucket privado `odin-cli-<amb>`, atualização do script de instalação servido pelo portal com o checksum fixado; atestação de origem do GitHub quando disponível no plano [VERIFICAR para repositório privado] |
 | `infra.yml` | Merge em `infra/` | `terraform apply` com aprovação de ambiente |
 
 ## 8. Segurança
@@ -406,7 +409,7 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 ### 8.1 Controles por camada
 | Camada | Controles |
 |---|---|
-| Borda | Cloud Armor (OWASP, limite de taxa), TLS gerenciado, ingress só pelo LB, faixas do GitHub nos webhooks |
+| Borda | Produção: Cloud Armor (OWASP, limite de taxa), TLS gerenciado, ingress só pelo LB, faixas do GitHub nos webhooks. PoC: `run.app` com TLS gerenciado, limites no serviço e HMAC nos webhooks |
 | Identidade | GitHub com 2FA (organização), convites, mapeamento por id numérico, reautenticação para administração, conta de emergência com alerta |
 | Sessão do portal | Cookie `HttpOnly`/`Secure`, CSRF, CSP estrita, `X-Frame-Options: DENY`, `Referrer-Policy`, expiração de 8 h |
 | Tokens | JWT de 15 min, assinado no KMS; renovação com prova de posse; rotação com detecção de reuso; revogação ≤ 30 s |
@@ -440,8 +443,8 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 ### 9.1 CLI `odin`
 - Node 22 empacotado como executável único por plataforma (para não depender do Node do usuário). [VERIFICAR] a ferramenta de empacotamento.
 - Cofre: macOS Keychain, Windows Credential Manager, Linux libsecret. Sem cofre disponível → arquivo cifrado com permissão `0600` e aviso.
-- Comandos: `setup`, `login`, `logout`, `token`, `ensure <skill>`, `doctor`, `guard-ping`, `update`, `uninstall`, `dev validate|try` (mantenedores).
-- Autoatualização: confere a release nova, a atestação e o checksum antes de trocar o binário.
+- Comandos: `setup`, `login`, `logout`, `token`, `ensure <skill>`, `doctor` (inclui remover cópias antigas de skills dos projetos, com confirmação e arquivamento), `guard-ping`, `update`, `uninstall`, `restore-copias` (plano de volta do corte, 30 dias), `dev validate|try` (mantenedores).
+- Autoatualização: baixa pelo portal (`/download/cli/...`) e confere a **assinatura do KMS** (`cli-signing`, chave pública embutida) e o checksum antes de trocar o binário.
 
 ### 9.2 Registro no Claude Code
 ```bash
@@ -482,6 +485,7 @@ infra/
     prod/
 ```
 - Estado no bucket `odin-tfstate-<amb>` com versionamento e trava.
+- **Desenvolvimento local** (decisão 34): emuladores do Firestore, do Pub/Sub e do Identity Platform (Firebase Local Emulator Suite), servidor MCP e portal rodando localmente, e um JWKS de teste; o ambiente de teste na nuvem é criado junto com a produção.
 - Segredos nunca no Terraform: o Terraform cria o segredo vazio, e o valor entra por um runbook ou pelo console, com auditoria.
 
 ## 12. Continuidade e backup

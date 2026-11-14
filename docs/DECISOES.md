@@ -1,6 +1,6 @@
 # Decisões do mantenedor
 
-> Respostas às 40 perguntas abertas (rodada 13 de revisão). **Estas decisões valem sobre o que estiver diferente nos outros documentos** até que cada documento seja ajustado.
+> Respostas às 40 perguntas abertas (rodada 13 de revisão). **Integradas a todos os documentos na rodada 14.** Em caso de diferença remanescente, estas decisões valem.
 > Data: 14/11/2026.
 
 ## A. Prova de conceito e ambiente

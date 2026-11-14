@@ -201,7 +201,7 @@ flowchart LR
 
 | Ambiente | Projeto GCP | Quem usa | Diferenças |
 |---|---|---|---|
-| `poc` | Projeto pessoal do mantenedor | Mantenedor + 2 usuários de teste | Escala até zero, endereços `run.app` permitidos, menor instância de Cloud SQL, Cloud Armor opcional |
+| `poc` | Projeto pessoal do mantenedor | Mantenedor + 2 usuários de teste | **Custo perto de zero** (decisão 7): escala até zero, endereços `run.app`, **RAG no Firestore** (sem Cloud SQL), **sem Load Balancer e sem Cloud Armor**, notificações só no portal, desenvolvimento com emuladores locais |
 | `prod` | Projeto da empresa (idealmente numa organização GCP) | Time | Domínio próprio, Cloud Armor, instância quente, Binary Authorization, VPC Service Controls, políticas da organização |
 
 **Limite do projeto pessoal:** sem uma organização GCP não há políticas de organização nem VPC Service Controls. O desenho funciona sem eles, mas a produção deve ficar numa organização.

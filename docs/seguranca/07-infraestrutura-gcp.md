@@ -33,7 +33,7 @@ Uma por componente, **sem chaves exportadas**, com papéis mínimos (tabela da [
 | Controle | Configuração |
 |---|---|
 | Borda | HTTPS Load Balancer externo, certificado gerenciado, TLS ≥ 1.2 com política moderna |
-| Ingress do Cloud Run | Serviços públicos: "interno e Cloud Load Balancing" (o `run.app` direto fica bloqueado em produção); serviços internos: "interno" + IAM |
+| Ingress do Cloud Run | Produção: serviços públicos com "interno e Cloud Load Balancing" (o `run.app` direto fica bloqueado); serviços internos com "interno" + IAM. **PoC** (sem Load Balancer, decisão 6): `run.app` público para portal, STS, MCP e webhooks, com limites no serviço; `odin-publisher` interno + IAM |
 | Cloud SQL | **Só IP privado**; sem IP público; conexão por saída direta para VPC; TLS obrigatório; autenticação IAM |
 | Saída | Serviços sem necessidade de internet ficam com saída só para a VPC; Cloud NAT só para quem precisa (GitHub, Vertex) |
 | VPC Service Controls (produção, com organização) | Perímetro com Firestore, Cloud SQL, Cloud Storage, KMS, Secret Manager e BigQuery; nenhum acesso aos dados de fora do perímetro |

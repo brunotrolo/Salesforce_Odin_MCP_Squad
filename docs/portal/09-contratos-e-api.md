@@ -15,6 +15,7 @@
 |---|---|---|---|---|
 | Início | `GET /api/me/resumo` | Sessão | 8 h | Firestore, `quotas`, `uso_diario`, `catalog_events` |
 | Conectar | `GET /api/conectar` (comandos e checksums da release atual do CLI) | Sessão | 8 h | Release do CLI |
+| Instalador e download do CLI | `GET /install.sh` · `GET /install.ps1` (script com o checksum fixado da versão atual) · `GET /download/cli/{versao}/{plataforma}` | **Público** (o binário não é segredo; os repositórios são privados) | — | Bucket privado `odin-cli-<amb>` |
 | Ativar | `GET /api/ativar/{user_code}` · `POST /api/ativar/{user_code}` (`aprovar` ou `nao_fui_eu`) | Sessão | **5 min** | `device_codes` |
 | Guia → Ferramentas | `GET /api/mcp/ferramentas` | Sessão | 8 h | `mcp_tools/{versao_servidor}` (publicado pelo `odin-mcp` ao iniciar) |
 | Guia → Skills / Minhas skills | `GET /api/me/skills` | Sessão | 8 h | Direitos efetivos + `catalog_skills` |

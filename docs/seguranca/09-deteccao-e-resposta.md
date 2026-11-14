@@ -34,7 +34,7 @@
 | DT-17 | Pico de custo no projeto GCP | Orçamento | SEV3 |
 | DT-18 | Pico de 4xx/5xx ou de limites do Cloud Armor | Monitoring | SEV3 |
 
-Alertas SEV1 e SEV2: notificação imediata (e-mail + canal de mensagens dos administradores) e registro de incidente. SEV3: painel e resumo diário.
+Alertas SEV1 e SEV2: notificação imediata e registro de incidente. **Na PoC** (notificações só no portal, decisão 36): canal de e-mail do **Cloud Monitoring** para o mantenedor (recurso nativo, sem provedor de e-mail) + portal. **Com o time:** também o provedor de e-mail escolhido. SEV3: painel e resumo diário.
 
 ## 3. Ciclo de resposta
 1. **Detectar e registrar:** abrir o incidente (id, hora, detecção, quem responde).

@@ -84,7 +84,7 @@ Três planos:
 2. Instalar o CLI: **um comando** copiado do portal.
    - macOS/Linux: `curl -fsSL https://odin.<dominio>/install.sh | sh`
    - Windows: `irm https://odin.<dominio>/install.ps1 | iex`
-   - O instalador baixa o CLI da release do GitHub e confere o checksum e a atestação de origem (seção 9.1).
+   - Como os repositórios são privados (decisão 5), o instalador baixa o CLI **pelo portal** do Odin (o binário não é segredo e fica num bucket privado) e confere o **checksum fixado** no próprio script servido pelo portal; as atualizações seguintes conferem a **assinatura do KMS** (seção 9.1).
 3. `odin setup`. Abre o navegador, a pessoa entra com o GitHub e o segundo fator do Odin (autenticador ou passkey), confirma o código do dispositivo e o resto é automático:
    - registra o MCP Odin no Claude Code no escopo do usuário;
    - instala o `odin-guard` (hook), a skill local `odin`, o `~/.odin/ODIN.md` e a linha que o importa no `CLAUDE.md` do usuário, e cria `~/.claude/agents/` (seção 22);
@@ -92,13 +92,14 @@ Três planos:
    - termina com `odin doctor` verde, ou com a correção exata do que faltou.
 
 ### 3.2 Uso diário: zero passos
-A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não existe "atualizar skill": a próxima chamada já usa a versão nova.
+A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não existe "atualizar skill": a próxima **sessão** do Claude Code já usa a versão nova (a versão fica fixa durante a sessão, decisão 15).
 
 ### 3.3 Quando algo muda
 | Evento | O que o usuário vê |
 |---|---|
 | Skill nova liberada para o perfil dele | Passa a ser roteada; o runtime instala no primeiro uso (`odin ensure`) |
-| Versão nova de uma skill | Nada: o conteúdo vem do servidor; o runtime se atualiza no primeiro uso |
+| Versão nova de uma skill | Nada: vale na próxima sessão; o runtime se atualiza no primeiro uso (versão proibida bloqueia na hora) |
+| Odin indisponível | As skills já usadas continuam pela cópia local assinada por até 7 dias; skills novas e conhecimento voltam quando o Odin voltar (decisão 14) |
 | Mudança nos hooks de segurança | Normalmente nada (o Claude Code capta a mudança); só se o `guard-ping` falhar aparece "reinicie a sessão" (seção 7.4) |
 | Acesso revogado | A próxima chamada responde "sem acesso a X; fale com o administrador" |
 | Token expirado | Nada: o `headersHelper` renova sozinho; só pede login de novo se a credencial de longa duração for revogada |
@@ -116,7 +117,7 @@ A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não 
 | C1 | **MCP Odin** | Cloud Run, Node/TypeScript, SDK oficial de MCP, transporte Streamable HTTP | Autenticar, autorizar, rotear, entregar skills, agentes e referências, buscar conhecimento, auditar |
 | C2 | **Portal** | Cloud Run, Next.js (ou similar), Identity Platform | Login, dispositivos e tokens, autoatendimento; console de administração (usuários, perfis, catálogo, conhecimento, auditoria) |
 | C3 | **Serviço de identidade** | Identity Platform com **login GitHub** (Google ou Microsoft opcionais) + emissor de tokens próprio `odin-sts` (JWT assinado no KMS) | Device login, credencial de dispositivo ligada a chave do dispositivo, tokens de acesso curtos, revogação |
-| C4 | **odin CLI** | Node ≥ 20, binário único por plataforma | `setup`, `login`, `token` (headersHelper), `ensure`, `doctor`, `guard-ping`, `update`, `logout` |
+| C4 | **odin CLI** | Node ≥ 20, binário único por plataforma | `setup`, `login`, `token` (headersHelper), `ensure`, `doctor`, `guard-ping`, `update`, `uninstall`, `restore-copias`, `logout` |
 | C5 | **odin-guard** | Node, um hook `PreToolUse` (e `PostToolUse` quando preciso) | Despachante das políticas de segurança de todas as skills, fail-closed |
 | C6 | **Gatilho e manual do Odin** | Instruções do servidor MCP + `~/.claude/skills/odin/SKILL.md` + `~/.odin/ODIN.md` | Fazer o Claude Code chamar o roteador em qualquer pedido coberto pelo Odin; explicar como o Odin funciona sem sobrepor o `CLAUDE.md` do projeto (7.6, 22.2) |
 | C7 | **Catálogo** | `catalog/` neste repositório (YAML) → Firestore | Quais skills existem, a versão fixada (commit SHA) de cada uma, perfis, canais |
@@ -200,7 +201,7 @@ sequenceDiagram
 3. **RAG:** filtro por coleção e projeto **no banco** (segurança em nível de linha), e não só na aplicação.
 4. **Auditoria:** quem, o quê, quando, de qual dispositivo e com qual resultado, inclusive as recusas.
 
-**Limite honesto:** o que já foi entregue a uma máquina (o texto de uma skill, um runtime instalado) fica lá. Revogar impede uso futuro pelo Odin, mas não apaga o que existe no disco. Com o `odin-guard`, o runtime de uma skill revogada pode ser desativado na próxima sessão (o guard confere o direito em cache), mas uma pessoa com acesso total ao disco consegue copiar arquivos. Para um conteúdo de método isso é aceitável. Segredo e dado de cliente **nunca** vão em skill (já é regra das skills hoje).
+**Limite honesto:** o que já foi entregue a uma máquina (o texto de uma skill, um runtime instalado) fica lá. Revogar impede uso futuro pelo Odin, mas não apaga o que existe no disco. Com o `odin-guard`, o runtime de uma skill revogada é desativado no próximo contato com o Odin; **uma máquina sem rede mantém a cópia local por até 7 dias** (modo degradado, decisão 14). Uma pessoa com acesso total ao disco também consegue copiar arquivos. Para um conteúdo de método isso é aceitável. Segredo e dado de cliente **nunca** vão em skill (já é regra das skills hoje).
 
 ---
 
@@ -330,7 +331,7 @@ As skills hoje referenciam `.claude/skills/<skill>/scripts/...` relativo ao proj
 ### 9.1 Âncoras de confiança
 | O que | Confia em | Não confia em |
 |---|---|---|
-| CLI | Release do GitHub com **atestação de origem** (artifact attestation do GitHub Actions) + checksum | Espelhos, cópias |
+| CLI | Primeira instalação: **checksum fixado** no script servido pelo portal (HTTPS); atualizações: **assinatura do KMS** (`cli-signing`) verificada pelo próprio CLI. Atestação de origem do GitHub registrada no CI [VERIFICAR disponibilidade em repositório privado] | Espelhos, cópias, binário sem assinatura |
 | Runtime, políticas e agentes | **Assinatura do KMS**, verificada contra a chave pública embutida no CLI | O MCP (ele só aponta *qual* versão usar) |
 | Conteúdo das skills | Hash no manifesto assinado: o MCP só serve conteúdo cujo hash confere, e o `odin doctor` compara amostras com o manifesto | Texto montado dinamicamente |
 | Conhecimento (RAG) | Origem curada (PR aprovado) | Contribuições não revisadas |
@@ -506,9 +507,9 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
 | **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; uma tarefa real de cada skill completa ponta a ponta |
 | **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, pgvector, segurança em nível de linha, avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
-| **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
+| **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Teste de carga com **50 usuários** simultâneos (decisão 33) dentro dos SLOs; simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
 | **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
-| **F10 Preparação para o time** | Guia de onboarding de uma página, página de status, termos de uso, perfis reais, canal `beta` com 2 ou 3 pessoas | 3 pessoas fazem o onboarding sozinhas em menos de 10 min |
+| **F10 Preparação para o time** | Portão 2 da seção 23 (organização GitHub, domínio, Cloud SQL, Load Balancer e Cloud Armor, segundo super-admin, jurídico), guia de onboarding de uma página, repositório de suporte, **ensaio do corte** com 2 ou 3 pessoas | Portão 2 todo verde; 3 pessoas fazem o onboarding sozinhas em menos de 10 min no ensaio |
 
 ### 16.1 Estimativa (mantenedor + Claude, tempo integral; decisão 35)
 
@@ -594,7 +595,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por treze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
+O plano passou por catorze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -656,6 +657,12 @@ O plano passou por treze rodadas de revisão contra os objetivos (fricção, gov
 | 12 | Precisão | O login com GitHub era descrito como "com PKCE" sem confirmação | Marcado [VERIFICAR] (depende do provedor e do SDK) |
 | 12 | Consistência | MFA ausente no onboarding da arquitetura de solução; ADRs fora de ordem | Corrigidos |
 | 13 | Decisões | 40 perguntas abertas | Respondidas em `docs/DECISOES.md`: PoC perto de zero com Firestore, modo degradado de 7 dias, versão fixa por sessão, Windows e VS Code como prioridade, sem correlação com LiteLLM, corte único, estimativa de 15,5 semanas; riscos R15 a R17 |
+| 14 | Integração | As decisões valiam só por cima dos documentos | Integradas em todos: versão por sessão e modo degradado (3.2, 3.3, 6.3), PoC sem Load Balancer e com Firestore (arquitetura 01 e 03, segurança 01, 04, 07, 08, 10), alertas pelo Cloud Monitoring na PoC (segurança 09, portal 08), Windows nativo nas políticas do guard (segurança 06) |
+| 14 | Segurança | Repositórios privados quebrariam o instalador do CLI (baixava da release do GitHub) e o pipeline (não leria as skills) | CLI servido pelo portal a partir de bucket privado, com checksum fixado e assinatura no KMS (`cli-signing`); pipeline lê as skills com token do GitHub App (arquitetura 03, segurança 03, 05, 11) |
+| 14 | Consistência | Primeira correção pôs o CLI em bucket público, contra a política da produção | Bucket privado + download pelo portal |
+| 14 | Fechamento | Faltavam critérios objetivos para começar e para liberar ao time | Portões 1 e 2, corte único e suporte (seção 23) |
+| 14 | Operação | Corte único sem plano de volta e suporte sem lugar definido | `odin restore-copias` por 30 dias; repositório `odin-suporte` (23.3, 23.4) |
+| 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
@@ -749,3 +756,38 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 4. Blocos marcados íntegros no `settings.json` e no `CLAUDE.md` do usuário (no `doctor`).
 5. Nenhum agente `odin-*` fora de `~/.claude/agents/` (sombra, R12).
 6. Cópias antigas de skills dentro de `.claude/` do projeto detectadas, com a oferta de remoção (o dev decide, porque é o projeto dele).
+
+
+---
+
+## 23. Portões e corte para o time
+
+### 23.1 Portão 1: pronto para começar a F0
+- [x] Decisões do mantenedor registradas ([DECISOES.md](DECISOES.md)).
+- [x] Arquitetura de solução, funcional, técnica, segurança e portal escritas e alinhadas.
+- [ ] Projeto `odin-poc` criado (decisão 1).
+- [ ] Roteiro da F0 (`docs/F0-ROTEIRO.md`) entregue.
+- [ ] Máquina de teste Windows nativo com Claude Code na extensão do VS Code e no terminal, com acesso ao LiteLLM real.
+
+### 23.2 Portão 2: pronto para liberar ao time (fim da F9, durante a F10)
+| Item | Por quê |
+|---|---|
+| Organização GitHub criada, com 2FA obrigatório e os repositórios transferidos (decisão 4) | Identidade e times |
+| Domínio próprio + Load Balancer + Cloud Armor, ingress só pela borda (decisão 6) | Borda de segurança |
+| RAG migrado para Cloud SQL, testes de isolamento no banco verdes (decisão 7) | Antes de qualquer conhecimento confidencial |
+| Segundo super-admin nomeado e com passkey (decisão 26, R15) | Pessoa única |
+| Segunda pessoa para aprovar PRs em `catalog/` ou exceção registrada (decisão 31) | Quatro olhos no catálogo |
+| Jurídico: base legal LGPD, termos de uso, aviso de privacidade, licenças de terceiros (decisão 37, R17) | Conformidade |
+| E-mail das notificações escolhido (decisão 36) | Avisos de segurança às pessoas |
+| Pentest externo sem achado crítico ou alto em aberto ([segurança 10](seguranca/10-controles-e-testes.md)) | Segurança |
+| Ensaio do corte concluído (23.3) | Corte único (decisão 29, R16) |
+
+### 23.3 Corte único (decisão 29)
+1. **Ensaio:** 2 a 3 pessoas fazem o onboarding sozinhas, usam as 5 skills por 1 semana e removem as cópias do projeto com o `odin doctor`.
+2. **Janela combinada** com o time (data, horário, canal de suporte).
+3. **No dia:** guia de uma página + vídeo curto; cada pessoa roda o instalador e o `odin setup`; o `odin doctor` remove as cópias antigas de `.claude/` dos projetos (com confirmação) e **arquiva** um pacote delas em `~/.odin/arquivo-copias/`.
+4. **Plano de volta:** por 30 dias, `odin restore-copias` devolve as cópias arquivadas a um projeto, se o Odin falhar para alguém.
+5. **Acompanhamento:** painel de adoção (pessoas conectadas, guard ativo, erros por skill) por 2 semanas.
+
+### 23.4 Suporte (decisão 30)
+Como os repositórios são privados, o suporte fica num repositório **`odin-suporte`** (privado, com leitura para todo o time), separado do código do Odin, com modelos de issue: **problema**, **pedido de acesso**, **sugestão de skill**, **conhecimento**. O portal leva a esse repositório pelo botão "Preciso de ajuda".

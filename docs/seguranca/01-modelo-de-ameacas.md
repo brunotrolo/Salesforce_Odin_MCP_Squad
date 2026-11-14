@@ -110,6 +110,8 @@ S = falsificação de identidade · T = adulteração · R = repúdio · I = vaz
 - **Texto já entregue fica na máquina** depois de uma revogação (método, não segredo).
 - **Risco inerente a agentes com acesso total ao disco:** o guard reduz, mas não elimina, o dano de uma instrução maliciosa que use comandos não cobertos pelas políticas.
 - **Phishing de device code:** reduzido, não eliminado; depende também de orientação às pessoas.
+- **Modo degradado de 7 dias** (decisão 14): uma máquina sem rede continua com as skills que tinha, mesmo se o acesso for revogado nesse período.
+- **Na PoC:** isolamento do RAG só na aplicação (Firestore), sem Load Balancer nem Cloud Armor, e um único administrador. Por isso a PoC **não recebe conhecimento confidencial nem o time** até o Portão 2 do [plano, seção 23](../PLANO.md).
 
 ## 7. Manutenção
 Refazer este modelo quando: entrar um componente ou integração nova; mudar o método de autenticação; houver um incidente; a cada 6 meses.

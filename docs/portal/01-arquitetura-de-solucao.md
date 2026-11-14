@@ -116,6 +116,7 @@ flowchart TB
   CO --> MF["/conta/mfa"]
   I --> KN["/conhecimento (minhas propostas)"]
   A0["/ativar (device flow)"]
+  DL["/install.sh · /install.ps1 · /download/cli (públicos)"]
 
   I --> AD["/admin (painel)"]
   AD --> AP["/admin/pessoas"]

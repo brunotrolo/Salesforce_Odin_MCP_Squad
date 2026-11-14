@@ -14,7 +14,7 @@ Referências: **OWASP ASVS 4.0** (aplicações web e APIs), **OWASP Top 10 para 
 | CT-04 | Refresh token rotativo, com detecção de reuso e prova de posse | RFC 9700 §4.14, RFC 7523 | STS | Teste: reuso revoga a família; sem assinatura não renova |
 | CT-05 | JWT de 15 min, algoritmo fixo, `aud` e `typ` conferidos | RFC 9068, ASVS V3 | MCP | Testes com `alg=none`, `HS256`, `aud` trocado, expirado |
 | CT-06 | Direitos no servidor e negado por padrão | ASVS V4 | MCP, portal | Testes de autorização ([04](04-autorizacao.md), seção 6) |
-| CT-07 | Isolamento por projeto no banco | ASVS V4, LLM06 | Cloud SQL | Teste: A não lê B |
+| CT-07 | Isolamento por projeto no banco | ASVS V4, LLM06 | Cloud SQL (na PoC, Firestore: teste na aplicação) | Teste: A não lê B; no banco obrigatório antes do Portão 2 |
 | CT-08 | Separação de funções e quatro olhos | ASVS V4.1 | Portal | Teste: autoaprovação recusada |
 | CT-09 | Cookies `__Host-`, `HttpOnly`, CSRF, CSP | ASVS V3, V14 | Portal | DAST + testes de cabeçalho |
 | CT-10 | Validação de entrada em todas as ferramentas MCP e APIs (schema) | ASVS V5 | MCP, portal | Fuzzing de entradas |
@@ -46,7 +46,7 @@ Referências: **OWASP ASVS 4.0** (aplicações web e APIs), **OWASP Top 10 para 
 | Testes de tokens | `alg` inválido, assinatura trocada, expirado, `aud` errado, reuso de refresh, prova de posse ausente | Todo PR |
 | Testes de política do guard | Casos de permitir e negar por regra | Todo PR em `policies/` |
 | Testes de injeção | Documentos e respostas com instrução dirigida a agentes | Todo PR em skills e na ingestão |
-| DAST | OWASP ZAP no portal e nas APIs (ambiente de teste) | Semanal e antes de cada liberação |
+| DAST | OWASP ZAP no portal e nas APIs (na PoC, contra o ambiente local com emuladores e a própria PoC; depois, no ambiente de teste) | Semanal e antes de cada liberação |
 | Pentest | Externo, com escopo de portal, STS, MCP, CLI e cadeia de distribuição | Antes de liberar para o time (fase F10) e anual |
 | Revisão do modelo de ameaças | Sessão com mantenedores | A cada fase e semestral |
 | Simulação de incidente | Executar um playbook ([09](09-deteccao-e-resposta.md)) | Semestral |

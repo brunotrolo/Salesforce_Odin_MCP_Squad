@@ -55,7 +55,7 @@ odin_metrics.uso_diario(dia, pessoa_id, squad_id, projeto_id, perfil, skill, fer
 ### 3.1 Dois mecanismos
 | Mecanismo | Para quê | Onde | Ao exceder |
 |---|---|---|---|
-| **Limite por minuto** | Proteger o serviço de laços e abusos | Em memória no `odin-mcp` (por pessoa) + Cloud Armor (por IP) | `limite_excedido` com "tente em N s" |
+| **Limite por minuto** | Proteger o serviço de laços e abusos | Em memória no `odin-mcp` (por pessoa) + Cloud Armor por IP (em produção; na PoC, sem Load Balancer, só o limite por pessoa) | `limite_excedido` com "tente em N s" |
 | **Cota diária** | Governança de uso por perfil, squad ou pessoa | Contador no Firestore (`quotas/{pessoa}/{dia}`), incrementado de forma atômica | `limite_excedido` com a hora de renovação e o link "pedir aumento" |
 
 ### 3.2 Valores iniciais (configuráveis no portal)

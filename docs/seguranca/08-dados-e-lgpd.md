@@ -42,7 +42,7 @@
 
 ## 5. Dados de clientes no conhecimento (RAG)
 - Cada item tem `projeto` e `sensibilidade`. O `confidencial` só fica em repositório **privado**.
-- **Isolamento por projeto em duas camadas** (aplicação e banco, [04](04-autorizacao.md)), com teste automatizado.
+- **Isolamento por projeto em duas camadas** (aplicação e banco, [04](04-autorizacao.md)), com teste automatizado. **Na PoC (Firestore) só a camada da aplicação**: por isso nenhum conhecimento confidencial entra antes da migração para o Cloud SQL.
 - **Máscara de PII** na ingestão: documentos, e-mails, telefones e nomes de pessoas (reaproveitando o `pii.mjs` das skills), além de rejeitar texto com instrução dirigida a agentes.
 - **Fim de contrato com um cliente:** comando de expurgo do projeto que apaga os trechos do banco, os snapshots e as coleções, mantendo só o registro de que o expurgo aconteceu.
 - Embeddings também são dados do cliente: ficam sob as mesmas regras.

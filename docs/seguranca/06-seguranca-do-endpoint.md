@@ -26,12 +26,14 @@ O Claude Code roda com acesso total à máquina. O Odin acrescenta skills e scri
 |---|---|---|
 | PG-01 Segredos | Ler arquivos de segredo e credenciais | `.env*`, `*.pem`, `*.key`, `id_rsa*`, `~/.aws/`, `~/.config/gcloud/`, `~/.sfdx/`, `~/.sf/` (exceto pelo `sf` CLI), cofres de senha, **o token do Jira na máquina** e o `~/.claude.json` (que guarda variáveis e cabeçalhos dos servidores MCP, inclusive o do Jira). Quem usa esses segredos são os próprios programas (MCP do Jira, `sf` CLI, Claude Code), nunca o modelo por leitura de arquivo |
 | PG-02 Odin | Editar as pastas e blocos do Odin | `~/.odin/`, `~/.claude/agents/odin-*`, `~/.claude/skills/odin/`, blocos marcados em `~/.claude/settings.json` e `~/.claude/CLAUDE.md` |
-| PG-03 Destruição | Apagar fora do projeto atual ou em massa | `rm -rf` fora da pasta do projeto, `git clean -fdx` na raiz da casa, formatar discos |
+| PG-03 Destruição | Apagar fora do projeto atual ou em massa | `rm -rf` fora da pasta do projeto, `git clean -fdx` na raiz da casa, formatar discos; no **Windows nativo** (maioria do time, decisão 23): `Remove-Item -Recurse -Force`, `rd /s /q`, `del /s /q` fora do projeto, `Format-Volume`, `diskpart` |
 | PG-04 Histórico | Reescrever histórico remoto | `git push --force` para `main`/`master`, apagar branches remotas protegidas |
 | PG-05 Produção Salesforce | Implantar ou alterar dados em org de produção | `sf project deploy` e `sf data` com org que não seja sandbox ou scratch (regra das skills, centralizada aqui) |
 | PG-06 Exfiltração | Enviar dados para destinos fora da lista | `curl`/`wget`/`Invoke-WebRequest` com envio de arquivo para domínios fora da lista permitida; `scp` para hosts desconhecidos |
 | PG-07 Persistência | Instalar serviços e tarefas agendadas | `crontab`, `launchctl load`, `schtasks /create`, alterações em perfis de shell fora do bloco do Odin |
 | PG-08 Elevação | Uso de privilégio | `sudo`, `runas`, alteração de permissões em pastas do sistema |
+
+**Windows nativo:** todas as políticas têm equivalentes em PowerShell e `cmd` (por exemplo `Invoke-WebRequest -InFile`, `schtasks /create`, `Start-Process -Verb RunAs`), com testes nos dois shells. [VERIFICAR] qual shell o Claude Code usa para rodar os hooks no Windows nativo e na extensão do VS Code (prioridade 1 da F0).
 
 **Lista de destinos permitidos (PG-06):** domínios do Odin, do GitHub, do registro de pacotes, do Salesforce (`*.salesforce.com`, `*.force.com`, `*.my.salesforce.com`) e os que cada projeto declarar. Manter essa lista tem custo, e o plano registra isso como [VERIFICAR]. Começa em modo **alerta** na prova de conceito e passa a **bloqueio** depois de calibrada.
 

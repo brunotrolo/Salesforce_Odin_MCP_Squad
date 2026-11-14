@@ -44,6 +44,8 @@ Quando usar: suspeita de comprometimento amplo (por exemplo, chave de JWT, base 
 4. Lista de versões proibidas com tudo o que foi assinado no período suspeito.
 5. Comunicar: "atualize o CLI" (o `ensure` força a atualização).
 
+> A chave `cli-signing` (assinatura dos binários do CLI) segue o mesmo processo do RB-05.
+
 ## RB-06 Rotacionar segredos (GitHub App, webhook, OAuth, sessão, pimenta)
 1. Gerar o novo valor na origem (GitHub App: nova chave privada; webhook: novo segredo; OAuth App: novo segredo do cliente).
 2. Nova versão no Secret Manager (ou no Identity Platform, para o OAuth).

@@ -36,7 +36,7 @@ flowchart LR
 | Armazenamento | Bucket com versionamento, retenção de 365 dias, CMEK, sem acesso público; download só por URL assinada de 5 min |
 | Verificação na máquina | O CLI confere a assinatura com a **chave pública embutida** e o hash de cada arquivo antes de instalar; recusa versão menor que a instalada (anti-rebaixamento), exceto em rollback assinado pelo catálogo |
 | Imagens dos serviços | Imagem base mínima fixada por digest; varredura no Artifact Registry; SBOM; **atestação de origem**; Binary Authorization em produção (só imagens atestadas pelo CI) |
-| CLI | Binários com **atestação de origem do GitHub** e checksums; o instalador confere os dois; a autoatualização confere de novo |
+| CLI | Binários assinados no KMS (`cli-signing`), guardados num bucket **privado** e servidos pelo portal (os repositórios são privados); a primeira instalação confere o **checksum fixado** no script servido pelo portal por HTTPS; a autoatualização confere a **assinatura** com a chave embutida. Atestação de origem do GitHub registrada quando o plano do GitHub permitir em repositório privado [VERIFICAR] |
 
 ## 3. Manifesto assinado (formato)
 ```json

@@ -74,7 +74,7 @@
 | Solicitação nova para aprovar | Aprovadores do escopo | Portal + e-mail (resumo diário opcional) |
 | Concessão ou token perto de vencer (7 dias) | A pessoa | Portal |
 | Skill nova, versão nova, depreciação, retirada | Quem tem acesso ou usou | Portal (Novidades) |
-| Alerta SEV1/SEV2 | Administradores de segurança | Portal + e-mail + canal de mensagens |
+| Alerta SEV1/SEV2 | Administradores de segurança | Portal + e-mail do Cloud Monitoring (PoC) + e-mail do provedor escolhido (com o time) |
 | Pedido a quatro olhos | Aprovadores elegíveis | Portal + e-mail |
 
 ## 8. Acessibilidade (WCAG 2.1 AA)
