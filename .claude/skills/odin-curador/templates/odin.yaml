@@ -1,0 +1,29 @@
+# Contrato de skill do Odin (modelo comentado). Fonte: docs/PLANO.md seção 8.1.
+# Só o que estiver declarado em skills, agentes, regras e runtime é empacotado e entregue.
+id: sf-exemplo                     # minúsculas e hífens; prefixo de tudo que vai para a máquina
+nome: Skill de Exemplo
+dominio: salesforce                # salesforce | web | dados | devops | mobile | ...
+dono: mantenedor                   # quem aprova mudanças
+descricao: >-
+  Uma ou duas frases sobre o que a skill faz e quando usar (pesa no roteamento).
+intencoes:                         # 20 frases reais; ver references/intencoes.md
+  - "pedido real de exemplo 1"
+  - texto: "pedido parecido que é de outra skill"
+    negativa: true
+perfis_sugeridos: [dev]
+entrada: [specs/**/spec.md]        # artefatos que a skill lê no projeto
+saida: [.sf-exemplo/**]            # o que ela grava (no projeto, pela própria skill, nunca pelo Odin)
+proximo: []                        # skills seguintes da jornada
+skills:
+  - path: .claude/skills/sf-exemplo/SKILL.md
+agentes: [.claude/agents/sf-exemplo-*.md]
+regras: [.claude/rules/exemplo.md]
+runtime:
+  dir: .claude/skills/sf-exemplo/scripts
+  node: ">=20"
+  dependencias: package-lock.json
+  prerequisitos: [git]              # ex.: sf, playwright:chromium
+politicas: []                      # políticas do odin-guard (policies/<id>.mjs)
+conhecimento: [tecnico]            # coleções consultadas
+licenca_terceiros: []              # bibliotecas de terceiros embutidas, com licença
+usa: []                            # pacotes de biblioteca compartilhados, ex.: [lib-salesforce-oficial@^1]

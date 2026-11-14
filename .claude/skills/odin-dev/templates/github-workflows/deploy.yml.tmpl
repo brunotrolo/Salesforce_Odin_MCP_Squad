@@ -1,0 +1,52 @@
+# Modelo: deploy seguro no Cloud Run (sem tráfego → fumaça → migração; falha mantém a revisão anterior).
+# Disparo manual do mantenedor (GitHub Free não tem ambientes com aprovação em repositório privado; a identidade
+# federada só aceita o actor_id do mantenedor e a main).
+name: deploy
+on:
+  workflow_dispatch:
+    inputs:
+      servico: { description: "odin-mcp | odin-sts | odin-portal | odin-webhooks | odin-publisher", required: true }
+permissions:
+  contents: read
+  id-token: write
+env:
+  PROJETO: odin-poc
+  REGIAO: southamerica-east1
+  REPO_IMAGENS: southamerica-east1-docker.pkg.dev/odin-poc/odin-images
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: google-github-actions/auth@<SHA-gh-auth>
+        with:
+          workload_identity_provider: projects/<NUMERO-PROJETO>/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-deploy@odin-poc.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@<SHA-setup-gcloud>
+      - name: Build, SBOM e push
+        env: { SERVICO: "${{ inputs.servico }}" }
+        run: |
+          IMG="$REPO_IMAGENS/$SERVICO:${GITHUB_SHA}"
+          gcloud builds submit "apps/${SERVICO#odin-}" --tag "$IMG"
+          echo "IMG=$IMG" >> "$GITHUB_ENV"
+      - name: Deploy sem tráfego
+        run: |
+          TAG="cand-${GITHUB_SHA::7}"
+          gcloud run deploy "${{ inputs.servico }}" --image "$IMG" --region "$REGIAO" --no-traffic --tag "$TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "URL_CAND=$(gcloud run services describe ${{ inputs.servico }} --region $REGIAO --format='value(status.traffic[?tag==`'$TAG'`].url)')" >> "$GITHUB_ENV"
+      - name: Fumaça na revisão candidata
+        env: { ODIN_TOKEN_TESTE: "${{ secrets.ODIN_TOKEN_TESTE }}" }
+        run: node .claude/skills/odin-dev/templates/smoke/smoke.mjs --base "$URL_CAND" --servico "${{ inputs.servico }}"
+      - name: Migrar tráfego
+        run: gcloud run services update-traffic "${{ inputs.servico }}" --region "$REGIAO" --to-tags "$TAG=100"
+      - name: Fumaça na URL principal (e rollback se falhar)
+        env: { ODIN_TOKEN_TESTE: "${{ secrets.ODIN_TOKEN_TESTE }}" }
+        run: |
+          URL=$(gcloud run services describe ${{ inputs.servico }} --region $REGIAO --format='value(status.url)')
+          if ! node .claude/skills/odin-dev/templates/smoke/smoke.mjs --base "$URL" --servico "${{ inputs.servico }}"; then
+            ANT=$(gcloud run revisions list --service ${{ inputs.servico }} --region $REGIAO --format='value(name)' --sort-by=~metadata.creationTimestamp --limit=2 | tail -1)
+            gcloud run services update-traffic "${{ inputs.servico }}" --region "$REGIAO" --to-revisions "$ANT=100"
+            echo "Rollback para $ANT"; exit 1
+          fi

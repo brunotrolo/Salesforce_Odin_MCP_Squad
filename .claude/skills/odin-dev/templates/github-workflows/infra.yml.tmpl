@@ -1,0 +1,29 @@
+# Modelo: Terraform da PoC (plano em todo disparo; apply só com confirmação explícita no disparo manual).
+name: infra
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar: { description: "Digite APLICAR para executar o apply", required: false, default: "" }
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  terraform:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: infra/envs/poc } }
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: hashicorp/setup-terraform@<SHA-setup-terraform>
+      - uses: google-github-actions/auth@<SHA-gh-auth>
+        with:
+          workload_identity_provider: projects/<NUMERO-PROJETO>/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-infra@odin-poc.iam.gserviceaccount.com
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform plan -input=false -out=plano.tfplan
+      - name: Conformidade da infraestrutura
+        working-directory: .
+        run: node scripts/conformidade.mjs
+      - if: inputs.aplicar == 'APLICAR'
+        run: terraform apply -input=false plano.tfplan

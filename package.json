@@ -1,0 +1,16 @@
+{
+  "name": "odin-mcp-squad",
+  "private": true,
+  "type": "module",
+  "description": "Odin MCP Squad: documentação, skills de desenvolvimento e verificações (o código do servidor, portal e CLI entra nas fases F1 a F5).",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "verificar": "node scripts/verificar-docs.mjs && node scripts/verificar-skills.mjs && node scripts/conformidade.mjs",
+    "verificar:docs": "node scripts/verificar-docs.mjs",
+    "verificar:skills": "node scripts/verificar-skills.mjs",
+    "conformidade": "node scripts/conformidade.mjs",
+    "sessao:inicio": "node scripts/sessao.mjs inicio",
+    "sessao:fim": "node scripts/sessao.mjs fim"
+  }
+}

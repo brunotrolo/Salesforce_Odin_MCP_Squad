@@ -1,7 +1,8 @@
 # Odin MCP Squad: plano de arquitetura
 
 > **Status:** plano, nada foi desenvolvido. Primeiro uso: prova de conceito pessoal num projeto Google Cloud do mantenedor, já com **todas** as skills. Depois, o time (cerca de 20 devs, mais POs).
-> **Decisões do mantenedor:** [`docs/DECISOES.md`](DECISOES.md) (40 respostas; valem sobre o que estiver diferente).
+> **Para quem continua o trabalho (outro chat ou pessoa):** comece por [`CLAUDE.md`](../CLAUDE.md) e [`docs/ESTADO.md`](ESTADO.md); mudanças de decisão viram ADR em [`docs/adr/`](adr/README.md).
+> **Decisões do mantenedor:** [`docs/DECISOES.md`](DECISOES.md) (41 respostas; valem sobre o que estiver diferente).
 > **Portal:** pasta [`docs/portal/`](portal/README.md) (área do usuário, guia do MCP, console de administração, consumo e cotas, ciclo de vida das skills, UX, API e critérios de aceite).
 > **Segurança:** pasta [`docs/seguranca/`](seguranca/README.md) (modelo de ameaças, autenticação e MFA, tokens, autorização, cadeia de suprimentos, endpoint, infraestrutura, LGPD, resposta a incidentes, controles e runbooks). Para segurança, vale a pasta.
 > **Arquitetura detalhada:** [solução](arquitetura/01-arquitetura-de-solucao.md) · [funcional](arquitetura/02-arquitetura-funcional.md) · [técnica](arquitetura/03-arquitetura-tecnica.md) · [portal e perfilamento](arquitetura/04-portal-e-perfilamento.md). Em caso de diferença de detalhe, valem os documentos de arquitetura.
@@ -572,7 +573,9 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 
 ---
 
-## 19. Estrutura proposta deste repositório (para quando houver desenvolvimento)
+## 19. Estrutura deste repositório
+
+Já existem: `CLAUDE.md`, `AGENTS.md`, `docs/` (com `ESTADO.md` e `adr/`), `apresentacao/`, `.claude/` (skills `odin-dev`, `odin-curador`, `odin-arquiteto`, `odin-operacao`; agentes revisores e auditor; hook `guard-docs`), `scripts/` (ADR, sessão, verificações de documentação, skills e conformidade), `tests/` e `.github/workflows/ci.yml`. O restante entra a partir da F1:
 
 ```
 apps/mcp-server/        servidor MCP (Cloud Run)
@@ -583,7 +586,9 @@ packages/manifest/      schema do odin.yaml e do manifesto assinado
 packages/router/        roteamento (embeddings + regras)
 packages/lint/          odin lint (isolamento, colisões, tamanho, licença, segredo)
 policies/               módulos de política do guard, com testes
-skills/                 odin-curador, odin-construtor, odin-auditor (para mantenedores)
+.claude/skills/         odin-dev, odin-curador, odin-arquiteto, odin-operacao (para mantenedores; ADR 0016)
+.claude/agents/         revisores (arquitetura, segurança, testes, documentação) e auditor
+scripts/                ADR, sessão, verificações e conformidade
 libs/                   pacotes de biblioteca de terceiros compartilhados, com LICENSE e NOTICE
 catalog/                skills.yaml, perfis.yaml
 pipeline/               validação, empacotamento, assinatura, publicação
@@ -596,7 +601,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por catorze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
+O plano passou por quinze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -665,6 +670,7 @@ O plano passou por catorze rodadas de revisão contra os objetivos (fricção, g
 | 14 | Operação | Corte único sem plano de volta e suporte sem lugar definido | `odin restore-copias` por 30 dias; repositório `odin-suporte` (23.3, 23.4) |
 | 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
 | 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
+| 15 | Continuidade | Outro chat não conheceria as regras nem o estado do projeto | ADR 0016: `CLAUDE.md`, `docs/ESTADO.md`, ADRs, skills `odin-dev`/`odin-curador`/`odin-arquiteto`/`odin-operacao`, revisores, hook `guard-docs`, verificações e CI (seções 19 e 22.4) |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
@@ -750,6 +756,8 @@ A sua ideia de uma skill para governar o MCP faz sentido, com uma divisão clara
 | **`odin-auditor`** (opcional) | Periodicamente: compara catálogo × portal × pacotes publicados, procura deriva de versões nas máquinas (pelas métricas), perfis com acesso demais e skills sem uso | Relatório para o admin; nenhuma mudança automática |
 
 Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Claude Code, que ficam neste repositório e são usadas por quem mantém o Odin. Elas mesmas podem ser publicadas pelo Odin para o perfil `mantenedor`.
+
+**Implementado (ADR 0016):** o `odin-construtor` virou a skill **`odin-dev`** (construção por fases e sustentação: bug, melhoria, verificação), ao lado de **`odin-curador`**, **`odin-arquiteto`** (consultas e mudanças por ADR) e **`odin-operacao`** (incidentes e runbooks); o `odin-auditor` virou agente, junto com os revisores independentes de arquitetura, segurança, testes e documentação. O hook `guard-docs` bloqueia a edição dos documentos de referência sem ADR aberto, e o CI recusa um conjunto de mudanças que altere documento protegido sem ADR.
 
 ### 22.5 Verificações automáticas de isolamento (`odin lint`, no pipeline e no `doctor`)
 1. Nenhum arquivo proibido (22.1) em pacote algum.

@@ -1,0 +1,36 @@
+# Modelo: publicação de skills (catálogo → pacotes assinados → Cloud Storage → catálogo no Firestore).
+name: publish
+on:
+  push:
+    branches: [main]
+    paths: ["catalog/**"]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publicar:
+    if: github.actor_id == '<ID-NUMERICO-DO-MANTENEDOR>'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: actions/setup-node@<SHA-actions-setup-node>
+        with: { node-version: 22 }
+      - name: Token do GitHub App para ler as skills privadas
+        id: app
+        uses: actions/create-github-app-token@<SHA-create-app-token>
+        with:
+          app-id: ${{ vars.ODIN_APP_ID }}
+          private-key: ${{ secrets.ODIN_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Conferir que o commit está na main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: google-github-actions/auth@<SHA-gh-auth>
+        with:
+          workload_identity_provider: projects/<NUMERO-PROJETO>/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-signer@odin-poc.iam.gserviceaccount.com
+      - run: npm ci
+      - name: Baixar skills no SHA, validar, testar, lint, empacotar, assinar, publicar
+        env: { GH_TOKEN: "${{ steps.app.outputs.token }}" }
+        run: node pipeline/publicar.mjs --catalogo catalog/skills.yaml --bucket odin-bundles-poc --chave bundle-signing
+      - name: Smoke de roteamento (≥ 90% nas intenções de teste)
+        run: node pipeline/smoke-roteamento.mjs --minimo 0.9

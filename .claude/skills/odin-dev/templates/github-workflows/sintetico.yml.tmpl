@@ -1,0 +1,31 @@
+# Modelo: dispara o teste sintético e a carga leve no Google Cloud; abre issue se falhar.
+name: sintetico
+on:
+  schedule: [{ cron: "17 11 * * 1-5" }]   # 08:17 em Brasília, dias úteis
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+jobs:
+  sintetico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: google-github-actions/auth@<SHA-gh-auth>
+        with:
+          workload_identity_provider: projects/<NUMERO-PROJETO>/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-deploy@odin-poc.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@<SHA-setup-gcloud>
+      - name: Executar o job sintético
+        run: gcloud run jobs execute odin-sintetico --region southamerica-east1 --wait
+      - name: Carga leve (5 usuários, 1 min)
+        uses: grafana/k6-action@<SHA-k6>
+        with:
+          filename: .claude/skills/odin-dev/templates/carga/k6-50-usuarios.js
+          flags: --vus 5 --duration 1m
+        env: { ODIN_MCP_URL: "${{ vars.ODIN_MCP_URL }}", ODIN_TOKEN_TESTE: "${{ secrets.ODIN_TOKEN_TESTE }}" }
+      - name: Abrir issue em caso de falha
+        if: failure()
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh issue create --title "Teste sintético falhou ($(date -u +%F))" --body "Execução: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

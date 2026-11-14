@@ -1,0 +1,10 @@
+[
+  { "termo": "/admin/v1", "motivo": "API administrativa unificada em /api/admin (portal 09)" },
+  { "termo": "aposentada", "motivo": "estados do catálogo são beta, ativa, depreciada, retirada" },
+  { "termo": "Login (Google, Microsoft)", "motivo": "login decidido: GitHub (decisão D1)" },
+  { "termo": "aud=odin-mcp", "motivo": "aud do token é https://mcp.<dominio> (segurança 03)" },
+  { "termo": "bucket de leitura pública", "motivo": "CLI servido pelo portal a partir de bucket privado (rodada 14)" },
+  { "termo": "conta corporativa", "motivo": "login com GitHub + segundo fator do Odin" },
+  { "termo": "120 chamadas/min por pessoa", "motivo": "limites por perfil (portal 06)" },
+  { "termo": "X-Odin-User", "motivo": "sem correlação com o LiteLLM (decisão 27)" }
+]

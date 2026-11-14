@@ -1,0 +1,10 @@
+node_modules/
+.odin-dev/
+.env
+.env.*
+*.log
+coverage/
+dist/
+.terraform/
+*.tfstate
+*.tfstate.*

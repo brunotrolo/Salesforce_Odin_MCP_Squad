@@ -1,0 +1,50 @@
+# Modelo: copiar para .github/workflows/ci.yml na F1 e trocar cada <SHA-…> pelo SHA completo da versão da ação
+# (conformidade CF-10 recusa referência por tag). Nenhum acesso ao Google Cloud em PR.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@<SHA-actions-setup-node>
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Emuladores (Firestore, Pub/Sub, Auth)
+        run: npx firebase emulators:exec --only firestore,pubsub,auth "npm test"
+      - run: npm run verificar
+      - name: ADR obrigatório para documentos protegidos
+        if: github.event_name == 'pull_request'
+        run: node scripts/verificar-docs.mjs --base origin/${{ github.base_ref }}
+  matriz-cli-guard:
+    strategy:
+      matrix: { os: [windows-latest, macos-latest, ubuntu-latest] }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: actions/setup-node@<SHA-actions-setup-node>
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npm test --workspace packages/cli --workspace packages/guard
+  seguranca:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@<SHA-actions-checkout>
+      - uses: github/codeql-action/init@<SHA-codeql-init>
+        with: { languages: javascript-typescript }
+      - uses: github/codeql-action/analyze@<SHA-codeql-analyze>
+      - name: Segredos (gitleaks)
+        uses: gitleaks/gitleaks-action@<SHA-gitleaks>
+      - name: Dependências (OSV)
+        uses: google/osv-scanner-action/osv-scanner-action@<SHA-osv>
+        with: { scan-args: "--recursive ./" }
+      - name: IaC (Checkov)
+        uses: bridgecrewio/checkov-action@<SHA-checkov>
+        with: { directory: infra }
