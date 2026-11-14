@@ -84,7 +84,7 @@ Três planos:
    - macOS/Linux: `curl -fsSL https://odin.<dominio>/install.sh | sh`
    - Windows: `irm https://odin.<dominio>/install.ps1 | iex`
    - O instalador baixa o CLI da release do GitHub e confere o checksum e a atestação de origem (seção 9.1).
-3. `odin setup`. Abre o navegador, a pessoa entra com a conta corporativa e o resto é automático:
+3. `odin setup`. Abre o navegador, a pessoa entra com o GitHub e o segundo fator do Odin (autenticador ou passkey), confirma o código do dispositivo e o resto é automático:
    - registra o MCP Odin no Claude Code no escopo do usuário;
    - instala o `odin-guard` (hook), a skill local `odin`, o `~/.odin/ODIN.md` e a linha que o importa no `CLAUDE.md` do usuário, e cria `~/.claude/agents/` (seção 22);
    - instala o runtime das skills a que a pessoa tem direito e confere os pré-requisitos (Node, git, `sf` CLI, Playwright quando aplicável);
@@ -144,7 +144,7 @@ sequenceDiagram
   CLI->>P: inicia device authorization (RFC 8628)
   P-->>CLI: user_code + URL
   CLI->>U: abre navegador com o código já preenchido
-  U->>IdP: login corporativo (SSO, MFA)
+  U->>IdP: login com GitHub + segundo fator do Odin (TOTP ou passkey)
   IdP-->>P: id_token
   P->>P: confere se o usuário está ativo e tem perfil
   P-->>CLI: credencial de dispositivo (90 dias, rotativa)
@@ -157,14 +157,14 @@ sequenceDiagram
 ```
 
 - **Credencial de dispositivo:** uma por máquina, rotativa a cada uso e revogável no portal. Nunca aparece na tela nem em arquivo de texto: fica no cofre do sistema.
-- **Token de acesso:** JWT assinado com chave do Cloud KMS, com 15 min de validade, `aud=odin-mcp` e as claims `sub`, id do GitHub, dispositivo e versão de política. **Os perfis não vão no token:** o MCP resolve os direitos no servidor a cada chamada, com cache de 30 s, e assim uma mudança no portal vale na hora (arquitetura técnica, 5.4).
+- **Token de acesso:** JWT assinado com chave do Cloud KMS, com 15 min de validade, `typ=at+jwt`, `aud=https://mcp.<dominio>` e as claims `sub`, id do GitHub, dispositivo, família e versão de política (formato completo em [segurança 03](seguranca/03-tokens-sessoes-e-chaves.md)). **Os perfis não vão no token:** o MCP resolve os direitos no servidor a cada chamada, com cache de 30 s, e assim uma mudança no portal vale na hora (arquitetura técnica, 5.4).
 - **Credencial de dispositivo ligada a chave:** o CLI gera um par de chaves no cofre do sistema; renovar exige uma assinatura com essa chave. Credencial roubada sem a chave não renova (arquitetura técnica, 5.3).
 - **Renovação transparente:** o servidor é registrado no **escopo do usuário** (`claude mcp add --transport http --scope user odin <url>` com `"headersHelper": "odin token"`), e o Claude Code chama `odin token` para obter os cabeçalhos. **[CONFIRMADO]** O helper roda a cada conexão (início de sessão e reconexão) e de novo quando o servidor responde `401` ou `403`, repetindo a chamada uma vez. O Claude Code não guarda o resultado, então o cache fica no CLI. O helper tem até 10 s e deve imprimir um objeto JSON de cabeçalhos. No escopo do usuário ele roda sem depender da confiança da pasta, que só é exigida para servidores de projeto (`.mcp.json`) ou de escopo local. Consequência: quando o JWT expira no meio da sessão, o MCP responde `401`, o Claude Code chama o helper de novo e a chamada é repetida, sem nada visível para o usuário. **[VERIFICAR]** o mesmo comportamento na extensão do VS Code.
 - **Plano B (portal):** o portal tem uma página **"Gerar token"** para o usuário logado, para clientes ou situações sem o CLI: token pessoal de no máximo 90 dias, escopo reduzido, exibido uma vez, usado como `claude mcp add ... --header "Authorization: Bearer <token>"`. Como esse token fica em texto no `~/.claude.json`, é exceção auditada, com validade curta e alerta de uso fora do padrão; o caminho normal é o device login, que também passa pelo portal.
 - **Plano C (alternativa nativa):** **[CONFIRMADO]** o Claude Code suporta OAuth 2.0 em servidores HTTP: o login abre no navegador via `/mcp` ou `claude mcp login odin`, com registro dinâmico de cliente, documento de metadados de cliente (CIMD) ou cliente pré-registrado (`--client-id`, `--client-secret`, `--callback-port`). Exige que o portal funcione como servidor de autorização OAuth compatível com MCP. Fica como evolução: só vale a troca se dispensar o login separado do CLI, e o CLI continua necessário para o runtime. Decidir depois de F0.
 
 ### 5.2 Ciclo de vida da pessoa
-- **Entrada:** o administrador convida pelo e-mail no portal e atribui perfis e projetos. Opcional: domínio corporativo com autoaprovação para um perfil mínimo.
+- **Entrada:** o administrador ou o gestor do squad convida pelo **login do GitHub** no portal (resolvido para o id numérico) e atribui squad e perfis. Com organização GitHub, pertencer a um time mapeado a um squad também dá entrada.
 - **Saída:** desativar no portal. As credenciais de dispositivo são revogadas e os tokens deixam de valer em até 15 min (na prática, 30 s pela lista de revogação).
 - **Perda de máquina:** revogar só aquele dispositivo.
 - **Toda emissão e revogação é auditada.**
@@ -181,16 +181,17 @@ sequenceDiagram
 - **Concessão individual** = exceção temporária com data de expiração, como "acesso ao Test Automator até 30/06".
 - **Canal** = `stable` (padrão) ou `beta`, para testar uma versão nova com poucas pessoas antes de todas (seção 8.4).
 
-### 6.2 Perfis iniciais (editáveis no portal)
+### 6.2 Perfis de uso iniciais (editáveis no portal)
 
-| Perfil | Skills | Conhecimento | Administração |
-|---|---|---|---|
-| `po` | Discovery-to-Backlog, Journey Designer (spec e protótipo) | funcional e negócio: ler e propor | — |
-| `dev` | Journey Developer, Data Architect (leitura de modelo), Test Automator | técnico: ler e propor; negócio: ler | — |
-| `qa` | Test Automator | negócio e técnico: ler | — |
-| `arquiteto` | Data Architect, Journey Designer, Journey Developer | técnico: curar (aprovar) | — |
-| `mantenedor` | todas, mais canal `beta` | todas: curar | catálogo e perfis |
-| `admin` | todas | todas | usuários, perfis, projetos, tokens, auditoria |
+| Perfil | Skills | Conhecimento |
+|---|---|---|
+| `po` | Discovery-to-Backlog, Journey Designer | `funcional`, `negocio`: ler e propor |
+| `dev` | Journey Developer, Data Architect (leitura), Test Automator | `tecnico`: ler e propor; `negocio`, `dados`: ler |
+| `qa` | Test Automator | `negocio`, `tecnico`, `licoes`: ler |
+| `arquiteto` | Journey Designer, Journey Developer, Data Architect | `tecnico`, `dados`: curar; demais: ler |
+| `mantenedor` | todas, mais canal `beta` | todas: ler |
+
+**Administração é separada dos perfis de uso:** papéis `super-admin`, `admin-identidade`, `admin-catalogo`, `gestor-squad`, `curador` e `auditor`, com escopo, quatro olhos e passkey ([arquitetura funcional, 4.3](arquitetura/02-arquitetura-funcional.md); [portal 05](portal/05-console-de-administracao.md)). Nenhum perfil de uso dá poder administrativo.
 
 ### 6.3 Onde a autorização é aplicada
 1. **MCP:** cada ferramenta confere a permissão. O roteador nunca sugere uma skill sem permissão, e `odin_carregar_skill` recusa com uma mensagem clara.
@@ -237,7 +238,7 @@ O modelo **nunca monta comando de instalação**. Ele só roda `odin ensure <ski
 
 ### 7.3 `odin-guard`: segurança em código
 - **Um único hook** registrado no `settings.json` do usuário, que despacha as políticas de todas as skills: as de hoje (`guard-qa`, `guard-deploy`, a proteção de escrita no Jira do Discovery e as do Data Architect) viram **módulos de política** com testes.
-- **Políticas globais** (sempre ativas): negar leitura de `.env*` e de chaves, negar `rm -rf` fora do projeto, negar `git push --force` e negar deploy para produção.
+- **Políticas globais** (sempre ativas): segredos, pastas e blocos do Odin, destruição fora do projeto, reescrita de histórico remoto, produção Salesforce, exfiltração, persistência e elevação. Catálogo completo (PG-01 a PG-08) em [segurança 06](seguranca/06-seguranca-do-endpoint.md).
 - **Políticas de skill:** ativas quando a skill está em uso. Ficam como gatilho por diretório de execução (por exemplo `.sf-test/`) ou pelo marcador de sessão criado por `odin ensure`.
 - **Fail-closed:** se o guard falhar, a política estiver corrompida ou a assinatura não conferir, o comando é **negado**, com uma mensagem orientando `odin doctor`.
 - **O agente não altera o guard nem o Odin:** a política global nega editar `~/.odin/`, `~/.claude/agents/odin-*`, `~/.claude/skills/odin/` e qualquer edição de `~/.claude/settings.json` ou `~/.claude/CLAUDE.md` que altere os blocos do Odin (o resto desses arquivos continua livre para o dev). Só o CLI (fora da sessão do modelo, ou via `odin ensure`, que verifica assinatura) mexe neles.
@@ -466,7 +467,7 @@ Mudanças, iguais para todas:
 | Projeto `odin-poc` (depois `odin-prod`) | Isolamento | Terraform recria tudo |
 | Região `southamerica-east1` | Latência e residência de dados | Conferir disponibilidade dos serviços na região |
 | Cloud Run: `odin-mcp`, `odin-portal` | Serviços | Mínimo de 0 instâncias na prova de conceito (custo perto de zero); 1 instância quente em produção para evitar partida a frio |
-| Identity Platform | Login (Google, Microsoft) | Faixa gratuita ampla para poucos usuários **[VERIFICAR]** os preços |
+| Identity Platform | Login com **GitHub** (Google e Microsoft opcionais) e segundo fator (TOTP) | Faixa gratuita ampla para poucos usuários **[VERIFICAR]** os preços e o MFA com login federado |
 | Firestore (nativo) | Catálogo, usuários, perfis, dispositivos, revogações | Sem servidor |
 | Cloud SQL Postgres + pgvector | RAG | Menor instância na prova de conceito; AlloyDB só se o volume exigir |
 | Vertex AI (embeddings) | Roteamento e RAG | Custo por chamada, baixo |
@@ -498,7 +499,7 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 |---|---|---|
 | **F0 Verificações e ferramentas de manutenção** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; importação `@~/.odin/ODIN.md` no `CLAUDE.md` do usuário (R13); **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa. Também: as skills `odin-construtor` e `odin-curador` (são markdown e agentes, e ajudam a construir as fases seguintes) | Planilha de resultado; o desenho é ajustado antes de F1 |
 | **F1 Fundação** | Projeto GCP, Terraform, WIF, orçamento, Cloud Run vazio, domínio (ou `run.app`) | `terraform apply` do zero em menos de 15 min; CI publica uma imagem sem chave |
-| **F2 Identidade** | Identity Platform, emissor de JWT (KMS), device flow, portal mínimo (login, dispositivos, revogar), lista de revogação | Login no navegador → credencial no cofre → `odin token` emite JWT; revogar invalida em ≤ 30 s |
+| **F2 Identidade** | Identity Platform com GitHub, **segundo fator** (TOTP e passkey, códigos de recuperação), emissor de JWT (KMS), device flow com chave do dispositivo, portal mínimo (login, ativação, dispositivos, revogar), revogação | Login no navegador → credencial no cofre → `odin token` emite JWT; revogar invalida em ≤ 30 s |
 | **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md` ou colisão de nome é recusado pelo pipeline |
 | **F4 MCP** | Ferramentas da seção 10, autorização por perfil e projeto, auditoria | PO de teste vê só Discovery e Designer; dev vê Developer, Data e Test; 100% das chamadas auditadas |
 | **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
@@ -570,7 +571,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por onze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança e portal). O que cada rodada mudou:
+O plano passou por doze rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada, cibersegurança, portal e revisão completa da documentação). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -625,6 +626,12 @@ O plano passou por onze rodadas de revisão contra os objetivos (fricção, gove
 | 11 | Governança | Não havia histórico de quando uma skill entrou, mudou ou saiu | Eventos de ciclo de vida, estados `depreciada` e `retirada`, comparação de versões (portal 07) |
 | 11 | Consistência | O guia do portal dependia de chamada ao MCP | O MCP grava os metadados das ferramentas no Firestore |
 | 11 | Segurança | O GitHub App precisava abrir PRs de catálogo | Escrita só em branches `portal/*`; `main` protegida (arquitetura técnica 7.2) |
+| 12 | Consistência | Seções antigas do plano divergiam dos documentos novos: login "corporativo", convite por e-mail, `aud` do token, tabela de perfis misturando uso e administração, Identity Platform com Google e Microsoft, políticas globais resumidas, F2 sem MFA | Plano alinhado à arquitetura, à segurança e ao portal (3.1, 5.1, 5.2, 6.2, 7.3, 14, 16) |
+| 12 | Consistência | Token de acesso diferente na arquitetura técnica e na segurança (`aud`, `typ`, `amr`, `acr`, `fam`) | Formato único (segurança 03), refletido na arquitetura técnica 5.4 |
+| 12 | Consistência | Duas APIs administrativas com caminhos diferentes (`/admin/v1` e `/api/admin`) | Uma só: `/api/*` e `/api/admin/*` (portal 09) |
+| 12 | Consistência | Modelo do Firestore sem as coleções do portal | `policy_versions`, `notifications`, `review_campaigns` acrescentadas |
+| 12 | Precisão | O login com GitHub era descrito como "com PKCE" sem confirmação | Marcado [VERIFICAR] (depende do provedor e do SDK) |
+| 12 | Consistência | MFA ausente no onboarding da arquitetura de solução; ADRs fora de ordem | Corrigidos |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 

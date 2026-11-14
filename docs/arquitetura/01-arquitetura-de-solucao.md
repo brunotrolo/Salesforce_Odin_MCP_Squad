@@ -145,15 +145,15 @@ flowchart LR
 | ADR-11 | **Catálogo por GitOps** (o que existe e em que versão) e **acesso pelo portal** (quem usa) | Tudo no portal; tudo no Git | Conteúdo exige revisão de código; acesso exige agilidade e trilha de aprovação |
 | ADR-12 | **OAuth 2.1 do MCP como evolução**: o `odin-sts` já nasce com metadados OAuth (RFC 8414) e JWKS | Implementar desde o início | O Claude Code suporta OAuth em servidores HTTP (confirmado); fica para depois da F0, porque o CLI continua necessário para o runtime |
 | ADR-13 | **Borda única** (Load Balancer + Cloud Armor) na frente de todos os serviços públicos | Endereços `run.app` diretos | WAF, limite de taxa, certificado e domínio próprio num lugar só; `run.app` só na prova de conceito |
-| ADR-15 | **Segundo fator próprio do Odin** (TOTP obrigatório; passkey para administradores), além do GitHub | Confiar só no 2FA do GitHub | Conta do GitHub tomada não basta; a conta pessoal da prova de conceito não permite exigir 2FA |
 | ADR-14 | **Região `southamerica-east1`** para dados e serviços | `us-central1` | Residência de dados no Brasil (LGPD) e latência; [VERIFICAR] disponibilidade de cada serviço na região |
+| ADR-15 | **Segundo fator próprio do Odin** (TOTP obrigatório; passkey para administradores), além do GitHub | Confiar só no 2FA do GitHub | Conta do GitHub tomada não basta; a conta pessoal da prova de conceito não permite exigir 2FA |
 
 ## 6. Fluxos de ponta a ponta
 
 ### 6.1 Onboarding (uma vez)
 1. A pessoa é convidada no portal (pelo login do GitHub) ou entra automaticamente por pertencer a um time do GitHub mapeado para um squad.
 2. Instala o CLI com um comando copiado do portal.
-3. `odin setup` → abre `https://odin.<dominio>/ativar` com o código preenchido → login com GitHub → aprova o dispositivo → o CLI recebe a credencial ligada à chave do dispositivo, registra o MCP no Claude Code e instala o guard, o `ODIN.md` e o runtime das skills a que ela tem direito.
+3. `odin setup` → abre `https://odin.<dominio>/ativar` com o código preenchido → login com GitHub e segundo fator do Odin → confere o código e os dados do dispositivo e aprova → o CLI recebe a credencial ligada à chave do dispositivo, registra o MCP no Claude Code e instala o guard, o `ODIN.md` e o runtime das skills a que ela tem direito.
 
 ### 6.2 Pedido de trabalho (todo dia)
 1. "Quero criar a classe de teste do `CaseRouter`" → o Claude Code (guiado pelas instruções do servidor Odin) chama `odin_rotear`.

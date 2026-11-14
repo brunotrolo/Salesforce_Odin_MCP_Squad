@@ -6,7 +6,7 @@
 
 | # | Quem → onde | Método escolhido | Fatores |
 |---|---|---|---|
-| AU-1 | Pessoa → portal | **OIDC / OAuth 2.0 Authorization Code com PKCE**, provedor GitHub, via Identity Platform | GitHub (com o 2FA do GitHub) **+ segundo fator do Odin** (TOTP ou passkey) |
+| AU-1 | Pessoa → portal | **OAuth 2.0 Authorization Code** com o GitHub, conduzido pelo Identity Platform (PKCE e `state` onde o provedor e o SDK suportarem [VERIFICAR]); o portal recebe um ID token OIDC do Identity Platform | GitHub (com o 2FA do GitHub) **+ segundo fator do Odin** (TOTP ou passkey) |
 | AU-2 | CLI → STS (ativação) | **OAuth 2.0 Device Authorization Grant** (RFC 8628), aprovado no portal | A aprovação exige sessão do portal **com MFA válido**; o dispositivo prova posse de uma chave própria |
 | AU-3 | CLI → STS (renovação) | **Refresh token** (OAuth 2.0) **+ prova de posse** `private_key_jwt` (RFC 7523) | Algo que o dispositivo tem: credencial + chave privada no cofre do sistema |
 | AU-4 | Claude Code → MCP; CLI → `/v1` | **Bearer token** (RFC 6750) com JWT de acesso (perfil RFC 9068) | Herdado da sessão do dispositivo |

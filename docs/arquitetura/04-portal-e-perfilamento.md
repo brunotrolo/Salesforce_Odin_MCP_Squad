@@ -131,25 +131,9 @@ Remoção do time do GitHub (webhook) ou suspensão no portal → pertenças enc
 ### 7.5 Incidente
 super-admin abre **Segurança → Revogação global** → reautentica → confirma com motivo → `revocations/global` é gravado com o carimbo de tempo → tokens e credenciais emitidos antes dele deixam de valer, e todos os CLIs pedem login de novo → alerta e relatório para todos os administradores. Se a própria chave de JWT estiver comprometida, a troca da chave segue o runbook (fora do portal).
 
-## 8. API administrativa (usada só pelo BFF do portal)
+## 8. API do portal
 
-| Recurso | Operações |
-|---|---|
-| `/admin/v1/users` | listar, ver, convidar, suspender, reativar |
-| `/admin/v1/squads` | CRUD, membros, gestores, mapeamento de time |
-| `/admin/v1/projects` | CRUD |
-| `/admin/v1/profiles` | CRUD, matriz |
-| `/admin/v1/grants` | criar, revogar, listar por pessoa ou alvo |
-| `/admin/v1/requests` | listar, aprovar, recusar |
-| `/admin/v1/admin-changes` | pedir, aprovar, recusar (quatro olhos) |
-| `/admin/v1/devices` | listar, revogar (por pessoa ou em massa) |
-| `/admin/v1/catalog` | ler skills e versões, abrir link de PR |
-| `/admin/v1/knowledge/proposals` | listar, aprovar (abre PR pelo GitHub App), recusar |
-| `/admin/v1/security` | alertas, revogação global, troca de chave |
-| `/admin/v1/audit` | busca e exportação (BigQuery) |
-| `/admin/v1/settings` | ler, pedir mudança (quatro olhos) |
-
-Cada operação declara o papel e o escopo exigidos. O BFF confere o cookie de sessão, a reautenticação recente e o papel. A API grava a auditoria antes de responder.
+Os contratos completos (rotas `/api/*` e `/api/admin/*`, papel, escopo, idade do MFA e fonte de dados de cada tela) estão em [portal 09](../portal/09-contratos-e-api.md).
 
 ## 9. Critérios de aceite do portal
 - Pessoa não convidada e fora de time mapeado não entra.

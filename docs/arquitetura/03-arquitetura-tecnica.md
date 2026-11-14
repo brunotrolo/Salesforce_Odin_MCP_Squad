@@ -126,6 +126,9 @@ quotas/{userId}/{dia}          contador diário de requisições (incremento at�
 quota_rules/{id}               cotas por perfil, squad ou pessoa (portal 06)
 proposals/{id}                 colecao, projeto, texto, fonte, origem (skill|pessoa), status, curador, prUrl?
 settings/global                ttls, limites, provedores habilitados, mensagem de manutenção
+policy_versions/{n}            versões da matriz perfil × skill × coleção (portal 09)
+notifications/{userId}/{id}    avisos do portal (portal 08)
+review_campaigns/{id}          revisão trimestral de acessos (segurança RB-12)
 ```
 - **Acesso:** os clientes nunca leem o Firestore direto. As regras de segurança negam tudo para clientes, e só as contas de serviço acessam.
 - **Cache de direitos:** o `odin-mcp` monta os "direitos efetivos" de cada pessoa a partir de `users`, `memberships`, `profiles`, `grants` e `projects`, e os guarda em memória por 30 s, chaveados por `userId` + `policyVersion`. Qualquer mudança administrativa incrementa o `policyVersion` da pessoa (ou de todos os membros de um squad).
@@ -251,14 +254,18 @@ sequenceDiagram
 ```json
 {
   "iss": "https://auth.<dominio>",
-  "aud": "odin-mcp",
+  "aud": "https://mcp.<dominio>",
   "sub": "usr_8f2c...",          // id interno da pessoa
+  "client_id": "odin-cli",
   "gh": 1234567,                 // id numérico do GitHub
   "dev": "dev_41a9...",          // dispositivo
+  "fam": "fam_77b0...",          // família do refresh token
   "pv": 17,                      // policyVersion no momento da emissão
-  "iat": 1760000000, "exp": 1760000900, "jti": "…"
+  "amr": ["github", "otp"], "acr": "N1",
+  "iat": 1760000000, "nbf": 1760000000, "exp": 1760000900, "jti": "…"
 }
 ```
+- Cabeçalho `{"alg":"ES256","typ":"at+jwt","kid":"…"}`. Lista completa de validações em [segurança 03, seção 2.2](../seguranca/03-tokens-sessoes-e-chaves.md).
 - **Sem perfis dentro do token** (ADR-05). O MCP resolve os direitos no servidor, com cache de 30 s. Se o `pv` do token for menor que o atual da pessoa, os direitos usados são **os atuais** (nunca os antigos).
 - Assinado com `jwt-signing` (KMS, ES256). As chaves públicas ficam em `https://auth.<dominio>/.well-known/jwks.json`, com cache de 10 min no MCP. A rotação mantém duas chaves publicadas durante a troca.
 - O `odin token` imprime `{"Authorization":"Bearer <jwt>","X-Odin-Runtime":"<caminho>","X-Odin-Cli":"<versão>"}` e guarda o JWT em cache até faltar 2 min para expirar.
