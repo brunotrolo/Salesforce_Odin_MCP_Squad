@@ -29,7 +29,7 @@
 |---|---|---|
 | 14 | **Modo degradado com cópia local assinada por 7 dias** das skills já usadas e ainda permitidas | O conteúdo da skill entra no pacote assinado do runtime; sem contato com o Odin por 7 dias, a cópia vence |
 | 15 | **Versão fixa por sessão**; a versão nova vale na próxima sessão (exceto versão proibida, que sempre bloqueia) | Resolve sessões paralelas e troca de runtime durante um script |
-| 16 | Credenciais de terceiros **ficam na máquina**; o guard protege | O Discovery publica no Jira pelo **MCP do Jira** (que cuida da própria autenticação) e o `jira.config.json` não tem credencial. O `sf` CLI usa a autenticação dele. O Odin não guarda nem repassa credenciais de terceiros |
+| 16 | Credenciais de terceiros **ficam na máquina**; o guard protege | O **token do Jira fica na máquina local do usuário**, usado pelo MCP do Jira que o Discovery chama para publicar; o `jira.config.json` não tem credencial. O `sf` CLI usa a autenticação dele. O Odin **não guarda, não lê e não repassa** credenciais de terceiros. O guard nega ao modelo a leitura dos locais onde o token fica (política PG-01), sem impedir o MCP do Jira de usá-lo |
 | 17 | Intenções de roteamento: **o Claude propõe 20 por skill**, o mantenedor revisa; meta ≥ 90% de acerto | Entregável na especificação de migração |
 | 18 | **Conhecimento começa vazio**; o mantenedor vai criar uma skill ou estrutura de *system patterns* que cresce com o tempo | Essa estrutura vira a fonte da coleção `tecnico` (formato de [plano, seção 11.2](PLANO.md)) |
 | 19 | Meta do RAG: **≥ 80% no top 5** | Avaliação por coleção |

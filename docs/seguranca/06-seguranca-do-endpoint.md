@@ -24,7 +24,7 @@ O Claude Code roda com acesso total à máquina. O Odin acrescenta skills e scri
 
 | Política | Nega | Exemplos |
 |---|---|---|
-| PG-01 Segredos | Ler arquivos de segredo e credenciais | `.env*`, `*.pem`, `*.key`, `id_rsa*`, `~/.aws/`, `~/.config/gcloud/`, `~/.sfdx/`, `~/.sf/` (exceto pelo `sf` CLI), cofres de senha |
+| PG-01 Segredos | Ler arquivos de segredo e credenciais | `.env*`, `*.pem`, `*.key`, `id_rsa*`, `~/.aws/`, `~/.config/gcloud/`, `~/.sfdx/`, `~/.sf/` (exceto pelo `sf` CLI), cofres de senha, **o token do Jira na máquina** e o `~/.claude.json` (que guarda variáveis e cabeçalhos dos servidores MCP, inclusive o do Jira). Quem usa esses segredos são os próprios programas (MCP do Jira, `sf` CLI, Claude Code), nunca o modelo por leitura de arquivo |
 | PG-02 Odin | Editar as pastas e blocos do Odin | `~/.odin/`, `~/.claude/agents/odin-*`, `~/.claude/skills/odin/`, blocos marcados em `~/.claude/settings.json` e `~/.claude/CLAUDE.md` |
 | PG-03 Destruição | Apagar fora do projeto atual ou em massa | `rm -rf` fora da pasta do projeto, `git clean -fdx` na raiz da casa, formatar discos |
 | PG-04 Histórico | Reescrever histórico remoto | `git push --force` para `main`/`master`, apagar branches remotas protegidas |
@@ -36,6 +36,12 @@ O Claude Code roda com acesso total à máquina. O Odin acrescenta skills e scri
 **Lista de destinos permitidos (PG-06):** domínios do Odin, do GitHub, do registro de pacotes, do Salesforce (`*.salesforce.com`, `*.force.com`, `*.my.salesforce.com`) e os que cada projeto declarar. Manter essa lista tem custo, e o plano registra isso como [VERIFICAR]. Começa em modo **alerta** na prova de conceito e passa a **bloqueio** depois de calibrada.
 
 **Limite honesto:** o guard intercepta as ferramentas do Claude Code (Bash, Edit, Write, Read e outras). Um script já permitido que, por dentro, faça algo indevido não é visto pelo guard. Por isso os scripts das skills são revisados e assinados (05), e os scripts do projeto do dev são do dev.
+
+### 3.1 Token do Jira (e outras credenciais de terceiros)
+- O token do Jira fica **na máquina do usuário**, na configuração do MCP do Jira. Ele nunca passa pelo Odin.
+- **Recomendado:** guardar o token no cofre do sistema e deixar a configuração do MCP só referenciá-lo, quando o MCP do Jira usado permitir [VERIFICAR o MCP do Jira adotado]. Senão, em arquivo com permissão `0600`, fora de qualquer repositório.
+- O `odin doctor` avisa se encontrar um token do Jira (ou de outro serviço) em arquivo de projeto, em `.env` versionado ou com permissão aberta.
+- A escrita no Jira continua sujeita à política de skill do Discovery (`guard-jira-write`: só com plano aprovado, sem exclusão nem mudança de status).
 
 ## 4. Políticas de skill (ativas quando a skill está em uso)
 Migradas das skills atuais, com testes: `guard-qa` (Test Automator: só sandbox, ação destrutiva só em registro criado pela execução, sem XPath), `guard-deploy` (Journey Developer), proteção de escrita no Jira (Discovery), políticas do Data Architect, verificação do protótipo (Designer).
