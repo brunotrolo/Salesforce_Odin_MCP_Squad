@@ -515,7 +515,7 @@ Metas: RPO de 1 h e RTO de 4 h. Exercício de restauração a cada semestre.
 
 ## 14. Pontos a verificar na prova de conceito
 0. **Prioridade da F0** (decisões 23 e 24): **Windows nativo** e **extensão do VS Code** primeiro.
-0b. Login OAuth do MCP oficial da Atlassian no Claude Code (relato de falha em 2026) e, se preciso, o modo token de API com `headersHelper` (segurança 06, 3.1).
+0b. Onde o Claude Code guarda o token OAuth do MCP oficial da Atlassian em cada sistema (o login pelo navegador já funciona no time), para a política PG-01 do guard cobrir o local certo.
 1. Modo sem estado do Streamable HTTP com o Claude Code (6.1).
 2. Disponibilidade em `southamerica-east1` de Identity Platform, Vertex AI (modelo de embeddings) e CMEK no Firestore.
 3. Nome e dimensão do modelo de embeddings multilíngue atual.
