@@ -1,6 +1,7 @@
 # Odin MCP Squad: plano de arquitetura
 
 > **Status:** plano, nada foi desenvolvido. Primeiro uso: prova de conceito pessoal num projeto Google Cloud do mantenedor, já com **todas** as skills. Depois, o time (cerca de 20 devs, mais POs).
+> **Segurança:** pasta [`docs/seguranca/`](seguranca/README.md) (modelo de ameaças, autenticação e MFA, tokens, autorização, cadeia de suprimentos, endpoint, infraestrutura, LGPD, resposta a incidentes, controles e runbooks). Para segurança, vale a pasta.
 > **Arquitetura detalhada:** [solução](arquitetura/01-arquitetura-de-solucao.md) · [funcional](arquitetura/02-arquitetura-funcional.md) · [técnica](arquitetura/03-arquitetura-tecnica.md) · [portal e perfilamento](arquitetura/04-portal-e-perfilamento.md). Em caso de diferença de detalhe, valem os documentos de arquitetura.
 > **Convenção:** **[VERIFICAR]** marca o que depende de um comportamento do Claude Code, do Google Cloud ou do LiteLLM que não foi confirmado na documentação; esses pontos são os primeiros testes da prova de conceito (seção 16). **[CONFIRMADO]** marca o que foi conferido na documentação oficial do Claude Code (code.claude.com/docs, páginas `mcp`, `hooks`, `sub-agents` e `plugins`). Confirmado em documentação não dispensa o teste prático em F0.
 
@@ -568,7 +569,7 @@ Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo pró
 
 ## 20. Revisões deste plano (laço de revisão)
 
-O plano passou por nove rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral e arquitetura detalhada). O que cada rodada mudou:
+O plano passou por dez rodadas de revisão contra os objetivos (fricção, governança, segurança, escala, conformidade, verificação na documentação, isolamento, consistência geral, arquitetura detalhada e cibersegurança). O que cada rodada mudou:
 
 | Rodada | Foco | Problema encontrado | Mudança |
 |---|---|---|---|
@@ -613,6 +614,11 @@ O plano passou por nove rodadas de revisão contra os objetivos (fricção, gove
 | 9 | Identidade | Provedor de login em aberto | GitHub decidido; id numérico do GitHub como chave da pessoa (D1) |
 | 9 | Segurança | Revogação global exigiria permissão de KMS no portal | Revogação por carimbo de tempo; troca de chave só por runbook (arquitetura técnica, 5.5) |
 | 9 | Governança | Duplicidade de onde se editam perfis (Git e portal) | Acesso no portal, conteúdo no Git (8.2, ADR-11) |
+| 10 | Segurança | Faltava documentação de segurança dedicada | Pasta `docs/seguranca/` com 12 documentos |
+| 10 | Identidade | Login dependia só do 2FA do GitHub | Segundo fator do Odin (TOTP obrigatório, passkey para administradores) e níveis de garantia N1, N2 e N3 |
+| 10 | Tokens | Inatividade de dispositivo em 90 dias era longa demais | Revogação após 30 dias sem uso; ativação vale no máximo 90 dias |
+| 10 | Resposta | Não havia como bloquear uma versão já instalada | Lista assinada de versões proibidas, aplicada pelo CLI e pelo guard |
+| 10 | Ameaças | Phishing de device code não estava tratado | MFA na aprovação, dados do dispositivo na tela, alerta de IP divergente |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 

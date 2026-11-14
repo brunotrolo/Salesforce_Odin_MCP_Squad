@@ -148,7 +148,8 @@ erDiagram
 | RN-11 | Conhecimento substituído (`substitui`) ou fora da vigência não é retornado como atual |
 | RN-12 | Resposta de conhecimento sempre traz citação (documento, seção, versão) |
 | RN-13 | Auditoria guarda quem, o quê, quando e resultado, mas não o texto do pedido (salvo amostragem mascarada habilitada) |
-| RN-14 | Dispositivo sem uso por 90 dias é revogado automaticamente |
+| RN-14 | Dispositivo sem uso por 30 dias é revogado automaticamente; toda ativação vale no máximo 90 dias |
+| RN-16 | Todo login no portal exige o segundo fator do Odin (TOTP ou passkey); papéis administrativos exigem passkey |
 | RN-15 | Conta de emergência só é usada com alerta imediato a todos os administradores |
 
 ## 6. Conhecimento: visão funcional
@@ -167,7 +168,7 @@ erDiagram
 
 | RF | Requisito | Capacidade |
 |---|---|---|
-| RF-01 | Login no portal com GitHub; opcionalmente Google ou Microsoft | 1 |
+| RF-01 | Login no portal com GitHub (opcionalmente Google ou Microsoft) **+ segundo fator do Odin** (TOTP ou passkey), com códigos de recuperação | 1 |
 | RF-02 | Ativar o CLI por device flow, com o código mostrado no terminal e confirmado no portal | 1 |
 | RF-03 | Listar e revogar os próprios dispositivos; ver o último uso | 1 |
 | RF-04 | Gerar token pessoal (exceção), com escopo, prazo e exibição única | 1 |

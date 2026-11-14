@@ -176,8 +176,8 @@ Tabela `odin_audit.eventos` (a partir do coletor): `ts`, `servico`, `ator` (user
 
 | Quem → onde | Método | Credencial | Validade |
 |---|---|---|---|
-| Pessoa → portal | **OIDC/OAuth 2.0 com GitHub** via Identity Platform; depois cookie de sessão | Cookie de sessão `HttpOnly`, `Secure`, `SameSite=Lax`, com proteção CSRF | 8 h; ações administrativas exigem login com menos de 15 min (reautenticação) |
-| CLI → STS (ativação) | **Device Authorization Grant (RFC 8628)**, aprovado no portal | Credencial de dispositivo opaca + par de chaves do dispositivo (P-256) no cofre do sistema | 90 dias, rotativa a cada uso, revogada sem uso por 90 dias |
+| Pessoa → portal | **OIDC/OAuth 2.0 com GitHub** via Identity Platform **+ segundo fator do Odin** (TOTP obrigatório; passkey obrigatória para administradores); depois cookie de sessão | Cookie de sessão `HttpOnly`, `Secure`, `SameSite=Lax`, com proteção CSRF | 8 h; ações administrativas exigem login com menos de 15 min (reautenticação) |
+| CLI → STS (ativação) | **Device Authorization Grant (RFC 8628)**, aprovado no portal | Credencial de dispositivo opaca + par de chaves do dispositivo (P-256) no cofre do sistema | Família de até 90 dias, rotativa a cada uso, revogada sem uso por 30 dias |
 | CLI → STS (renovação) | `refresh_token` + **prova de posse** (JWT assinado pela chave do dispositivo, no estilo `private_key_jwt`, RFC 7523) | — | — |
 | Claude Code → MCP | **Bearer JWT** (ES256) via `headersHelper` (`odin token`) | Token de acesso | 15 min |
 | CLI → `/v1` | Mesmo Bearer JWT | — | 15 min |
@@ -210,6 +210,7 @@ sequenceDiagram
   P->>P: [com organização] pertence à organização? 2FA exigido pela organização?
   P-->>B: cookie de sessão (HttpOnly, Secure) e redireciona
 ```
+- **Segundo fator:** depois do GitHub, o portal exige o fator do Odin (TOTP ou passkey) antes de criar a sessão. Detalhes em [segurança 02](../seguranca/02-autenticacao-e-mfa.md).
 - **Chave da pessoa:** o id numérico do GitHub (`providerData[github.com].uid`), nunca o login.
 - **Primeiro acesso:** só entra quem foi **convidado** (pelo login do GitHub, resolvido para o id no aceite) ou quem pertence a um **time do GitHub mapeado** a um squad. Os demais veem "sem acesso; peça a um administrador".
 - **2FA:** a organização do GitHub deve exigir 2FA (configuração da organização). Na conta pessoal da prova de conceito, o portal mostra o aviso e o administrador decide. [VERIFICAR] como confirmar o 2FA de um membro pela API (depende de permissões de dono da organização).
@@ -371,6 +372,8 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 | `infra.yml` | Merge em `infra/` | `terraform apply` com aprovação de ambiente |
 
 ## 8. Segurança
+
+> Detalhamento completo (modelo de ameaças, MFA, tokens, autorização, cadeia de suprimentos, endpoint, infraestrutura, LGPD, resposta a incidentes, controles e runbooks) na pasta [`docs/seguranca/`](../seguranca/README.md). Em caso de diferença, vale a pasta de segurança.
 
 ### 8.1 Controles por camada
 | Camada | Controles |

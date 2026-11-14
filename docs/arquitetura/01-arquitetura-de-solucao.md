@@ -145,6 +145,7 @@ flowchart LR
 | ADR-11 | **Catálogo por GitOps** (o que existe e em que versão) e **acesso pelo portal** (quem usa) | Tudo no portal; tudo no Git | Conteúdo exige revisão de código; acesso exige agilidade e trilha de aprovação |
 | ADR-12 | **OAuth 2.1 do MCP como evolução**: o `odin-sts` já nasce com metadados OAuth (RFC 8414) e JWKS | Implementar desde o início | O Claude Code suporta OAuth em servidores HTTP (confirmado); fica para depois da F0, porque o CLI continua necessário para o runtime |
 | ADR-13 | **Borda única** (Load Balancer + Cloud Armor) na frente de todos os serviços públicos | Endereços `run.app` diretos | WAF, limite de taxa, certificado e domínio próprio num lugar só; `run.app` só na prova de conceito |
+| ADR-15 | **Segundo fator próprio do Odin** (TOTP obrigatório; passkey para administradores), além do GitHub | Confiar só no 2FA do GitHub | Conta do GitHub tomada não basta; a conta pessoal da prova de conceito não permite exigir 2FA |
 | ADR-14 | **Região `southamerica-east1`** para dados e serviços | `us-central1` | Residência de dados no Brasil (LGPD) e latência; [VERIFICAR] disponibilidade de cada serviço na região |
 
 ## 6. Fluxos de ponta a ponta
@@ -175,7 +176,7 @@ flowchart LR
 ## 7. Visões transversais
 
 ### 7.1 Segurança (resumo; detalhe na arquitetura técnica, seção 8)
-- **Identidade:** login com GitHub (2FA exigido pela organização do GitHub), sessão no portal com cookie seguro e reautenticação para ações administrativas.
+- **Identidade:** login com GitHub (2FA exigido pela organização do GitHub) **mais o segundo fator do Odin** (TOTP ou passkey; passkey para administradores), sessão no portal com cookie seguro e reautenticação para ações administrativas. Detalhe na pasta [`docs/seguranca/`](../seguranca/README.md).
 - **Acesso:** perfis de uso × papéis administrativos separados; squads e projetos como recorte; concessões com validade; aprovação a quatro olhos para papéis administrativos.
 - **Credenciais:** token de 15 min; credencial de dispositivo rotativa e ligada a chave; revogação em até 30 s; token pessoal só como exceção.
 - **Cadeia de suprimentos:** pacotes e dependências assinados; imagens com varredura e (em produção) Binary Authorization; Dependabot.

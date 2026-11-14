@@ -25,10 +25,11 @@ A mesma tela se adapta ao papel: cada pessoa só vê os menus que pode usar.
 ## 3. Login e sessão
 
 1. **Entrar com GitHub:** o único botão (Google e Microsoft podem ser ligados depois, por configuração).
-2. **Quem entra:** pessoa convidada (pelo login do GitHub) ou membro de um time do GitHub mapeado a um squad. Os demais veem "Você ainda não tem acesso. Peça a um administrador do Odin" e o pedido fica registrado.
-3. **Sessão:** 8 horas. Ações administrativas pedem **login de novo** se o último tiver mais de 15 minutos (reautenticação).
-4. **Sair:** encerra a sessão no portal; dispositivos continuam ativos (são independentes).
-5. **Suspensão:** pessoa suspensa perde a sessão no portal e os tokens em até 30 s.
+2. **Segundo fator do Odin:** código do aplicativo autenticador (Google Authenticator, Microsoft Authenticator, Authy) ou passkey. No primeiro acesso, o cadastro do fator é obrigatório antes de qualquer outra tela. Administradores precisam de passkey ([segurança 02](../seguranca/02-autenticacao-e-mfa.md)).
+3. **Quem entra:** pessoa convidada (pelo login do GitHub) ou membro de um time do GitHub mapeado a um squad. Os demais veem "Você ainda não tem acesso. Peça a um administrador do Odin" e o pedido fica registrado.
+4. **Sessão:** 8 horas (30 min de inatividade). Ações administrativas pedem **o segundo fator de novo** se o último tiver mais de 15 minutos; ativar dispositivo e gerar token pessoal, se tiver mais de 5 minutos.
+5. **Sair:** encerra a sessão no portal; dispositivos continuam ativos (são independentes).
+6. **Suspensão:** pessoa suspensa perde a sessão no portal e os tokens em até 30 s.
 
 ## 4. Área do usuário (todos os perfis)
 
@@ -37,6 +38,7 @@ A mesma tela se adapta ao papel: cada pessoa só vê os menus que pode usar.
 | **Início** | Saudação, squads e projetos, perfis, skills disponíveis (com versão e canal), status do serviço | Copiar o comando de instalação do CLI |
 | **Conectar** | Passo a passo: instalar o CLI (macOS/Linux e Windows) e rodar `odin setup` | Copiar comandos; baixar o guia em uma página |
 | **Ativar** (`/ativar`) | Dispositivo pedindo ativação: nome, sistema, IP, local aproximado, código | Confirmar ou recusar; avisa "só confirme se foi você quem rodou o comando agora" |
+| **Segurança da conta** | Fatores cadastrados (TOTP, passkeys), códigos de recuperação restantes, últimos logins | Cadastrar ou remover fator (com o fator atual), gerar novos códigos de recuperação |
 | **Meus dispositivos** | Lista com nome, sistema, ativado em, último uso, IP | Renomear, **revogar** um ou todos |
 | **Tokens pessoais** | Tokens de exceção ativos (só prefixo e validade) | Gerar (escopo, prazo ≤ 90 dias, motivo; exibido **uma vez**), revogar |
 | **Minhas skills** | O que posso usar, por squad e projeto, e o porquê (perfil ou concessão) | Ver detalhes e documentação de cada skill |
