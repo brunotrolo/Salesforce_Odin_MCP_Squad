@@ -34,7 +34,7 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 
 ## F5 · Runtime local (2 semanas)
 - **Ler:** plano 7 e 22; segurança 06; decisões 14, 15, 22, 23, 24.
-- **Entregar:** `packages/cli` (setup, login, token, ensure, doctor, guard-ping, update, uninstall, restore-copias), `packages/guard` com PG-01 a PG-08 e as políticas das skills, skill local `odin`, `ODIN.md`, blocos marcados, cópia local de 7 dias, versão fixa por sessão.
+- **Entregar:** `packages/cli` (setup, login, token, ensure, doctor, guard, update, uninstall, restore-copias), `packages/guard` com PG-01 a PG-08 e as políticas das skills, skill local `odin`, `ODIN.md`, blocos marcados, cópia local de 7 dias, versão fixa por sessão.
 - **Testes:** matriz Windows nativo (PowerShell e `cmd`), macOS e Linux no CI; CT-15, CT-24 e CT-26 (arquivo do runtime alterado → detectado, reinstalado, DT-19); isolamento (nada escrito no projeto); `uninstall` devolve os arquivos idênticos; guard ausente bloqueia.
 
 ## F6 · Adaptação das 10 skills (4,5 semanas)

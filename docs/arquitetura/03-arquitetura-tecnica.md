@@ -463,7 +463,7 @@ A revogação imediata continua no portal (≤ 30 s). O atraso de até 15 min va
 ### 9.1 CLI `odin`
 - Node 22 empacotado como executável único por plataforma (para não depender do Node do usuário). [VERIFICAR] a ferramenta de empacotamento.
 - Cofre: macOS Keychain, Windows Credential Manager, Linux libsecret. Sem cofre disponível → arquivo cifrado com permissão `0600` e aviso.
-- Comandos: `setup`, `login`, `logout`, `token`, `ensure <skill>`, `doctor` (inclui remover cópias antigas de skills dos projetos, com confirmação e arquivamento), `guard-ping`, `update`, `uninstall`, `restore-copias` (plano de volta do corte, 30 dias), `dev validate|try` (mantenedores).
+- Comandos: `setup`, `login`, `logout`, `token`, `ensure <skill>`, `doctor` (inclui remover cópias antigas de skills dos projetos, com confirmação e arquivamento), `guard` (o hook), `update`, `uninstall`, `restore-copias` (plano de volta do corte, 30 dias), `dev validate|try` (mantenedores).
 - Autoatualização: baixa pelo portal (`/download/cli/...`) e confere a **assinatura do KMS** (`cli-signing`, chave pública embutida) e o checksum antes de trocar o binário.
 
 ### 9.2 Registro no Claude Code

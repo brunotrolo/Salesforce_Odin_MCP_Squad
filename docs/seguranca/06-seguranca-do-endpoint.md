@@ -17,7 +17,7 @@ O Claude Code roda com acesso total à máquina. O Odin acrescenta skills e scri
 ## 2. Guard: comportamento
 - **Fail-closed:** erro interno, política corrompida, assinatura inválida ou tempo esgotado → **nega**, com a mensagem "rode `odin doctor`". O tempo limite do hook é curto (5 s) para não travar a sessão.
 - **Bloqueio:** código de saída 2 ou `permissionDecision: "deny"` com motivo (confirmado na documentação do Claude Code). Ficar em silêncio não aprova nada.
-- **Prova de vida:** `odin guard-ping` (plano, seção 7.4) confirma que o guard está ativo na sessão antes de qualquer skill rodar.
+- **Prova de vida:** o marcador que o guard grava ao ver `odin ensure` passar (plano, seção 7.4) confirma que o guard está ativo na sessão antes de qualquer skill rodar.
 - **Políticas assinadas:** distribuídas no pacote `policies`, verificadas pelo CLI; o guard confere o hash do próprio pacote a cada início.
 
 ## 3. Catálogo de políticas globais (sempre ativas)

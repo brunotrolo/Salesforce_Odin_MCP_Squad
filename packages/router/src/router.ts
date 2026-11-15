@@ -65,8 +65,13 @@ export class Roteador {
   rotear(pedido: string, permitidas: Set<string>, artefatos: string[] = [], skillAtual?: string): { candidatas: Candidata[] } | { nao_sei: true; pergunta: string } {
     const q = this.embedder.vetor(pedido);
     const notas: Candidata[] = [];
+    let foraDoPerfil: { nome: string; nota: number } | null = null;
     for (const s of this.skills) {
-      if (!permitidas.has(s.id)) continue;
+      if (!permitidas.has(s.id)) { // só para dizer "isso é de outra skill", nunca para sugerir
+        let pos = 0, neg = 0; for (const i of this.vetores.get(s.id)!) { const c = cosseno(q, i.v); if (i.negativa) neg = Math.max(neg, c); else pos = Math.max(pos, c); }
+        const nota = neg > pos ? pos * 0.4 : pos; if (nota > (foraDoPerfil?.nota ?? 0)) foraDoPerfil = { nome: s.nome, nota };
+        continue;
+      }
       let pos = 0, neg = 0, exemplo = '';
       for (const i of this.vetores.get(s.id)!) { const c = cosseno(q, i.v); if (i.negativa) neg = Math.max(neg, c); else if (c > pos) { pos = c; exemplo = i.texto; } }
       let nota = neg > pos ? pos * 0.4 : pos;
@@ -76,6 +81,7 @@ export class Roteador {
       if (nota > 0) notas.push({ skill: s.id, confianca: Math.round(nota * 100) / 100, motivo: insumo ? `parecido com "${exemplo}"; insumo presente (${insumo})` : `parecido com "${exemplo}"` });
     }
     notas.sort((a, b) => b.confianca - a.confianca);
+    if (foraDoPerfil && foraDoPerfil.nota >= this.limiar && foraDoPerfil.nota > (notas[0]?.confianca ?? 0) * 1.25) return { nao_sei: true, pergunta: `Esse pedido parece ser da skill ${foraDoPerfil.nome}, que não está no seu perfil. Peça acesso no portal ou diga se é outra coisa.` };
     if (!notas.length || notas[0]!.confianca < this.limiar) {
       const nomes = this.skills.filter((s) => permitidas.has(s.id)).map((s) => s.nome).slice(0, 6).join(', ');
       return { nao_sei: true, pergunta: nomes ? `Não identifiquei a skill com segurança. O pedido é sobre qual destas áreas: ${nomes}?` : 'Você ainda não tem skills liberadas. Peça acesso no portal.' };

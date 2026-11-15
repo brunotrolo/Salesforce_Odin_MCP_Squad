@@ -92,6 +92,11 @@
 | 51 | **Apex Callouts Developer ajustado para Service Cloud** na migração (hoje fala em arquitetura FSC) | Tarefa da F6, com o `odin-curador` |
 | 52 | **11 atalhos**: aos 6 da decisão 10 somam-se `/odin:legado`, `/odin:lwc`, `/odin:callout`, `/odin:cobertura` e `/odin:debug` | Prompts MCP correspondentes |
 
+## J. Desenvolvimento (15/11/2026, ADR 0020)
+| # | Decisão | Consequência |
+|---|---|---|
+| 53 | **Desenvolver tudo localmente primeiro**, com testes e CI no GitHub; a nuvem entra depois | Serviços atrás de interfaces (documentos, pacotes, assinatura, embeddings, cofre) com implementação local e de nuvem; `npm run dev` e `npm run demo` rodam o Odin inteiro na máquina; a F0 e a F1 no Google Cloud ficam para depois do caminho local completo |
+
 ## G. Entregáveis
 | # | Decisão | Consequência |
 |---|---|---|

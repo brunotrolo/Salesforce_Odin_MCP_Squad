@@ -48,8 +48,8 @@ flowchart LR
   "fonte": { "repo": "<dono>/Salesforce_Test_Automator", "sha": "be2e06b…" },
   "pipeline": { "run": "https://github.com/<dono>/Salesforce_Odin_MCP_Squad/actions/runs/…", "sha": "6df0db3…" },
   "pacotes": {
-    "conteudo": { "uri": "gs://odin-bundles-poc/sf-test/1.4.2/conteudo.tar.zst", "sha256": "…" },
-    "runtime":  { "uri": "gs://odin-bundles-poc/sf-test/1.4.2/runtime.tar.zst",  "sha256": "…" }
+    "conteudo": { "uri": "gs://odin-bundles-poc/sf-test/1.4.2/conteudo.odinpkg", "sha256": "…" },
+    "runtime":  { "uri": "gs://odin-bundles-poc/sf-test/1.4.2/runtime.odinpkg",  "sha256": "…" }
   },
   "arquivos": { "runtime/scripts/executar.mjs": "sha256:…", "…": "…" },
   "sbom": "sha256:…",

@@ -24,6 +24,6 @@ Servidor MCP único (Google Cloud) que entrega as skills de engenharia do time n
 10. Uma fase só fecha com os critérios da seção 16 do plano, os revisores independentes e os testes verdes.
 
 ## Comandos
-`npm ci` · `npm test` · `npm run verificar` (docs + skills + contratos + conformidade) · `node scripts/adr.mjs listar|novo|aceitar|fechar` · `node scripts/sessao.mjs inicio|fim`
+`npm ci` · `npm test` · `npm run verificar` (docs + skills + contratos + conformidade + roteamento + tipos) · `npm run demo` · `npm run dev` · `node scripts/adr.mjs listar|novo|aceitar|fechar` · `node scripts/sessao.mjs inicio|fim`
 
 Idioma: português do Brasil em documentos, interface e mensagens.

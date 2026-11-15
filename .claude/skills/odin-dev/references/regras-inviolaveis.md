@@ -44,7 +44,7 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | # | Regra | Fonte |
 |---|---|---|
 | D1 | Nunca escrever no projeto do dev; só pastas e blocos do Odin **[CF-09]** | Plano 22 |
-| D2 | Guard fail-closed; `guard-ping` comprova o guard ativo antes de qualquer skill | Plano 7.3 e 7.4 |
+| D2 | Guard fail-closed; o `odin ensure` só continua com o marcador recente gravado pelo guard (prova de vida) | Plano 7.3 e 7.4 |
 | D3 | Políticas globais PG-01 a PG-08, com equivalentes Windows (PowerShell e `cmd`) | Segurança 06 |
 | D4 | Credenciais de terceiros (Jira, `sf`) ficam na máquina; o Odin nunca as lê | Decisão 16; segurança 06, 3.1 |
 | D5 | Prioridade de teste: Windows nativo e extensão do VS Code | Decisões 23 e 24 |

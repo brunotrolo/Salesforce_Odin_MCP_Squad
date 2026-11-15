@@ -2,7 +2,7 @@
 
 Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as skills de engenharia no Claude Code, com login pelo GitHub, perfis de acesso, atualização automática, runtime local assinado e base de conhecimento (RAG), governado no Google Cloud.
 
-> **Status:** plano e arquitetura. Nada foi desenvolvido ainda.
+> **Status:** em desenvolvimento, local primeiro. O caminho completo (ativação, token, servidor MCP, publicação assinada, CLI e guard) já roda e é testado na máquina; a nuvem entra depois. Veja em segundos: `npm ci && npm run demo`.
 
 | Documento | Conteúdo |
 |---|---|
@@ -39,6 +39,30 @@ Abra este repositório no Claude Code e diga, por exemplo, **"continue o Odin"**
 Agentes independentes (somente leitura): `odin-revisor-arquitetura`, `odin-revisor-seguranca`, `odin-revisor-testes`, `odin-revisor-documentacao` e `odin-auditor`.
 
 **Garantias em código:** o hook `guard-docs` bloqueia a edição dos documentos de referência sem um ADR aberto (`node scripts/adr.mjs novo "título"`); o CI roda os testes (Linux e Windows), as verificações de documentação, skills, contratos e conformidade de segurança e de custo (inclusive caracteres Unicode ocultos), e recusa mudança em documento protegido sem ADR. Como contribuir: [CONTRIBUTING.md](CONTRIBUTING.md). Segurança: [SECURITY.md](SECURITY.md). Mudanças: [CHANGELOG.md](CHANGELOG.md).
+
+## Rodar na sua máquina
+
+```bash
+npm ci
+npm run demo      # o Odin de ponta a ponta, numa pasta temporária, sem instalar nada
+npm run dev       # sobe emissor de tokens + servidor MCP locais e mostra como conectar o seu Claude Code
+npm run odin -- doctor
+```
+
+| Pasta | O que é |
+|---|---|
+| `apps/sts` | Emissor de tokens: ativação do dispositivo, renovação com prova de posse, revogação |
+| `apps/mcp-server` | Servidor MCP (7 ferramentas, atalhos) e API `/v1` do CLI |
+| `apps/jobs` | Publisher: registra versões só com assinatura válida |
+| `packages/cli` | `odin`: setup, login, token, ensure, doctor, status, uninstall |
+| `packages/guard` | Hook de segurança com as políticas PG-01 a PG-08 |
+| `packages/router`, `catalog/` | Roteador e catálogo das 10 skills |
+| `packages/lint`, `pipeline/` | `odin lint` e publicação assinada |
+| `packages/shared` | Tokens, assinatura, armazenamento, auditoria, limites |
+| `dev/` | Ambiente local, servidor de desenvolvimento e demonstração |
+| `skills/odin-ambiente` | Skill de apoio do próprio Odin |
+
+## Verificações
 
 ```bash
 npm ci                           # dependências de desenvolvimento (validação dos contratos)
