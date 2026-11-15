@@ -398,8 +398,8 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 | Workflow | Gatilho | Faz |
 |---|---|---|
 | `ci.yml` | Todo PR | Lint, testes, testes de política, testes de autorização do RAG, `terraform plan` |
-| `publish.yml` | Merge em `catalog/` na `main` | Baixa skills no SHA, valida, testa, `odin lint`, empacota com dependências, **assina (KMS)**, envia ao bucket, chama o publisher, smoke test de roteamento |
-| `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII e injeção, roda a avaliação de recuperação; no merge, o webhook dispara o indexer |
+| `publish.yml` | Merge em `catalog/` na `main` | Baixa skills no SHA, valida, testa, roda as avaliações determinísticas, `odin lint` (inclui Unicode oculto), empacota com dependências, **assina (KMS)**, envia ao bucket, chama o publisher, smoke test de roteamento. No PR de promoção para `stable`, confere `evals/resultado.json` do SHA (ADR 0017) |
+| `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII, injeção e Unicode oculto, roda a avaliação de recuperação; no merge, o webhook dispara o indexer |
 | `deploy.yml` | Tag `v*` | Build das imagens, SBOM, atestação de origem, envio ao Artifact Registry, deploy no Cloud Run (prod com Binary Authorization) |
 | `cli-release.yml` | Tag `cli-v*` | Binários do CLI por plataforma, checksums, **assinatura no KMS** (`cli-signing`), envio ao bucket privado `odin-cli-<amb>`, atualização do script de instalação servido pelo portal com o checksum fixado; atestação de origem do GitHub quando disponível no plano [VERIFICAR para repositório privado] |
 | `infra.yml` | Disparo manual do mantenedor após merge em `infra/` | `terraform apply` (no Free não há ambientes com aprovação em repositório privado; a condição da identidade federada exige o mantenedor) |

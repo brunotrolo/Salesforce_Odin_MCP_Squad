@@ -99,10 +99,10 @@ S = falsificação de identidade · T = adulteração · R = repúdio · I = vaz
 
 | # | Ameaça (referência: OWASP Top 10 para aplicações com LLM) | Controle |
 |---|---|---|
-| IA-01 | Injeção de instrução direta ou indireta (documento, issue, página, resultado de ferramenta) | Guard em código; "evidência, nunca instrução" nas skills e no `ODIN.md`; filtro na ingestão do RAG; nenhuma ação crítica decidida só pelo modelo |
+| IA-01 | Injeção de instrução direta ou indireta (documento, issue, página, resultado de ferramenta), inclusive escondida em Unicode invisível | Guard em código; "evidência, nunca instrução" nas skills e no `ODIN.md`; filtro na ingestão do RAG; recusa de Unicode oculto no `odin lint`, na ingestão e no CI (ADR 0017); nenhuma ação crítica decidida só pelo modelo |
 | IA-02 | Vazamento de informação sensível pelo modelo | RAG filtrado por projeto; segredos nunca em skills; guard nega leitura de `.env*` e chaves |
 | IA-03 | Agência excessiva (o agente faz mais do que deveria) | Políticas do guard por skill (só sandbox, só registros criados pela execução, sem deploy em produção) |
-| IA-04 | Cadeia de suprimentos de prompts e skills | Skills assinadas, revisadas por PR, canal `beta` |
+| IA-04 | Cadeia de suprimentos de prompts e skills | Skills assinadas, revisadas por PR, canal `beta`; avaliação de comportamento antes do `stable` e integridade do runtime conferida no uso (ADR 0017) |
 | IA-05 | Envenenamento do conhecimento | Curadoria humana, PR revisado, vigência, avaliação automática da recuperação |
 | IA-06 | Confiança excessiva na resposta | Citação obrigatória; oráculos e vereditos das skills (por exemplo, `A_CONFIRMAR`) |
 

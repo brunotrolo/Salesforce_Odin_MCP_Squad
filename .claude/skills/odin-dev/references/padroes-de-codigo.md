@@ -29,6 +29,13 @@ catalog/  policies/  libs/  pipeline/  infra/  schemas/  tests/  docs/  .claude/
 - **Windows:** `path.join`/`path.resolve` sempre; nada de `/` fixo; testes do CLI e do guard rodam em `windows-latest`; cofre via Windows Credential Manager.
 - **Dependências:** lockfile, versões fixas, sem `postinstall` de terceiros sem revisão; idade mínima de 7 dias para versões novas.
 - **Acessibilidade e idioma** no portal: WCAG 2.1 AA; textos em arquivos de tradução (pt-BR).
+- **Unicode oculto:** nenhum caractere de largura zero, controle de direção ou *tag* em código, documento ou skill (`scripts/lib/unicode.mjs`). Quando precisar citar um, use o escape (`\u200B`), nunca o caractere.
+
+## Economia de contexto (ADR 0017)
+- O que vai para o modelo custa contexto em todas as sessões do time. **Trabalho pesado é de script**: varrer logs, metadados ou arquivos grandes, comparar versões, montar relatórios. O script grava o detalhe em arquivo (`.odin-dev/`, `.sf-test/<run>/`, …) e devolve **só o resumo** (até 40 linhas, com o caminho do detalhe).
+- Respostas de ferramenta MCP: teto `MAX_TOOL_RESPONSE_TOKENS = 8000`; paginar listas e buscas.
+- `SKILL.md` e cada referência: alvo de cerca de **5.000 tokens** (`SKILL_TARGET_TOKENS = 5000`, o `odin lint` avisa acima) e teto de 8.000 (reprova). Passou do alvo → mover detalhe para `references/` carregadas sob demanda.
+- Nada de colar saída bruta de comando no contexto quando um script pode resumir.
 
 ## Commits e PRs
 - Branch `odin/<fase>-<tema>`; commits pequenos, em português, no imperativo ("Adiciona validação de JWT").

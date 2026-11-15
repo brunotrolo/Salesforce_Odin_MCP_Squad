@@ -63,6 +63,8 @@ Migradas das skills atuais, com testes: `guard-qa` (Test Automator: só sandbox,
   2. O RAG marca cada trecho como evidência, e a ingestão rejeita texto com instrução dirigida a agentes.
   3. As ações críticas nunca dependem só do modelo: o guard decide em código.
   4. As skills que leem material de terceiros (por exemplo, o Discovery com transcrições) carregam casos de teste de injeção.
+  5. **Unicode oculto** (largura zero, controles de direção, *tags* U+E0000 a U+E007F) é recusado no pacote das skills, na ingestão do RAG e nas instruções do servidor, com o código do caractere e a linha (ADR 0017). Material do projeto lido pela skill não é bloqueado, mas os scripts que o resumem marcam a presença desses caracteres como sinal de ataque.
+  6. **Integridade no uso:** o runtime instalado é conferido contra o manifesto assinado na primeira chamada de cada skill na sessão; arquivo alterado é reinstalado (DT-19).
 
 ## 6. Repositório malicioso
 | Vetor | Controle |

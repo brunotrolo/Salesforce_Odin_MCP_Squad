@@ -6,11 +6,13 @@
 //  - blocos de código fechados; linhas de tabela terminam com "|"
 //  - termos de decisões já descartadas (scripts/termos-proibidos.json) não reaparecem
 //  - com --base: mudança em documento protegido exige mudança em docs/adr/ no mesmo conjunto
+//  - nenhum caractere Unicode oculto (ADR 0017) fora de .claude/ (lá, quem confere é verificar-skills)
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, normalize, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ehProtegido } from './lib/protegidos.mjs';
+import { caracteresOcultos, varrerOcultos } from './lib/unicode.mjs';
 
 function listarMd(raiz) {
   const out = [];
@@ -37,6 +39,7 @@ export function verificar(raiz, { base = null } = {}) {
     const rel = relative(raiz, abs).split('\\').join('/');
     const t = readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
     const linhas = t.split('\n');
+    if (!rel.startsWith('.claude/')) for (const a of caracteresOcultos(t)) erros.push(`${rel}:${a.linha}:${a.coluna}: caractere Unicode oculto ${a.codigo} (${a.nome})`);
     // links
     for (const m of t.matchAll(/\]\(([^)#\s]+\.md)(#[^)]*)?\)/g)) {
       if (/^https?:/.test(m[1])) continue;
@@ -58,6 +61,9 @@ export function verificar(raiz, { base = null } = {}) {
       if (!historico) for (const tp of termos) if (l.includes(tp.termo) && !(tp.permitido_em || []).includes(rel)) erros.push(`${rel}:${i + 1}: termo descartado "${tp.termo}" (${tp.motivo})`);
     });
   }
+
+  // código, workflows e apresentação (os .md já foram vistos acima)
+  erros.push(...varrerOcultos(raiz, ['scripts', 'tests', '.github', 'apresentacao', 'package.json'], { extensoes: new Set(['.mjs', '.js', '.json', '.yml', '.yaml', '.html']) }));
 
   if (base) {
     let alterados = [];

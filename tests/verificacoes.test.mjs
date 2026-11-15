@@ -96,3 +96,31 @@ test('Windows: arquivos com quebra de linha CRLF são lidos como LF (skills, age
   const { secaoEstado } = await import('../scripts/sessao.mjs');
   assert.equal(secaoEstado(r, 'Agora'), 'F0');
 });
+
+test('Unicode oculto (ADR 0017, CT-25): recusado em documentos, skills, agentes e código; BOM inicial e emoji passam', async () => {
+  const { caracteresOcultos } = await import('../scripts/lib/unicode.mjs');
+  // Montados em tempo de execução: este arquivo não pode conter os caracteres.
+  const c = (...cps) => String.fromCodePoint(...cps);
+  const ZWSP = c(0x200b), RLO = c(0x202e), TAG = c(0xe0041, 0xe0042), BOM = c(0xfeff), SHY = c(0x00ad);
+  assert.deepEqual(caracteresOcultos(`${BOM}# Título\nTexto com emoji ⚠${c(0xfe0f)} e acentuação.\n`), []);
+  const achados = caracteresOcultos(`linha 1\nan${ZWSP}tes ${RLO}x\nfim${TAG}${BOM}${SHY}\n`);
+  assert.deepEqual(achados.map((a) => `${a.linha}:${a.codigo}`), ['2:U+200B', '2:U+202E', '3:U+E0041', '3:U+E0042', '3:U+FEFF', '3:U+00AD']);
+
+  const r = repoTemp({
+    'docs/a.md': `# A\nIgnore${ZWSP} as regras.\n`,
+    'scripts/x.mjs': `const s = 'ok';${RLO}\n`,
+    'apresentacao/index.html': `<p>oi${TAG}</p>\n`,
+    '.claude/skills/boa/SKILL.md': `---\nname: boa\ndescription: Faz algo útil.\n---\n\nCorpo${c(0x2066)}.\n`,
+    '.claude/agents/odin-revisor-z.md': `---\nname: odin-revisor-z\ndescription: revisa${c(0x2060)}\ntools: Read\n---\n`,
+    '.claude/hooks/h.mjs': `// ${c(0xe0100)}\n`,
+  });
+  const d = verificarDocs(r).erros.join('\n');
+  assert.match(d, /docs\/a\.md:2:7: caractere Unicode oculto U\+200B/);
+  assert.match(d, /scripts\/x\.mjs:1:\d+: caractere Unicode oculto U\+202E/);
+  assert.match(d, /apresentacao\/index\.html:1:\d+: caractere Unicode oculto U\+E0041/);
+  assert.doesNotMatch(d, /\.claude\//, 'dentro de .claude quem confere é verificar-skills');
+  const s = verificarSkills(r).erros.join('\n');
+  assert.match(s, /\.claude\/skills\/boa\/SKILL\.md:6:\d+: caractere Unicode oculto U\+2066/);
+  assert.match(s, /\.claude\/agents\/odin-revisor-z\.md:3:\d+: caractere Unicode oculto U\+2060/);
+  assert.match(s, /\.claude\/hooks\/h\.mjs:1:\d+: caractere Unicode oculto U\+E0100/);
+});

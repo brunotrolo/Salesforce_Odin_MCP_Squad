@@ -235,7 +235,8 @@ O MCP entrega **instruções**. Scripts (validadores, motor Playwright, geradore
 4. Confere os pré-requisitos (`node`, `git`, `sf`, navegadores do Playwright). Se faltar algo instalável sem privilégio, instala; senão, para com a correção exata (por exemplo, "instale o Salesforce CLI: <comando>").
 5. Materializa os agentes da skill em `~/.claude/agents/`. **[CONFIRMADO]** O Claude Code observa `~/.claude/agents/` e usa um agente novo ou editado na delegação seguinte, sem reiniciar, **desde que a pasta já existisse quando a sessão começou**. Por isso o `odin setup` cria a pasta no onboarding.
 6. Confirma o guard ativo (7.4).
-7. Responde em uma linha JSON, e a skill segue.
+7. **Integridade no uso (ADR 0017):** na primeira chamada de cada skill na sessão, recalcula o SHA-256 dos arquivos do runtime instalado e compara com o manifesto assinado do cache. Divergência → reinstala do pacote assinado, registra telemetria e gera a detecção DT-19; sem pacote íntegro, a skill não roda (fail-closed). Nas chamadas seguintes da mesma sessão, confere só o hash do manifesto.
+8. Responde em uma linha JSON, e a skill segue.
 
 O modelo **nunca monta comando de instalação**. Ele só roda `odin ensure <skill>`, um comando fixo que entra na lista de permissões do usuário (sem pedido de confirmação a cada vez).
 
@@ -296,6 +297,7 @@ runtime:
   prerequisitos: [git, sf, playwright:chromium]
 politicas: [guard-qa]
 conhecimento: [tecnico, negocio, licoes]          # coleções que a skill consulta
+avaliacoes: evals/                                # casos de avaliação de comportamento (8.3, ADR 0017)
 licenca_terceiros: []                             # skills de terceiros embutidas (seção 15)
 usa: []                                           # pacotes de biblioteca compartilhados, ex.: [lib-salesforce-oficial@^1] (22.3)
 ```
@@ -309,8 +311,8 @@ Só os caminhos declarados em `skills`, `agentes`, `regras` e `runtime` são emp
 ### 8.3 Pipeline de publicação (a cada merge no catálogo)
 1. Baixa cada repositório de skill no SHA fixado.
 2. Valida: `odin.yaml`, frontmatter dos `SKILL.md` e dos agentes, e caminhos referenciados existentes. Aplica a regra "nada de alias de org, nome real ou segredo" (varredura de segredos e PII).
-3. Roda os testes do repositório da skill (os que já existem, como os 71 do Test Automator).
-4. Roda o **`odin lint`** (22.5): arquivos proibidos, destinos, colisões de nome, tamanho de cada `SKILL.md` e referência (≤ 8.000 tokens), licenças de terceiros.
+3. Roda os testes do repositório da skill (os que já existem, como os 71 do Test Automator) e as **avaliações determinísticas** de `evals/` (scripts da skill sobre fixtures, sem modelo). Falha bloqueia a publicação (ADR 0017).
+4. Roda o **`odin lint`** (22.5): arquivos proibidos, destinos, colisões de nome, **Unicode oculto**, tamanho de cada `SKILL.md` e referência (alvo de 5.000 tokens com aviso; reprova acima de 8.000), licenças de terceiros.
 5. **Reescreve caminhos** para o contrato Odin (8.5) e gera o **pacote de conteúdo** (servido pelo MCP) e o **pacote de runtime** (`tar.zst`, com as dependências).
 6. Calcula o SHA-256 de cada pacote e assina o manifesto com chave assimétrica no **Cloud KMS**. O CI só tem permissão de *assinar*, nunca de exportar a chave.
 7. Publica no Cloud Storage (versionado, com retenção) e atualiza o índice no Firestore, além dos embeddings de roteamento.
@@ -318,7 +320,7 @@ Só os caminhos declarados em `skills`, `agentes`, `regras` e `runtime` são emp
 
 ### 8.4 Canais e rollback
 - `beta` → mantenedores (e quem receber o canal); `stable` → todos.
-- Promoção: PR que move a versão de `beta` para `stable`.
+- Promoção: PR que move a versão de `beta` para `stable`. **Portão de avaliação (ADR 0017):** o PR traz `evals/resultado.json` gerado por `odin dev eval <skill>` na máquina do mantenedor (a skill executada pelo Claude Code em modo não interativo sobre as fixtures, 3 repetições por caso, nota por código e, quando preciso, por juiz independente). O CI recusa a promoção se o relatório não for do SHA promovido, se a nota cair mais de 5 pontos em relação à versão `stable` atual ou se algum caso `critico` falhar. Nenhuma chave de modelo fica no CI.
 - Rollback: PR que volta o SHA. O conteúdo muda na próxima chamada e o runtime volta no próximo `ensure`.
 - Nada é apagado: as versões antigas ficam no Cloud Storage para auditoria.
 
@@ -378,6 +380,7 @@ Poucas ferramentas, porque cada ferramenta ocupa contexto do modelo. Todas receb
 - **Prompts MCP:** um por skill principal (atalhos explícitos para quem prefere digitar o comando). **[CONFIRMADO]** Aparecem como `/odin:discovery (MCP)` e também rodam como `/mcp__odin__discovery`.
 - **Recursos MCP:** cada skill e referência também é exposta como recurso (`skill://<id>/...`), que o usuário pode citar com `@odin:skill://sf-test/SKILL.md` **[CONFIRMADO: o formato `@servidor:protocolo://caminho`]**. O caminho principal continua sendo a ferramenta, porque o modelo a chama sozinho.
 - **Limite de tamanho de saída [CONFIRMADO]:** o Claude Code avisa acima de 10.000 tokens por resposta de ferramenta e corta em 25.000 por padrão (`MAX_MCP_OUTPUT_TOKENS`); texto acima de 50.000 caracteres vai para arquivo. Regra do Odin: **nenhuma resposta acima de 8.000 tokens**. `SKILL.md` grande é dividido, referências vêm sob demanda e buscas são paginadas. O pipeline mede o tamanho de cada `SKILL.md` e falha acima do limite.
+- **Economia de contexto (ADR 0017):** alvo de cerca de 5.000 tokens por `SKILL.md` e por referência (o `odin lint` avisa entre 5.000 e 8.000). Trabalho pesado (logs, metadados, relatórios, comparação de arquivos grandes) é feito por **script local**, que grava o detalhe em arquivo e devolve ao modelo só o resumo (até 40 linhas), como já faz o relatório do Test Automator.
 - **Tempo limite:** sem problema para as ferramentas do Odin, que respondem em milissegundos. A conexão HTTP ociosa cai em 5 min e é refeita sozinha (o helper renova o token).
 - **Não há suporte nativo documentado a "skills servidas por MCP"** no Claude Code. Por isso o Odin entrega skills por ferramenta, recurso e prompt, e não depende de uma extensão do protocolo ainda em proposta.
 - **Roteamento:** determinístico e barato. (1) Filtro por permissão. (2) Similaridade de embeddings entre o pedido e as `intencoes` e `descricao` da skill. (3) Regras por artefato (`odin_proximo_passo`). (4) Limiar de confiança. Opcional depois: reordenar com modelo via LiteLLM se as métricas mostrarem erro de roteamento.
@@ -413,7 +416,7 @@ A precedência segue o princípio que as skills já usam: maior autoridade vence
 
 ### 11.3 Pipeline de conhecimento
 1. Alteração por PR em `odin-knowledge`, com revisão do dono da coleção.
-2. CI valida o frontmatter, mascara PII (reaproveitando o `pii.mjs` das skills), rejeita instruções dirigidas a agentes e confere `substitui` e vigência.
+2. CI valida o frontmatter, mascara PII (reaproveitando o `pii.mjs` das skills), rejeita instruções dirigidas a agentes e **Unicode oculto** (ADR 0017), e confere `substitui` e vigência.
 3. Divide por seção (sem quebrar tabelas e blocos de código), gera embeddings (Vertex AI) e grava em Postgres com `pgvector`, mais busca textual (`tsvector`) para busca híbrida.
 4. Segurança em nível de linha por `projeto` e `colecao`.
 5. **Avaliação:** um conjunto de perguntas com resposta esperada por coleção roda a cada mudança; o PR falha se a precisão de recuperação cair.
@@ -503,10 +506,10 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | **F0 Verificações e ferramentas de manutenção** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; importação `@~/.odin/ODIN.md` no `CLAUDE.md` do usuário (R13); **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa. Também: as skills `odin-construtor` e `odin-curador` (são markdown e agentes, e ajudam a construir as fases seguintes) | Planilha de resultado; o desenho é ajustado antes de F1 |
 | **F1 Fundação** | Projeto GCP, Terraform, WIF, orçamento, Cloud Run vazio, domínio (ou `run.app`) | `terraform apply` do zero em menos de 15 min; CI publica uma imagem sem chave |
 | **F2 Identidade** | Identity Platform com GitHub, **segundo fator** (TOTP e passkey, códigos de recuperação), emissor de JWT (KMS), device flow com chave do dispositivo, portal mínimo (login, ativação, dispositivos, revogar), revogação | Login no navegador → credencial no cofre → `odin token` emite JWT; revogar invalida em ≤ 30 s |
-| **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md` ou colisão de nome é recusado pelo pipeline |
+| **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md`, colisão de nome, Unicode oculto ou avaliação determinística falhando é recusado pelo pipeline; promoção sem relatório de avaliação do SHA é recusada |
 | **F4 MCP** | Ferramentas da seção 10, autorização por perfil e projeto, auditoria | PO de teste vê só Discovery e Designer; dev vê Developer, Data e Test; 100% das chamadas auditadas |
-| **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
-| **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; uma tarefa real de cada skill completa ponta a ponta |
+| **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; runtime adulterado depois da instalação é detectado e reinstalado (DT-19); nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
+| **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; cada skill tem `evals/` com ao menos 10 casos (negativos e de injeção incluídos) e nota de referência registrada; uma tarefa real de cada skill completa ponta a ponta |
 | **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, pgvector, segurança em nível de linha, avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
 | **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Teste de carga com **50 usuários** simultâneos (decisão 33) dentro dos SLOs; simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
 | **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
@@ -522,12 +525,12 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | F3 Catálogo e publicação | 1,5 semana |
 | F4 MCP | 1,5 semana |
 | F5 Runtime local (prioridade Windows nativo e extensão do VS Code) | 2 semanas |
-| F6 Adaptação das 5 skills | 2 semanas |
+| F6 Adaptação das 5 skills (inclui as avaliações, ADR 0017) | 2,5 semanas |
 | F7 Conhecimento (Firestore na PoC) | 1 semana |
 | F8 Operação | 1 semana |
 | F9 Validação pessoal | 2 semanas |
 | F10 Preparação para o time (inclui organização GitHub, domínio, Cloud SQL, segundo super-admin, jurídico) | 1,5 semana |
-| **Total** | **cerca de 15,5 semanas (± 30%)** |
+| **Total** | **cerca de 16 semanas (± 30%)** |
 
 Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (dependem do comportamento real do Claude Code no Windows e na extensão do VS Code). Revisar a estimativa ao fim da F0.
 
@@ -538,8 +541,9 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 - **Fricção:** onboarding ≤ 3 passos e ≤ 10 min; uso diário com 0 passos de manutenção; 0 cópias de skill em repositórios de projeto.
 - **Atualização:** versão nova em `stable` chega a 100% das chamadas seguintes; runtime atualizado no primeiro uso; rollback em menos de 10 min.
 - **Governança:** 100% das chamadas autenticadas e auditadas; revogação efetiva em ≤ 30 s; perfil e projeto aplicados no MCP, no runtime e no banco do RAG (testes automatizados).
-- **Segurança:** pacote adulterado sempre recusado; guard ausente sempre bloqueia; nenhuma skill com segredo ou dado de cliente (varredura no CI).
+- **Segurança:** pacote adulterado sempre recusado (na instalação e no uso); Unicode oculto sempre recusado; guard ausente sempre bloqueia; nenhuma skill com segredo ou dado de cliente (varredura no CI).
 - **Roteamento:** ≥ 90% de acerto no conjunto de intenções de teste; "não sei" em vez de chute abaixo do limiar.
+- **Comportamento das skills:** nenhuma promoção para `stable` com queda de nota maior que 5 pontos ou caso crítico falhando (ADR 0017).
 - **Conhecimento:** toda resposta com citação; meta de recuperação por coleção atingida; nenhuma injeção aceita na ingestão (casos de teste).
 - **Isolamento:** 0 arquivos escritos pelo Odin dentro de projetos; 0 colisões de nome não resolvidas no catálogo; `odin uninstall` devolve os arquivos do usuário idênticos ao que eram.
 
@@ -567,6 +571,7 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 | R16 | Migração por corte único (decisão 29) | Ensaio do corte, guia de uma página, plano de volta com as cópias arquivadas por 30 dias |
 | R18 | GitHub Free em repositório privado: sem proteção de branch, revisão obrigatória, tags protegidas, ambientes com aprovação nem atestação (decisão 41) | Só o mantenedor escreve; 2FA; condições da identidade federada por `actor_id` e `main`; checagens no próprio workflow; assinatura no KMS como garantia principal |
 | R17 | Sem jurídico ou DPO (decisão 37) | Bloqueio formal: o time não entra sem validação de LGPD, termos e licenças |
+| R19 | Avaliação de comportamento com modelo é não determinística e roda só na máquina do mantenedor (ADR 0017) | 3 repetições por caso, mediana, tolerância de 5 pontos; nota principal por código; camada determinística no CI; casos `critico` sem tolerância |
 | D1 | Provedor de login | **Decidido: GitHub** (SSO), via Identity Platform; Google ou Microsoft podem ser ligados depois. Times do GitHub viram squads quando houver organização GitHub |
 | D2 | Conhecimento por projeto: quem é dono em cada cliente | **PoC: o mantenedor cura tudo** (decisão 20); definir por projeto antes do time |
 | D3 | Um repositório por skill (como hoje) ou um monorepo de skills | **Decidido: um repositório por skill** + catálogo (decisão 8) |
@@ -671,6 +676,7 @@ O plano passou por quinze rodadas de revisão contra os objetivos (fricção, go
 | 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
 | 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
 | 15 | Continuidade | Outro chat não conheceria as regras nem o estado do projeto | ADR 0016: `CLAUDE.md`, `docs/ESTADO.md`, ADRs, skills `odin-dev`/`odin-curador`/`odin-arquiteto`/`odin-operacao`, revisores, hook `guard-docs`, verificações e CI (seções 19 e 22.4) |
+| 16 | Qualidade e segurança | Comparação com práticas de mercado (skills por MCP): faltavam avaliação de comportamento por skill, recusa de Unicode oculto, integridade do runtime no uso e diretriz de economia de contexto | ADR 0017: `evals/` e portão de promoção (8.3, 8.4), Unicode oculto no lint, no RAG e no CI deste repositório (8.3, 11.3, 22.5), `ensure` confere hashes na primeira chamada (7.2, DT-19), alvo de 5.000 tokens e scripts que devolvem resumo (10); risco R19 |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
 
@@ -766,6 +772,7 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 4. Blocos marcados íntegros no `settings.json` e no `CLAUDE.md` do usuário (no `doctor`).
 5. Nenhum agente `odin-*` fora de `~/.claude/agents/` (sombra, R12).
 6. Cópias antigas de skills dentro de `.claude/` do projeto detectadas, com a oferta de remoção (o dev decide, porque é o projeto dele).
+7. Nenhum caractere Unicode oculto (largura zero, controle de direção, *tags*) em arquivo de texto do pacote (ADR 0017); no `doctor`, conferência dos hashes do runtime instalado contra o manifesto.
 
 
 ---

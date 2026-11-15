@@ -82,7 +82,7 @@ Ver [06](06-consumo-cotas-e-metricas.md) para as definições. Telas:
 Fila por coleção e projeto (o curador só vê a sua): proposta, origem (skill ou pessoa), fonte, itens parecidos já existentes. **Aprovar** (o portal abre o PR no `odin-knowledge` pelo GitHub App), **Pedir ajuste** ou **Recusar** (motivo). Também mostra as **lacunas**: buscas sem resultado, agrupadas por tema.
 
 ## 10. Segurança (`/admin/seguranca`)
-- **Alertas** (detecções DT-01 a DT-18 de [segurança 09](../seguranca/09-deteccao-e-resposta.md)): severidade, pessoa, quando, estado (aberto, em análise, resolvido) e ações sugeridas (revogar, suspender).
+- **Alertas** (detecções DT-01 a DT-19 de [segurança 09](../seguranca/09-deteccao-e-resposta.md)): severidade, pessoa, quando, estado (aberto, em análise, resolvido) e ações sugeridas (revogar, suspender).
 - **Sessões e dispositivos ativos:** busca e revogação.
 - **Tokens pessoais:** todos os ativos, com destaque para os sem uso recente ou com IP novo.
 - **Revogação em massa:** por squad, por projeto ou por versão do CLI.

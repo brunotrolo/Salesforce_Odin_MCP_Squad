@@ -25,5 +25,6 @@ runtime:
   prerequisitos: [git]              # ex.: sf, playwright:chromium
 politicas: []                      # políticas do odin-guard (policies/<id>.mjs)
 conhecimento: [tecnico]            # coleções consultadas
+avaliacoes: evals/                 # casos de avaliação de comportamento (references/avaliacoes.md, ADR 0017)
 licenca_terceiros: []              # bibliotecas de terceiros embutidas, com licença
 usa: []                            # pacotes de biblioteca compartilhados, ex.: [lib-salesforce-oficial@^1]

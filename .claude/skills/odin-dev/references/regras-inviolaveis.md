@@ -37,6 +37,7 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | M3 | Versão da skill fixa por sessão; versão proibida bloqueia na hora | Decisão 15 |
 | M4 | Modo degradado: cópia local assinada por até 7 dias | Decisão 14 |
 | M5 | O MCP grava os metadados das ferramentas em `mcp_tools` (o portal lê) | Portal 09 |
+| M6 | Economia de contexto: trabalho pesado por script local que devolve só o resumo; alvo de 5.000 tokens por `SKILL.md` e referência | Plano 10; ADR 0017 |
 
 ## Máquina do usuário
 | # | Regra | Fonte |
@@ -46,6 +47,7 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | D3 | Políticas globais PG-01 a PG-08, com equivalentes Windows (PowerShell e `cmd`) | Segurança 06 |
 | D4 | Credenciais de terceiros (Jira, `sf`) ficam na máquina; o Odin nunca as lê | Decisão 16; segurança 06, 3.1 |
 | D5 | Prioridade de teste: Windows nativo e extensão do VS Code | Decisões 23 e 24 |
+| D6 | `odin ensure` confere os hashes do runtime contra o manifesto assinado na primeira chamada de cada skill na sessão; divergência reinstala e gera DT-19 | Plano 7.2; ADR 0017 |
 
 ## Distribuição e nuvem
 | # | Regra | Fonte |
@@ -56,3 +58,5 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | N4 | Cloud SQL só com IP privado **[CF-02]** (quando existir) | Segurança 07 |
 | N5 | PoC perto de custo zero: Firestore no RAG, sem Load Balancer/Cloud Armor, sem dado confidencial | Decisão 7 |
 | N6 | Região `southamerica-east1` | ADR-14 |
+| N7 | Nenhum Unicode oculto em documento, skill, pacote ou conhecimento **[verificar:docs, verificar:skills]** | Segurança 06 §5; ADR 0017 |
+| N8 | Promoção para `stable` só com avaliação de comportamento do SHA, sem queda maior que 5 pontos nem caso crítico falhando | Plano 8.4; ADR 0017 |

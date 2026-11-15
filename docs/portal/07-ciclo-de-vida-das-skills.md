@@ -39,7 +39,7 @@ Toda mudança gera um evento em `catalog_events` (Firestore, com cópia no BigQu
 |---|---|---|
 | `skill_incorporada` | Primeira publicação de uma skill | skill, repositório, dono, domínio, PR, quem aprovou |
 | `versao_publicada` | Pipeline publicou uma versão (em `beta`) | versão, SHA da fonte, PR do catálogo, run do pipeline, `kid` da assinatura, hash do manifesto, changelog, estatística de mudanças (arquivos e linhas) |
-| `versao_promovida` | Versão passou de `beta` para `stable` | versão de, versão para, PR, quem aprovou |
+| `versao_promovida` | Versão passou de `beta` para `stable` | versão de, versão para, PR, quem aprovou, **nota da avaliação** de comportamento (atual e da versão anterior, ADR 0017) |
 | `rollback` | Canal voltou para uma versão anterior | canal, versão de, versão para, motivo, PR |
 | `perfil_alterado` | Matriz perfil × skill mudou (no portal) | perfil, skill, antes, depois, quem mudou, pessoas afetadas |
 | `depreciada` | PR de depreciação | data prevista de retirada, substituta sugerida, motivo |
@@ -86,6 +86,7 @@ Todos os eventos de todas as skills, com filtros e exportação. Indicadores do 
 ### 3.4 Impacto (aba Uso)
 - Requisições e pessoas por versão ao longo do tempo (para ver a adoção da versão nova).
 - Taxa de erro antes e depois de cada evento `versao_publicada` e `versao_promovida`.
+- Nota da avaliação de comportamento por versão (gráfico da evolução); promoções recusadas pelo portão de avaliação.
 - Pessoas que ainda têm runtime antigo instalado (telemetria do CLI).
 
 ### 3.5 Para o usuário (Novidades)

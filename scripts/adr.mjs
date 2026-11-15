@@ -13,7 +13,7 @@ import { listarAdrs, adrAtivo, MARCADOR } from './lib/protegidos.mjs';
 
 export const PRIMEIRO_NUMERO = 16; // ADR-01 a ADR-15 vivem em docs/arquitetura/01-arquitetura-de-solucao.md
 
-const slug = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+const slug = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 export function proximoNumero(raiz) {

@@ -17,12 +17,13 @@ Abra a sessão com `node scripts/sessao.mjs inicio`. Fontes: `docs/PLANO.md` se�
 6. **Bibliotecas de terceiros:** só as usadas, como pacote compartilhado em `libs/` com `LICENSE` e `NOTICE` (decisão 11); registre em `licenca_terceiros` e `usa`.
 7. **Intenções de roteamento:** proponha **20 frases reais** (`references/intencoes.md`) e peça a revisão do mantenedor (decisão 17).
 8. **Varreduras:** nenhum segredo, alias de org, nome real ou dado de cliente; nenhuma colisão de nome com outra skill ou biblioteca.
-9. **Testes** da skill rodando a partir do runtime do Odin.
+9. **Testes** da skill rodando a partir do runtime do Odin, e **avaliações** em `evals/` (`references/avaliacoes.md`): ao menos 10 casos, camada determinística passando, nota de referência com modelo registrada.
+   - **Economia de contexto:** `SKILL.md` e referências com alvo de 5.000 tokens; trabalho pesado em script que devolve só o resumo.
 10. **PR no catálogo** (`catalog/skills.yaml`, canal `beta`, SHA fixado). Peça os revisores `odin-revisor-arquitetura` e `odin-revisor-seguranca`.
-11. Depois de usar em `beta` sem regressão: PR de promoção para `stable`. Registre em `docs/ESTADO.md`.
+11. Depois de usar em `beta` sem regressão: `odin dev eval <skill>` gera `evals/resultado.json` do SHA; PR de promoção para `stable` (recusado se a nota cair mais de 5 pontos ou um caso `critico` falhar). Registre em `docs/ESTADO.md`.
 
 ## versao <skill>
-Tag nova no repositório da skill → PR no catálogo trocando o SHA do canal `beta` → pipeline verde (inclui o smoke de roteamento ≥ 90%) → uso em beta → PR de promoção. Mudança de comportamento visível vai no changelog do PR (aparece em Novidades no portal).
+Tag nova no repositório da skill → PR no catálogo trocando o SHA do canal `beta` → pipeline verde (inclui avaliações determinísticas, Unicode oculto e o smoke de roteamento ≥ 90%) → uso em beta → `odin dev eval` → PR de promoção. Mudança de comportamento visível vai no changelog do PR (aparece em Novidades no portal).
 
 ## ajustar <skill>
 - **Acesso** (quem usa): é no portal, matriz de perfis (não é PR). Explique ao mantenedor o efeito (quantas pessoas, quais squads).
@@ -39,4 +40,5 @@ PR no catálogo com a data prevista, a skill substituta e o motivo; na retirada,
 ## Referências
 - `references/checklist-migracao.md`: checklist por skill, com o inventário atual das 5 skills.
 - `references/intencoes.md`: como escrever e avaliar as 20 intenções.
+- `references/avaliacoes.md`: formato dos casos de avaliação de comportamento e portão de promoção.
 - `templates/odin.yaml`: modelo comentado do contrato.

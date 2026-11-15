@@ -17,7 +17,7 @@ Servidor MCP único (Google Cloud) que entrega as skills de engenharia do time n
 3. **Sem segredo, dado de cliente, alias de org ou nome real** em código, skill, teste ou documento.
 4. **Sem chave de conta de serviço**; CI entra no Google Cloud por identidade federada restrita ao mantenedor (`actor_id`) e à `main`; pacotes e CLI assinados no KMS.
 5. Token de acesso **ES256, 15 min, sem perfis dentro**; direitos resolvidos no servidor; revogação ≤ 30 s; refresh rotativo com prova de posse.
-6. **Negado por padrão.** No máximo **7 ferramentas MCP** e respostas ≤ 8.000 tokens. Sem chamada de modelo no caminho principal.
+6. **Negado por padrão.** No máximo **7 ferramentas MCP** e respostas ≤ 8.000 tokens. Sem chamada de modelo no caminho principal. Trabalho pesado em script que devolve só o resumo; nenhum caractere Unicode oculto (ADR 0017).
 7. PoC **perto de custo zero**: Firestore no RAG, sem Load Balancer; **nenhum conhecimento confidencial** até o Portão 2.
 8. **Prioridade de teste: Windows nativo e extensão do VS Code.**
 9. GitHub Free: só o mantenedor escreve; trabalhe em branch, PR com CI verde; merge com o "ok" do mantenedor.

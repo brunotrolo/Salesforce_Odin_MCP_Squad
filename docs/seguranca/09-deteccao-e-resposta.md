@@ -33,6 +33,7 @@
 | DT-16 | Publicação no catálogo sem PR aprovado | Pipeline, `odin-publisher` | SEV1 |
 | DT-17 | Pico de custo no projeto GCP | Orçamento | SEV3 |
 | DT-18 | Pico de 4xx/5xx ou de limites do Cloud Armor | Monitoring | SEV3 |
+| DT-19 | Runtime instalado diverge do manifesto assinado (arquivo alterado depois da instalação) | Telemetria do CLI (`odin ensure`, `doctor`) | SEV2 |
 
 Alertas SEV1 e SEV2: notificação imediata e registro de incidente. **Na PoC** (notificações só no portal, decisão 36): canal de e-mail do **Cloud Monitoring** para o mantenedor (recurso nativo, sem provedor de e-mail) + portal. **Com o time:** também o provedor de e-mail escolhido. SEV3: painel e resumo diário.
 
@@ -56,6 +57,7 @@ Alertas SEV1 e SEV2: notificação imediata e registro de incidente. **Na PoC** 
 | **Chave de JWT suspeita** | Revogação global | Nova versão da chave; retirar a antiga do JWKS; todos reativam |
 | **Vazamento entre projetos no RAG** (DT-13) | Desligar a ferramenta de busca (manutenção) | Corrigir; reexecutar os testes de isolamento; avaliar a comunicação ao cliente |
 | **Token pessoal vazado** (DT-11) | Revogação automática | Avisar a pessoa; revisar o uso no período |
+| **Runtime alterado na máquina** (DT-19) | O CLI já reinstalou do pacote assinado; se repetir na mesma máquina, revogar o dispositivo | Investigar a máquina (malware, outro processo); conferir se a mesma divergência aparece em outras máquinas (pode indicar pacote ou CLI com defeito) |
 | **Skill maliciosa em `beta`** | Rollback do canal; revogar os runtimes da versão (o CLI recebe a lista de versões proibidas no próximo `ensure`) | Investigar como passou na revisão |
 | **Indisponibilidade** | Página de status; o runtime instalado continua para skills já em uso | Restaurar pelo runbook; RTO de 4 h |
 

@@ -6,7 +6,7 @@ argument-hint: incidente <descrição> | runbook RB-<nn> | alerta DT-<nn> | roti
 
 # odin-operacao: incidentes e runbooks
 
-Fontes obrigatórias: `docs/seguranca/09-deteccao-e-resposta.md` (severidades, detecções DT-01 a DT-18, playbooks) e `docs/seguranca/11-runbooks.md` (RB-01 a RB-12). Rotinas em `../odin-dev/references/sustentacao.md`.
+Fontes obrigatórias: `docs/seguranca/09-deteccao-e-resposta.md` (severidades, detecções DT-01 a DT-19, playbooks) e `docs/seguranca/11-runbooks.md` (RB-01 a RB-12). Rotinas em `../odin-dev/references/sustentacao.md`.
 
 ## incidente <descrição>
 1. **Classifique** a severidade (SEV1 a SEV4) pela tabela da segurança 09. SEV1/SEV2: avise o mantenedor imediatamente e registre a hora.

@@ -7,6 +7,8 @@
 | **Contrato MCP** | Cada ferramenta: entrada válida e inválida, saída, tamanho ≤ 8.000 tokens, códigos de erro, autorização | CI com emuladores | Todo PR |
 | **Integração local** | Serviços contra os **emuladores** (Firestore, Pub/Sub, Identity Platform via Firebase Local Emulator Suite) | CI e local | Todo PR |
 | **Conformidade** | Regras invioláveis verificáveis (`scripts/conformidade.mjs`) | CI | Todo PR |
+| **Unicode oculto** | Largura zero, controles de direção, *tags* (`scripts/lib/unicode.mjs`, CT-25) | CI (`verificar:docs`, `verificar:skills`); depois `odin lint` e ingestão do RAG | Todo PR |
+| **Integridade no uso** | Runtime alterado depois da instalação é detectado e reinstalado (CT-26, DT-19) | Matriz do CLI | Todo PR que toca `packages/cli` |
 | **Segurança** | SAST (CodeQL), segredos (gitleaks), dependências (OSV), IaC (Checkov/tfsec), testes de autorização e de tokens | CI | Todo PR; DAST semanal |
 | **Matriz do CLI e do guard** | Windows nativo (PowerShell e `cmd`), macOS e Linux | CI (`windows-latest`, `macos-latest`, `ubuntu-latest`) | Todo PR que toca `packages/cli` ou `packages/guard` |
 | **Fumaça pós-deploy (GCP)** | Saúde dos serviços, MCP `initialize` + `tools/list` + `odin_rotear` com conta de teste, JWKS, portal `/entrar` | GitHub Actions logo após o deploy | Todo deploy; falha → rollback automático |
@@ -31,3 +33,7 @@
 ## Avaliações (não determinísticas)
 - **Roteamento:** conjunto de 20 intenções por skill (gerado na migração, revisado pelo mantenedor); meta ≥ 90% no topo; falha bloqueia a publicação (smoke de roteamento do pipeline).
 - **RAG:** perguntas com resposta esperada por coleção; meta ≥ 80% no top 5 (decisão 19); falha bloqueia o PR de conhecimento.
+- **Comportamento de cada skill (ADR 0017, CT-27):** `evals/` no repositório da skill, com no mínimo 10 casos. Formato em `../odin-curador/references/avaliacoes.md`.
+  - **Determinística** (scripts da skill sobre fixtures, sem modelo): roda no `publish.yml`; falha bloqueia a publicação.
+  - **Com modelo** (`odin dev eval <skill>`, Claude Code em modo não interativo, 3 repetições, mediana): roda na máquina do mantenedor; gera `evals/resultado.json` com o SHA. A promoção para `stable` é recusada se o SHA não bater, a nota cair mais de 5 pontos ou um caso `critico` falhar.
+  - O juiz, quando usado, é um agente independente e somente leitura que recebe só o esperado e a evidência (nunca a narrativa da execução), como o juiz do Test Automator.

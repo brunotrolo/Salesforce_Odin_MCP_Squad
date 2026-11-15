@@ -24,7 +24,8 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 ## F3 · Catálogo e publicação (1,5 semana)
 - **Ler:** plano 8 e 22; segurança 05; portal 07; decisões 8 a 13.
 - **Entregar:** schema do `odin.yaml` e do manifesto, `catalog/`, `odin lint`, `publish.yml` (lê skills privadas com token do GitHub App, empacota com dependências, assina, publica, registra eventos do ciclo de vida), canais beta e stable.
-- **Testes:** CT-12 a CT-14; pacote adulterado recusado; pacote com `CLAUDE.md` ou colisão de nome recusado; reprodutibilidade (mesmo commit → mesmo hash).
+- **Testes:** CT-12 a CT-14, CT-25 e CT-27; pacote adulterado recusado; pacote com `CLAUDE.md`, colisão de nome ou Unicode oculto recusado; avaliação determinística falhando bloqueia; promoção sem relatório do SHA recusada; reprodutibilidade (mesmo commit → mesmo hash).
+- **Reaproveitar:** `scripts/lib/unicode.mjs` deste repositório no `odin lint`.
 
 ## F4 · MCP (1,5 semana)
 - **Ler:** plano 10; arquitetura 03 seção 6; portal 04, 06, 09.
@@ -34,15 +35,15 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 ## F5 · Runtime local (2 semanas)
 - **Ler:** plano 7 e 22; segurança 06; decisões 14, 15, 22, 23, 24.
 - **Entregar:** `packages/cli` (setup, login, token, ensure, doctor, guard-ping, update, uninstall, restore-copias), `packages/guard` com PG-01 a PG-08 e as políticas das skills, skill local `odin`, `ODIN.md`, blocos marcados, cópia local de 7 dias, versão fixa por sessão.
-- **Testes:** matriz Windows nativo (PowerShell e `cmd`), macOS e Linux no CI; CT-15 e CT-24; isolamento (nada escrito no projeto); `uninstall` devolve os arquivos idênticos; guard ausente bloqueia.
+- **Testes:** matriz Windows nativo (PowerShell e `cmd`), macOS e Linux no CI; CT-15, CT-24 e CT-26 (arquivo do runtime alterado → detectado, reinstalado, DT-19); isolamento (nada escrito no projeto); `uninstall` devolve os arquivos idênticos; guard ausente bloqueia.
 
 ## F6 · Adaptação das 5 skills (2 semanas)
-- Use a skill `odin-curador` para cada uma. **Aceite:** testes atuais de cada skill passam a partir do runtime do Odin; uma tarefa real de cada skill completa ponta a ponta.
+- Use a skill `odin-curador` para cada uma. **Aceite:** testes atuais de cada skill passam a partir do runtime do Odin; `evals/` com ao menos 10 casos e nota de referência registrada (o Test Automator já tem os bugs plantados como base); uma tarefa real de cada skill completa ponta a ponta.
 
 ## F7 · Conhecimento (1 semana)
 - **Ler:** plano 11; arquitetura 03 seções 4.3 e 4.3.1; segurança 08; decisões 18 a 20.
 - **Entregar:** `KnowledgeStore` (Firestore na PoC), `odin-indexer`, avaliação de recuperação, curadoria no portal, ingestão da estrutura de *system patterns* do mantenedor.
-- **Testes:** ≥ 80% no top 5; isolamento entre projetos na aplicação; injeção rejeitada na ingestão.
+- **Testes:** ≥ 80% no top 5; isolamento entre projetos na aplicação; injeção e Unicode oculto rejeitados na ingestão.
 
 ## F8 · Operação (1 semana)
 - **Entregar:** painéis, alertas (Cloud Monitoring com e-mail ao mantenedor), coletor de auditoria, runbooks testados, teste sintético agendado, teste de carga com 50 usuários.

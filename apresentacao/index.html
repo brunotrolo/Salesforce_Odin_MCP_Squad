@@ -383,7 +383,7 @@ pre.payload{margin:0;background:var(--surface-2);border-radius:8px;padding:12px;
 <section class="cap" id="roteiro" data-nome="Roteiro" hidden>
   <div class="eyebrow">Capítulo 8 · Roteiro</div>
   <h2>Da prova de conceito ao time</h2>
-  <p class="lead">Cerca de 15,5 semanas (± 30%), com o mantenedor e o Claude em tempo integral. A fase F0 testa as premissas antes de qualquer código; dois portões separam a prova de conceito da liberação para o time.</p>
+  <p class="lead">Cerca de 16 semanas (± 30%), com o mantenedor e o Claude em tempo integral. A fase F0 testa as premissas antes de qualquer código; dois portões separam a prova de conceito da liberação para o time.</p>
   <div class="card scrollx"><div class="gantt" id="gantt"></div></div>
   <div class="grid2">
     <div class="gate"><h3>Portão 1 · Pronto para a F0</h3><div id="gate1"></div></div>
@@ -608,7 +608,7 @@ function pshow(k){const s=screens[k];$$('#pside button').forEach(b=>b.setAttribu
 pshow('inicio');
 
 /* ---------- 8. roteiro ---------- */
-const ph=[['F0 Verificações',1],['F1 Fundação',.5],['F2 Identidade e MFA',1.5],['F3 Catálogo e publicação',1.5],['F4 MCP',1.5],['F5 Runtime local',2],['F6 Adaptação das 5 skills',2],['F7 Conhecimento',1],['F8 Operação',1],['F9 Validação pessoal',2],['F10 Preparação para o time',1.5]];
+const ph=[['F0 Verificações',1],['F1 Fundação',.5],['F2 Identidade e MFA',1.5],['F3 Catálogo e publicação',1.5],['F4 MCP',1.5],['F5 Runtime local',2],['F6 Adaptação das 5 skills',2.5],['F7 Conhecimento',1],['F8 Operação',1],['F9 Validação pessoal',2],['F10 Preparação para o time',1.5]];
 const tot=ph.reduce((a,p)=>a+p[1],0);let acc=0;const g=$('#gantt');
 ph.forEach((p,i)=>{const r=el('div',{class:'grow'},`<span>${p[0]} <span class="note">· ${String(p[1]).replace('.',',')} sem</span></span>`);const b=el('div',{class:'gbar'});const s=el('span',{class:i===0?'poc':''});s.style.left=(acc/tot*100)+'%';s.style.width=(p[1]/tot*100)+'%';acc+=p[1];b.appendChild(s);r.appendChild(b);g.appendChild(r)});
 const chk=(on,t)=>`<div class="check ${on?'on':''}"><i>${on?'✓':''}</i><span>${t}</span></div>`;

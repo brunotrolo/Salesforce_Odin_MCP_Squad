@@ -25,8 +25,10 @@
 - [ ] `entrada`, `saida`, `proximo` declarados (encadeamento)
 - [ ] 20 intenções escritas e revisadas pelo mantenedor
 - [ ] Nenhum segredo, alias de org, nome real ou dado de cliente
-- [ ] `SKILL.md` e referências ≤ 8.000 tokens cada
+- [ ] `SKILL.md` e referências ≤ 8.000 tokens cada (alvo de 5.000); trabalho pesado em script que devolve só o resumo
+- [ ] Nenhum Unicode oculto (largura zero, controle de direção, *tags*)
+- [ ] `evals/` com ao menos 10 casos (`references/avaliacoes.md`), incluindo negativos e de injeção; camada determinística passando; nota de referência com modelo registrada
 - [ ] Testes da skill passam a partir do runtime do Odin
 - [ ] PR no catálogo (beta) com revisores de arquitetura e segurança
 - [ ] Uma tarefa real completa ponta a ponta pelo Odin
-- [ ] Promoção para stable; ESTADO atualizado
+- [ ] Promoção para stable com `evals/resultado.json` do SHA (sem queda maior que 5 pontos nem caso crítico falhando); ESTADO atualizado

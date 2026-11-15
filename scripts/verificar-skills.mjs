@@ -4,9 +4,11 @@
 //  - corpo do SKILL.md com no máximo 500 linhas
 //  - arquivos citados em `references/`, `scripts/`, `templates/` existem
 //  - agentes têm name, description e tools; revisores e auditor são somente leitura
+//  - nenhum caractere Unicode oculto em .claude/ (skills, agentes, regras, hooks, configurações; ADR 0017)
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { varrerOcultos } from './lib/unicode.mjs';
 
 export function frontmatter(t) {
   t = t.replace(/\r\n/g, '\n');
@@ -46,6 +48,7 @@ export function verificar(raiz) {
     if (!fm.tools) erros.push(`agente ${f}: sem tools (defina explicitamente)`);
     if (/revisor|auditor/.test(f) && /\b(Edit|Write|MultiEdit|Bash|NotebookEdit)\b/.test(fm.tools || '')) erros.push(`agente ${f}: revisor/auditor precisa ser somente leitura`);
   }
+  erros.push(...varrerOcultos(raiz, ['.claude']));
   return { erros, skills: skills.length, agentes: agentes.length };
 }
 

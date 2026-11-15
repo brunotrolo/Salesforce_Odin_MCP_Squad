@@ -33,7 +33,7 @@ Abra este repositório no Claude Code e diga, por exemplo, **"continue o Odin"**
 
 Agentes independentes (somente leitura): `odin-revisor-arquitetura`, `odin-revisor-seguranca`, `odin-revisor-testes`, `odin-revisor-documentacao` e `odin-auditor`.
 
-**Garantias em código:** o hook `guard-docs` bloqueia a edição dos documentos de referência sem um ADR aberto (`node scripts/adr.mjs novo "título"`); o CI roda os testes (Linux e Windows), as verificações de documentação, skills e conformidade, e recusa mudança em documento protegido sem ADR.
+**Garantias em código:** o hook `guard-docs` bloqueia a edição dos documentos de referência sem um ADR aberto (`node scripts/adr.mjs novo "título"`); o CI roda os testes (Linux e Windows), as verificações de documentação, skills e conformidade (inclusive caracteres Unicode ocultos), e recusa mudança em documento protegido sem ADR.
 
 ```bash
 npm test                         # testes dos scripts e do hook

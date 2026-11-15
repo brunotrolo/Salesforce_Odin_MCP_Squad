@@ -32,6 +32,9 @@ Referências: **OWASP ASVS 4.0** (aplicações web e APIs), **OWASP Top 10 para 
 | CT-22 | Segredos só no Secret Manager, com rotação | ASVS V6 | Todos | Varredura de segredos |
 | CT-23 | Revogação ≤ 30 s | Interno | MCP, STS | Teste com relógio controlado |
 | CT-24 | Nada escrito no projeto do dev; blocos íntegros | Interno | CLI | Teste de isolamento ([plano](../PLANO.md), seção 22) |
+| CT-25 | Unicode oculto recusado (largura zero, controles de direção, *tags*) | LLM01; CVE-2021-42574 (Trojan Source) | `odin lint`, ingestão do RAG, CI | Casos de teste com cada faixa proibida; já ativo no CI deste repositório (ADR 0017) |
+| CT-26 | Integridade do runtime conferida no uso | SLSA (verificação no consumo) | CLI | Teste: arquivo alterado depois da instalação é detectado, reinstalado e gera DT-19 |
+| CT-27 | Promoção para `stable` bloqueada por avaliação de comportamento | LLM09 (confiança excessiva) | CI do catálogo | Teste: relatório de outro SHA, queda maior que 5 pontos ou caso crítico falhando recusam o PR |
 
 ## 2. Plano de testes de segurança
 
@@ -45,7 +48,8 @@ Referências: **OWASP ASVS 4.0** (aplicações web e APIs), **OWASP Top 10 para 
 | Testes de autorização | Suíte própria ([04](04-autorizacao.md), seção 6) | Todo PR |
 | Testes de tokens | `alg` inválido, assinatura trocada, expirado, `aud` errado, reuso de refresh, prova de posse ausente | Todo PR |
 | Testes de política do guard | Casos de permitir e negar por regra | Todo PR em `policies/` |
-| Testes de injeção | Documentos e respostas com instrução dirigida a agentes | Todo PR em skills e na ingestão |
+| Testes de injeção | Documentos e respostas com instrução dirigida a agentes, inclusive escondida em Unicode invisível | Todo PR em skills e na ingestão |
+| Avaliação de comportamento | `evals/` de cada skill: determinística no pipeline, com modelo na máquina do mantenedor antes da promoção (ADR 0017) | Toda publicação e toda promoção |
 | DAST | OWASP ZAP no portal e nas APIs (na PoC, contra o ambiente local com emuladores e a própria PoC; depois, no ambiente de teste) | Semanal e antes de cada liberação |
 | Pentest | Externo, com escopo de portal, STS, MCP, CLI e cadeia de distribuição | Antes de liberar para o time (fase F10) e anual |
 | Revisão do modelo de ameaças | Sessão com mantenedores | A cada fase e semestral |
@@ -58,12 +62,12 @@ Referências: **OWASP ASVS 4.0** (aplicações web e APIs), **OWASP Top 10 para 
 | F0 Verificações | Confirmados: `headersHelper` no escopo do usuário, comportamento com `401`, hooks na extensão do VS Code; MFA do Identity Platform com login GitHub (ou decisão pelo TOTP próprio) |
 | F1 Fundação | Teste de conformidade da infraestrutura verde; nenhuma chave de conta de serviço; WIF com condição |
 | F2 Identidade | CT-01 a CT-05 e CT-23 verdes; MFA obrigatório; passkey para administradores |
-| F3 Catálogo e publicação | CT-12 a CT-14 verdes; pacote adulterado recusado |
+| F3 Catálogo e publicação | CT-12 a CT-14, CT-25 e CT-27 verdes; pacote adulterado recusado |
 | F4 MCP | CT-06, CT-07, CT-10, CT-21 verdes |
-| F5 Runtime local | CT-15, CT-24 verdes; guard fail-closed comprovado |
+| F5 Runtime local | CT-15, CT-24 e CT-26 verdes; guard fail-closed comprovado |
 | F6 Adaptação das skills | Políticas migradas com testes; nenhuma skill com segredo |
 | F7 Conhecimento | CT-07 e CT-16 verdes; máscara de PII validada |
-| F8 Operação | Detecções DT-01 a DT-18 configuradas; runbooks testados |
+| F8 Operação | Detecções DT-01 a DT-19 configuradas; runbooks testados |
 | F9 Validação pessoal | Simulação de incidente executada |
 | F10 Time | **Pentest externo** sem achado crítico ou alto em aberto; termos de uso e aviso de privacidade publicados |
 
