@@ -1,0 +1,26 @@
+# Skill de apoio do próprio Odin: confere se a máquina tem o que as skills do time precisam.
+id: odin-ambiente
+nome: Ambiente
+dominio: salesforce
+dono: mantenedor
+descricao: Confere se a máquina do dev está pronta para as skills do time. Verifica Node, Git, Salesforce CLI, org padrão e navegadores do Playwright, e diz exatamente o que instalar ou corrigir.
+intencoes:
+  - "verificar se minha máquina está pronta para usar as skills"
+  - "o que falta instalar para usar o Odin"
+  - "conferir Node, Git e Salesforce CLI"
+  - "preparar o ambiente de desenvolvimento Salesforce"
+  - "o sf CLI está instalado e autenticado?"
+  - texto: "investigar um erro na org"
+    negativa: true
+perfis_sugeridos: [dev, qa, po, arquiteto]
+entrada: []
+saida: [.odin-ambiente/relatorio.json]
+proximo: []
+skills:
+  - path: .claude/skills/odin-ambiente/SKILL.md
+regras: [.claude/rules/ambiente.md]
+runtime:
+  dir: .claude/skills/odin-ambiente/scripts
+  node: ">=20"
+  prerequisitos: [node]
+conhecimento: [tecnico]

@@ -44,7 +44,8 @@ export const REGRAS = [
   },
   {
     id: 'CF-05', nome: 'Token de acesso com no máximo 15 minutos', fonte: 'segurança 03; CT-05',
-    alvo: (r) => arquivos(r, 'apps', (p) => /\.(ts|mjs|js)$/.test(p)).filter((p) => /ACCESS_TOKEN_TTL_SECONDS/.test(ler(p))),
+    // vale onde a constante é DEFINIDA (packages/shared/src/limites.ts), não onde é só usada
+    alvo: (r) => [...arquivos(r, 'apps', (p) => /\.(ts|mjs|js)$/.test(p)), ...arquivos(r, 'packages', (p) => /\.(ts|mjs|js)$/.test(p))].filter((p) => /ACCESS_TOKEN_TTL_SECONDS\s*[=:]\s*\d/.test(ler(p))),
     checar: (fs) => fs.filter((p) => { const m = ler(p).match(/ACCESS_TOKEN_TTL_SECONDS\s*[=:]\s*(\d+)/); return !m || Number(m[1]) > 900; }),
   },
   {

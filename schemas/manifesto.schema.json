@@ -5,32 +5,193 @@
   "description": "Gerado pelo pipeline e assinado no Cloud KMS (segurança 05, seção 3). A assinatura fica em manifesto.sig, sobre o SHA-256 do JSON canônico.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "skill", "versao", "canal", "fonte", "pipeline", "pacotes", "arquivos", "runtime_min_cli", "emitido_em", "kid"],
+  "required": [
+    "schema",
+    "skill",
+    "versao",
+    "canal",
+    "fonte",
+    "pipeline",
+    "pacotes",
+    "arquivos",
+    "runtime_min_cli",
+    "emitido_em",
+    "kid"
+  ],
   "properties": {
-    "schema": { "const": "odin.bundle/1" },
-    "skill": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" },
-    "versao": { "$ref": "#/$defs/semver" },
-    "canal": { "enum": ["beta", "stable"] },
-    "fonte": { "type": "object", "additionalProperties": false, "required": ["repo", "sha"],
-      "properties": { "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" }, "sha": { "$ref": "#/$defs/gitSha" } } },
-    "pipeline": { "type": "object", "additionalProperties": false, "required": ["run", "sha"],
-      "properties": { "run": { "type": "string", "format": "uri" }, "sha": { "$ref": "#/$defs/gitSha" } } },
-    "pacotes": { "type": "object", "additionalProperties": false, "required": ["conteudo", "runtime"],
-      "properties": { "conteudo": { "$ref": "#/$defs/pacote" }, "runtime": { "$ref": "#/$defs/pacote" } } },
-    "arquivos": { "type": "object", "minProperties": 1, "description": "Caminho → hash de cada arquivo; base da conferência de integridade no uso (ADR 0017).",
-      "propertyNames": { "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$" },
-      "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } },
-    "sbom": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "avaliacao": { "type": "object", "additionalProperties": false, "required": ["nota", "resultado_sha256"],
-      "properties": { "nota": { "type": "number", "minimum": 0, "maximum": 100 }, "resultado_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } } },
-    "runtime_min_cli": { "$ref": "#/$defs/semver" },
-    "emitido_em": { "type": "string", "format": "date-time" },
-    "kid": { "type": "string", "pattern": "^bundle-\\d{4}-[a-z]$" }
+    "schema": {
+      "const": "odin.bundle/1"
+    },
+    "skill": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,39}$"
+    },
+    "versao": {
+      "$ref": "#/$defs/semver"
+    },
+    "canal": {
+      "enum": [
+        "beta",
+        "stable"
+      ]
+    },
+    "fonte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo",
+        "sha"
+      ],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "sha": {
+          "$ref": "#/$defs/gitSha"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run",
+        "sha"
+      ],
+      "properties": {
+        "run": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha": {
+          "$ref": "#/$defs/gitSha"
+        }
+      }
+    },
+    "pacotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conteudo",
+        "runtime"
+      ],
+      "properties": {
+        "conteudo": {
+          "$ref": "#/$defs/pacote"
+        },
+        "runtime": {
+          "$ref": "#/$defs/pacote"
+        }
+      }
+    },
+    "arquivos": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Caminho → hash de cada arquivo; base da conferência de integridade no uso (ADR 0017).",
+      "propertyNames": {
+        "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "sbom": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "avaliacao": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nota",
+        "resultado_sha256"
+      ],
+      "properties": {
+        "nota": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "resultado_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "runtime_min_cli": {
+      "$ref": "#/$defs/semver"
+    },
+    "emitido_em": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "kid": {
+      "type": "string",
+      "pattern": "^bundle-\\d{4}-[a-z]$"
+    },
+    "entrega": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "O que o servidor e o CLI precisam saber para entregar a skill.",
+      "properties": {
+        "prerequisitos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agentes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "colecoes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "node": {
+          "type": "string"
+        },
+        "politicas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   "$defs": {
-    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$" },
-    "gitSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "pacote": { "type": "object", "additionalProperties": false, "required": ["uri", "sha256"],
-      "properties": { "uri": { "type": "string", "pattern": "^gs://[a-z0-9][a-z0-9._-]+/.+$" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } } }
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "pacote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "sha256"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^gs://[a-z0-9][a-z0-9._-]+/.+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
   }
 }

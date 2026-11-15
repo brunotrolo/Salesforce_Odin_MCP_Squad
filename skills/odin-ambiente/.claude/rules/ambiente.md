@@ -1,0 +1,2 @@
+- Esta skill só lê: não instala, não altera configuração e não toca em org nenhuma.
+- O resultado vai para a pessoa como resumo; o detalhe fica em `.odin-ambiente/relatorio.json`.

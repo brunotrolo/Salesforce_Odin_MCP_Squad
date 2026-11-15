@@ -1,0 +1,217 @@
+# Catálogo do Odin: o que existe, em que versão e como rotear (plano, seção 8.2; docs/PIPELINE.md).
+# `sha` fixa o commit de cada repositório; o pipeline só publica o que está aqui. Mudança = PR com CI verde.
+# As intenções completas (20 por skill) entram na migração de cada skill (F6); as daqui já dirigem o roteador.
+skills:
+  - id: sf-archaeologist
+    nome: Archaeologist
+    repo: Salesforce_Archaeologist
+    etapa: 1
+    atalho: legado
+    estado: beta
+    perfis: [arquiteto]
+    descricao: Engenharia reversa de uma org Salesforce existente. Mapeia metadados e código, extrai as regras de negócio que já existem, faz o assessment de arquitetura e gera diagramas para migração ou refatoração.
+    proximo: [sf-discovery, sf-data-architect]
+    sinais: [docs/legado/**, .sf-archaeologist/**]
+    intencoes:
+      - "mapear como esta org funciona hoje"
+      - "fazer engenharia reversa da org antes da migração"
+      - "extrair as regras de negócio que existem no código legado"
+      - "assessment de arquitetura da org atual"
+      - "documentar o legado para refatorar com segurança"
+      - "gerar diagramas C4 do que existe hoje na org"
+      - "levantar todas as automações e triggers existentes"
+      - "inventário de metadados e dependências da org"
+      - { texto: "por que este erro acontece na trigger de caso", negativa: true }
+      - { texto: "quais regras o negócio quer na nova jornada", negativa: true }
+  - id: sf-discovery
+    nome: Discovery-to-Backlog
+    repo: Salesforce_Discovery-to-Backlog
+    etapa: 2
+    atalho: discovery
+    estado: beta
+    perfis: [po]
+    descricao: Transforma entrevistas, transcrições e documentos do negócio em backlog rastreável, com critérios de aceite e regras de negócio com fonte, e publica as histórias no Jira.
+    proximo: [sf-data-architect, sf-journey-designer]
+    insumos: [discovery/**/transcricao*, discovery/**/*.docx]
+    sinais: [discovery/**/backlog.json]
+    intencoes:
+      - "transformar a transcrição da reunião em backlog"
+      - "fazer o discovery com o cliente e levantar requisitos"
+      - "escrever as histórias de usuário com critérios de aceite"
+      - "levantar as regras de negócio que o negócio quer"
+      - "publicar o backlog no Jira"
+      - "priorizar as capacidades do produto"
+      - "preparar o material de discovery para a PO"
+      - "gerar épicos e histórias a partir da entrevista"
+      - { texto: "escrever a spec técnica da jornada", negativa: true }
+      - { texto: "mapear as regras que existem no código legado", negativa: true }
+  - id: sf-data-architect
+    nome: Data Architect
+    repo: Salesforce_Data_Architect
+    etapa: 3
+    atalho: data
+    estado: beta
+    perfis: [arquiteto, dev]
+    descricao: Desenha o modelo de dados e o contrato de dados da solução Salesforce. Objetos, campos, relacionamentos, glossário, volumetria e regras de qualidade.
+    proximo: [sf-journey-designer]
+    insumos: [discovery/**/backlog.json]
+    sinais: [docs/dados/**, docs/sdd/data-contract*]
+    intencoes:
+      - "desenhar o modelo de dados da solução"
+      - "definir objetos, campos e relacionamentos"
+      - "criar o contrato de dados e o glossário"
+      - "modelar as entidades do domínio de atendimento"
+      - "revisar o modelo de dados e os relacionamentos master-detail"
+      - "avaliar a volumetria e a estratégia de dados"
+      - "diagrama entidade-relacionamento dos objetos"
+      - { texto: "criar registros de teste na sandbox", negativa: true }
+      - { texto: "construir a jornada da spec", negativa: true }
+  - id: sf-journey-designer
+    nome: Journey Designer
+    repo: Salesforce_Journey_Designer
+    etapa: 3
+    atalho: spec
+    estado: beta
+    perfis: [po, arquiteto]
+    descricao: Escreve a spec de uma jornada no Service Cloud, o plano técnico, as tarefas e o protótipo navegável em HTML, a partir do backlog aprovado.
+    proximo: [sf-journey-developer, sf-lwc-developer, sf-callouts-developer]
+    insumos: [discovery/**/backlog.json, docs/sdd/BACKLOG.md]
+    sinais: [specs/**/spec.md, specs/**/plan.md]
+    intencoes:
+      - "escrever a spec da jornada de atendimento"
+      - "desenhar a jornada e o protótipo navegável"
+      - "criar o plano técnico e as tarefas da capacidade"
+      - "prototipar as telas da jornada em HTML"
+      - "especificar a jornada a partir do backlog"
+      - "decidir entre padrão e customizado para a jornada"
+      - "detalhar a experiência do usuário da jornada"
+      - { texto: "implementar a jornada na sandbox", negativa: true }
+      - { texto: "criar o componente LWC da tela", negativa: true }
+  - id: sf-journey-developer
+    nome: Journey Developer
+    repo: Salesforce_Journey_Developer
+    etapa: 4
+    atalho: build
+    estado: beta
+    perfis: [dev, arquiteto]
+    descricao: Constrói uma capacidade completa a partir da spec. Metadados, objetos, Flow, Apex e permissões, com implantação na sandbox e relatório de construção.
+    proximo: [sf-apex-cover-loop, sf-test]
+    insumos: [specs/**/spec.md, specs/**/tasks.md]
+    sinais: [build-report.md, specs/**/build-report.md]
+    intencoes:
+      - "construir a capacidade da spec na sandbox"
+      - "implementar a jornada completa conforme o plano"
+      - "desenvolver as tarefas da spec e implantar"
+      - "criar os metadados, o flow e o apex da capacidade"
+      - "fazer o build da jornada e gerar o build report"
+      - "implementar a história ponta a ponta"
+      - "criar a trigger e a classe de serviço da capacidade"
+      - { texto: "criar só o componente LWC", negativa: true }
+      - { texto: "refatorar o callout para a API", negativa: true }
+      - { texto: "aumentar a cobertura de teste da classe", negativa: true }
+  - id: sf-lwc-developer
+    nome: LWC Developer
+    repo: Salesforce_LWC-Developer
+    etapa: 4
+    atalho: lwc
+    estado: beta
+    perfis: [dev]
+    descricao: Front-end em Lightning Web Components. Aprende o design system de LWC da org, escreve a spec do componente e cria, clona ou edita componentes alinhados aos padrões, com testes Jest.
+    proximo: [sf-apex-cover-loop, sf-test]
+    insumos: [specs/**/spec.md, force-app/**/lwc/**]
+    sinais: [.lwc-spec-writer/specs/**, .lwc-pattern-documenter/**]
+    intencoes:
+      - "criar um componente LWC para a tela"
+      - "editar o componente lightning web component existente"
+      - "clonar um LWC e adaptar para outro cenário"
+      - "documentar o design system de LWC da org"
+      - "escrever a spec do componente de tela"
+      - "ajustar o html e o javascript do componente"
+      - "criar um datatable em LWC com SLDS"
+      - "escrever o teste Jest do componente"
+      - { texto: "prototipar a jornada em HTML", negativa: true }
+      - { texto: "testar a tela na sandbox", negativa: true }
+  - id: sf-callouts-developer
+    nome: Apex Callouts Developer
+    repo: Salesforce_Apex_Callouts_Developer
+    etapa: 4
+    atalho: callout
+    estado: beta
+    perfis: [dev, arquiteto]
+    descricao: Integrações HTTP em Apex. Cria ou refatora callouts para a arquitetura de referência, com Named Credential, External Credential, tabela de rotas e cache de token, a partir de um curl, de uma classe legada ou de uma descrição.
+    proximo: [sf-apex-cover-loop]
+    sinais: [.apex-callouts/**, specs/**/callout-spec.md]
+    intencoes:
+      - "refatorar este callout para o padrão de integração"
+      - "criar a integração com a API externa"
+      - "transformar este curl em um callout Apex"
+      - "migrar o webservice legado para Named Credential"
+      - "criar um connector HTTP para o serviço do parceiro"
+      - "configurar External Credential e cache de token"
+      - "integrar o Salesforce com o endpoint REST"
+      - { texto: "construir a jornada completa da spec", negativa: true }
+      - { texto: "investigar por que o callout falhou em produção", negativa: true }
+  - id: sf-apex-cover-loop
+    nome: Apex Cover Loop
+    repo: Salesforce_Apex-Cover-Loop
+    etapa: 5
+    atalho: cobertura
+    estado: beta
+    perfis: [dev]
+    descricao: Classes de teste Apex. Leva uma classe a 99 por cento de cobertura com todos os testes passando, em ciclos de gerar, rodar e corrigir.
+    proximo: [sf-test]
+    insumos: [force-app/**/classes/*.cls]
+    sinais: [.apex-test-loop/**]
+    intencoes:
+      - "criar a classe de teste do CaseRouter"
+      - "aumentar a cobertura de teste desta classe Apex"
+      - "chegar a 99% de cobertura para o deploy"
+      - "escrever testes unitários Apex para o serviço"
+      - "a cobertura está baixa e o deploy foi barrado"
+      - "gerar test class com mock de callout"
+      - "cobrir a trigger com testes"
+      - { texto: "testar a tela da jornada na sandbox", negativa: true }
+      - { texto: "por que este teste está falhando", negativa: true }
+  - id: sf-test
+    nome: Test Automator
+    repo: Salesforce_Test_Automator
+    etapa: 5
+    atalho: test
+    estado: beta
+    perfis: [qa, dev]
+    descricao: QA de tela autônomo na sandbox. Lê o backlog, a spec e o relatório de construção, executa os casos no navegador e separa bug, comportamento previsto e ponto a confirmar.
+    proximo: [sf-deep-debugger]
+    insumos: [build-report.md, specs/**/build-report.md]
+    sinais: [.sf-test/**, specs/**/test-report.md]
+    intencoes:
+      - "testar a capacidade na sandbox"
+      - "rodar o QA de tela da entrega"
+      - "validar a jornada no navegador antes de homologar"
+      - "executar os casos de teste da história"
+      - "testar a tela de ponta a ponta com Playwright"
+      - "verificar se a entrega atende os critérios de aceite"
+      - "fazer o teste funcional da jornada de proposta"
+      - { texto: "criar a classe de teste Apex", negativa: true }
+      - { texto: "aumentar a cobertura de código", negativa: true }
+  - id: sf-deep-debugger
+    nome: Deep Debugger
+    repo: Salesforce_Deep_Debugger
+    etapa: 6
+    atalho: debug
+    estado: beta
+    perfis: [dev, qa, arquiteto]
+    descricao: Diagnóstico rápido de um bug declarado. Parte do relato, do debug log, da exceção ou do erro de validação, localiza a causa raiz com evidência e sugere a correção em De-Para.
+    proximo: [sf-journey-developer, sf-lwc-developer, sf-callouts-developer]
+    insumos: ["**/*.log"]
+    sinais: [.sf-deep-debugger/**]
+    intencoes:
+      - "investigar este erro"
+      - "por que isso quebrou em produção"
+      - "achar a causa raiz desta exceção"
+      - "analisar este debug log"
+      - "o deploy foi rejeitado na validação, por quê"
+      - "tem um bug na jornada, o campo não atualiza"
+      - "stack trace de NullPointerException na trigger"
+      - "diagnosticar o erro de governor limit"
+      - { texto: "mapear a org inteira", negativa: true }
+      - { texto: "criar a classe de teste", negativa: true }

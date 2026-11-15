@@ -1,0 +1,7 @@
+# Semente dos perfis iniciais (plano, seção 6.2; docs/PIPELINE.md, seção 6). Depois disso, o acesso é governado no portal.
+perfis:
+  po: { skills: [sf-discovery, sf-journey-designer], colecoes: { funcional: propor, negocio: propor }, canais: [stable] }
+  dev: { skills: [sf-journey-developer, sf-lwc-developer, sf-callouts-developer, sf-apex-cover-loop, sf-deep-debugger, sf-test, sf-data-architect], colecoes: { tecnico: propor, negocio: ler, dados: ler }, canais: [stable] }
+  qa: { skills: [sf-test, sf-deep-debugger], colecoes: { negocio: ler, tecnico: ler, licoes: ler }, canais: [stable] }
+  arquiteto: { skills: [sf-archaeologist, sf-data-architect, sf-journey-designer, sf-journey-developer, sf-callouts-developer, sf-deep-debugger], colecoes: { tecnico: curar, dados: curar, negocio: ler, funcional: ler, licoes: ler }, canais: [stable] }
+  mantenedor: { skills: ["*"], colecoes: { funcional: ler, negocio: ler, tecnico: ler, licoes: ler, dados: ler }, canais: [stable, beta] }

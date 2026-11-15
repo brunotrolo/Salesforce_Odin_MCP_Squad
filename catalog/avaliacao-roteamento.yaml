@@ -1,0 +1,40 @@
+# Pedidos de avaliação do roteador (não aparecem nas intenções do catálogo). Meta: ≥ 90% com a skill certa no topo.
+casos:
+  - { pedido: "preciso entender tudo que essa org faz antes de migrar para o Service Cloud", esperado: sf-archaeologist }
+  - { pedido: "levante as regras de negócio escondidas nas triggers e flows antigos", esperado: sf-archaeologist }
+  - { pedido: "documente a arquitetura atual da org com diagramas", esperado: sf-archaeologist }
+  - { pedido: "tenho a gravação da reunião com o cliente, monte o backlog", esperado: sf-discovery }
+  - { pedido: "escreva histórias de usuário com critérios de aceite a partir desta entrevista", esperado: sf-discovery }
+  - { pedido: "suba as histórias no Jira", esperado: sf-discovery }
+  - { pedido: "quais objetos e campos eu preciso para esse domínio?", esperado: sf-data-architect }
+  - { pedido: "monte o modelo de dados e o glossário", esperado: sf-data-architect }
+  - { pedido: "desenhe os relacionamentos entre as entidades", esperado: sf-data-architect }
+  - { pedido: "escreva a spec da jornada de abertura de caso", esperado: sf-journey-designer }
+  - { pedido: "quero um protótipo navegável da jornada", esperado: sf-journey-designer }
+  - { pedido: "monte o plano técnico e as tarefas dessa capacidade", esperado: sf-journey-designer }
+  - { pedido: "implemente a capacidade 003 da spec e implante na sandbox", esperado: sf-journey-developer }
+  - { pedido: "desenvolva as tarefas do plano com flow e apex", esperado: sf-journey-developer }
+  - { pedido: "faça o build da jornada e me dê o build report", esperado: sf-journey-developer }
+  - { pedido: "crie um componente LWC de lista de casos", esperado: sf-lwc-developer }
+  - { pedido: "ajuste o lightning web component do painel", esperado: sf-lwc-developer }
+  - { pedido: "aprenda o design system de LWC desta org", esperado: sf-lwc-developer }
+  - { pedido: "clone o componente de busca e adapte para contas", esperado: sf-lwc-developer }
+  - { pedido: "tenho um curl da API do parceiro, crie o callout", esperado: sf-callouts-developer }
+  - { pedido: "refatore a classe de webservice legada para Named Credential", esperado: sf-callouts-developer }
+  - { pedido: "preciso integrar com um endpoint REST externo", esperado: sf-callouts-developer }
+  - { pedido: "crie a test class do OrderService", esperado: sf-apex-cover-loop }
+  - { pedido: "essa classe está com 60% de cobertura, suba para 99", esperado: sf-apex-cover-loop }
+  - { pedido: "escreva os testes unitários apex dessa trigger", esperado: sf-apex-cover-loop }
+  - { pedido: "o deploy barrou por cobertura de código", esperado: sf-apex-cover-loop }
+  - { pedido: "teste a jornada de proposta na sandbox", esperado: sf-test }
+  - { pedido: "rode o QA de tela dessa entrega", esperado: sf-test }
+  - { pedido: "valide no navegador se a história atende o aceite", esperado: sf-test }
+  - { pedido: "execute os casos de teste funcionais", esperado: sf-test }
+  - { pedido: "investigue esse erro que apareceu no log", esperado: sf-deep-debugger }
+  - { pedido: "por que essa exceção está estourando?", esperado: sf-deep-debugger }
+  - { pedido: "ache a causa raiz desse bug no campo de status", esperado: sf-deep-debugger }
+  - { pedido: "a validação do pacote foi rejeitada, o que houve?", esperado: sf-deep-debugger }
+  - { pedido: "analise esse stack trace", esperado: sf-deep-debugger }
+  - { pedido: "erro de governor limit too many SOQL, diagnostique", esperado: sf-deep-debugger }
+  - { pedido: "qual a previsão do tempo amanhã?", esperado: nao_sei }
+  - { pedido: "traduza este e-mail para inglês", esperado: nao_sei }
