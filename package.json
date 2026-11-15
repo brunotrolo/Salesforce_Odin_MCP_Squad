@@ -19,7 +19,8 @@
     "avaliar:roteamento": "node scripts/avaliar-roteamento.ts --detalhe",
     "dev": "node dev/servidor.ts",
     "demo": "node dev/demo.ts",
-    "odin": "node packages/cli/src/odin.ts"
+    "odin": "node packages/cli/src/odin.ts",
+    "prontidao": "node scripts/prontidao-skills.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

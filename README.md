@@ -15,6 +15,7 @@ Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as s
 | 🔐 [04 Portal e perfilamento](docs/arquitetura/04-portal-e-perfilamento.md) | Portal do usuário e console de administração, papéis, matriz de permissões, fluxos |
 | 💰 [05 Custos e FinOps](docs/arquitetura/05-custos-e-finops.md) | Estágios de custo (E0, E1, E2), gatilhos para cada recurso pago, modelo de custo, teto de instâncias e disjuntor |
 | 📜 [Contratos](schemas/README.md) | Schemas verificáveis: `odin.yaml`, manifesto assinado, avaliações, auditoria, as 7 ferramentas MCP e a API `/v1` |
+| 🚚 [Migração das skills](docs/MIGRACAO-SKILLS.md) | Prontidão de cada skill real no `odin lint`, com bloqueios e avisos (gerado) |
 | 🗂️ [Registro de decisões (ADRs)](docs/adr/README.md) | Por que cada coisa é como é, depois da linha de base |
 | 🖥️ [Portal](docs/portal/README.md) | Área do usuário, guia do MCP (ferramentas, conexão, autenticação, consumo), console de administração, consumo e cotas, ciclo de vida das skills, UX, API e critérios de aceite |
 | 🛡️ [Segurança](docs/seguranca/README.md) | Modelo de ameaças, autenticação e MFA, tokens e refresh, autorização, cadeia de suprimentos, máquina do usuário, infraestrutura, LGPD, resposta a incidentes, controles e runbooks |

@@ -1,0 +1,39 @@
+# Rascunho gerado por scripts/prontidao-skills.ts a partir do catálogo e da estrutura do repositório.
+# Na migração (F6), este arquivo vai para a raiz do repositório da skill, revisado.
+id: sf-data-architect
+nome: Data Architect
+dominio: salesforce
+dono: mantenedor
+descricao: Desenha o modelo de dados e o contrato de dados da solução Salesforce. Objetos, campos, relacionamentos, glossário, volumetria e regras de qualidade.
+intencoes:
+  - desenhar o modelo de dados da solução
+  - definir objetos, campos e relacionamentos
+  - criar o contrato de dados e o glossário
+  - modelar as entidades do domínio de atendimento
+  - revisar o modelo de dados e os relacionamentos master-detail
+  - avaliar a volumetria e a estratégia de dados
+  - diagrama entidade-relacionamento dos objetos
+  - texto: criar registros de teste na sandbox
+    negativa: true
+  - texto: construir a jornada da spec
+    negativa: true
+perfis_sugeridos:
+  - arquiteto
+  - dev
+proximo:
+  - sf-journey-designer
+skills:
+  - path: .claude/skills/sf-data-architect/SKILL.md
+agentes:
+  - .claude/agents/sf-analytics-engineer.md
+  - .claude/agents/sf-data-analyst.md
+  - .claude/agents/sf-data-engineer.md
+  - .claude/agents/sf-data-scientist.md
+regras:
+  - .claude/rules/data-governance.md
+runtime:
+  dir: .claude/skills/sf-data-architect/scripts
+  node: ">=20"
+  prerequisitos:
+    - node
+    - git

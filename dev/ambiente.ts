@@ -19,7 +19,7 @@ export const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 export interface AmbienteLocal {
   store: Store; armazenamento: Armazenamento; eventos: EventoAuditoria[]; assinadorPacotes: AssinadorLocal;
   sts: string; mcp: string; arquivoChaves: string; aprovar: (codigo: string, userId: string) => Promise<unknown>;
-  publicarSkill: (repo: string, versao: string, o?: { odinYaml?: string; promover?: boolean }) => Promise<string[]>;
+  publicarSkill: (repo: string, versao: string, o?: { odinYaml?: string; promover?: boolean; rascunho?: boolean }) => Promise<string[]>;
   mcpApp: ReturnType<typeof criarMcp>; fechar: () => Promise<void>;
 }
 
@@ -80,7 +80,7 @@ export async function subirLocal(o: { dir?: string; portaSts?: number; portaMcp?
     store, armazenamento, eventos, assinadorPacotes: pacotes, sts, mcp: `${mcpBase}/mcp`, arquivoChaves, mcpApp,
     aprovar: (codigo, userId) => stsApp.aprovarDispositivo(codigo, userId),
     async publicarSkill(repo, versao, op = {}) {
-      const p = await publicar({ repo, versao, canal: 'beta', fonte: { repo: `dono-exemplo/${repo.split(/[\\/]/).filter(Boolean).pop()}`, sha: '0'.repeat(40) }, assinador: pacotes, armazenamento, odinYaml: op.odinYaml });
+      const p = await publicar({ repo, versao, canal: 'beta', fonte: { repo: `dono-exemplo/${repo.split(/[\\/]/).filter(Boolean).pop()}`, sha: '0'.repeat(40) }, assinador: pacotes, armazenamento, odinYaml: op.odinYaml, rascunho: op.rascunho });
       const meta = { nome: p.odin.nome, dominio: p.odin.dominio, descricao: p.odin.descricao, etapa: 0, estado: 'beta', proximo: p.odin.proximo ?? [], intencoes: p.odin.intencoes.map((i) => (typeof i === 'string' ? { texto: i } : i)) };
       const existente = await store.get('catalog_skills', p.odin.id);
       await registrarVersao(deps, p.odin.id, versao, existente ? undefined : meta);

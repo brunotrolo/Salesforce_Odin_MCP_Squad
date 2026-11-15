@@ -30,7 +30,7 @@ export function listar(dir: string): string[] {
 }
 
 /** Lê e confere um repositório de skill. `odinYaml` permite um contrato fora do repositório (rascunho de migração). */
-export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: string[] } = {}): ResultadoLint {
+export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: string[]; rascunho?: boolean } = {}): ResultadoLint {
   const r: ResultadoLint = { erros: [], avisos: [], arquivos: { skills: [], agentes: [], regras: [], referencias: [], runtime: [] } };
   const caminhoYaml = o.odinYaml ?? join(repo, 'odin.yaml');
   if (!existsSync(caminhoYaml)) { r.erros.push('odin.yaml não encontrado'); return r; }
@@ -52,7 +52,8 @@ export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: strin
 
   const entregues = [...r.arquivos.skills, ...r.arquivos.agentes, ...r.arquivos.regras, ...r.arquivos.referencias, ...r.arquivos.runtime];
   for (const f of entregues) {
-    if (PROIBIDOS.test(f)) r.erros.push(`arquivo proibido no pacote: ${f}`);
+    // README dentro de references/ é conteúdo da skill; na raiz ou em .claude/ é documentação de quem mantém
+    if (PROIBIDOS.test(f) && !(/README\.md$/i.test(f) && /\/references\//.test(f))) r.erros.push(`arquivo proibido no pacote: ${f}`);
     if (!TEXTO.test(f)) continue;
     const t = readFileSync(join(repo, f), 'utf8').replace(/\r\n/g, '\n');
     const oc = caracteresOcultos(t) as Array<{ linha: number; codigo: string }>;
@@ -68,7 +69,7 @@ export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: strin
   if (principal) {
     const t = readFileSync(join(repo, principal), 'utf8');
     if (!/^---\n(?:[\s\S]*?\n)?name:\s*\S+/.test(t.replace(/\r\n/g, '\n'))) r.erros.push(`${principal}: sem frontmatter com name`);
-    if (!t.includes(`odin ensure ${odin.id}`)) r.erros.push(`${principal}: o primeiro passo precisa ser \`odin ensure ${odin.id}\``);
+    if (!t.includes(`odin ensure ${odin.id}`)) (o.rascunho ? r.avisos : r.erros).push(`${principal}: o primeiro passo precisa ser \`odin ensure ${odin.id}\``);
   }
   for (const a of r.arquivos.agentes) if (!/(^|\n)tools:\s*\S/.test(readFileSync(join(repo, a), 'utf8'))) r.erros.push(`${a}: agente sem tools explícitas`);
   if ((o.idsExistentes ?? []).includes(odin.id)) r.erros.push(`colisão de id: ${odin.id} já existe no catálogo`);

@@ -8,6 +8,7 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 - Emissor de tokens, servidor MCP com 7 ferramentas e API `/v1`, roteador e catálogo das 10 skills, `odin lint`, publicação assinada, publisher, guard (PG-01 a PG-08) e CLI.
 - `npm run demo` (ponta a ponta em segundos) e `npm run dev` (Odin local para o Claude Code).
 - 44 testes em Linux e Windows, com o cliente oficial do MCP.
+- Prontidão de migração das 10 skills reais (`docs/MIGRACAO-SKILLS.md`): 8 publicáveis em rascunho, 2 bloqueadas pelo lint; rascunhos de contrato em `catalog/migracao/`.
 
 ### 2026-11-15 · Pipeline das 10 skills (ADR 0019)
 - As 10 skills em 6 etapas, com encadeamento, fronteiras, perfis e 11 atalhos.

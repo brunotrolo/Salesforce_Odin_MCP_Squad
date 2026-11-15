@@ -10,12 +10,14 @@ import { lint, type OdinYaml, type ResultadoLint } from '../packages/lint/src/li
 export interface OpcoesPublicacao {
   repo: string; versao: string; canal: 'beta' | 'stable'; fonte: { repo: string; sha: string }; pipeline?: { run: string; sha: string };
   assinador: Assinador; armazenamento: Armazenamento; bucket?: string; odinYaml?: string; idsExistentes?: string[]; agora?: Date; runtimeMinCli?: string;
+  /** Migração em rascunho: o contrato fica fora do repositório da skill e o passo `odin ensure` é inserido no empacotamento. */
+  rascunho?: boolean;
 }
 export interface Publicado { manifesto: Record<string, unknown>; assinatura: string; odin: OdinYaml; avisos: string[] }
 export class LintReprovado extends Error { resultado: ResultadoLint; constructor(r: ResultadoLint) { super(`odin lint reprovou:\n- ${r.erros.join('\n- ')}`); this.resultado = r; } }
 
 export async function publicar(o: OpcoesPublicacao): Promise<Publicado> {
-  const r = lint(o.repo, { odinYaml: o.odinYaml, idsExistentes: o.idsExistentes });
+  const r = lint(o.repo, { odinYaml: o.odinYaml, idsExistentes: o.idsExistentes, rascunho: o.rascunho });
   if (r.erros.length || !r.odin) throw new LintReprovado(r);
   const odin = r.odin; const dirPrincipal = odin.skills[0]!.path.replace(/\/SKILL\.md$/, '');
   const dirRuntime = odin.runtime?.dir.replace(/\/$/, '');
@@ -25,6 +27,10 @@ export async function publicar(o: OpcoesPublicacao): Promise<Publicado> {
 
   const conteudo: Arquivos = {};
   for (const f of r.arquivos.skills) conteudo[f === odin.skills[0]!.path ? 'SKILL.md' : `skills/${basename(f.replace(/\/SKILL\.md$/, ''))}/SKILL.md`] = ler(f);
+  if (o.rascunho && !conteudo['SKILL.md']!.toString('utf8').includes(`odin ensure ${odin.id}`)) {
+    const md = conteudo['SKILL.md']!.toString('utf8'); const fim = md.startsWith('---') ? md.indexOf('\n---', 3) + 4 : 0;
+    conteudo['SKILL.md'] = Buffer.from(`${md.slice(0, fim)}\n\n> **Primeiro passo (Odin):** rode \`odin ensure ${odin.id}\` e só continue se a resposta tiver \`"ok": true\`.\n${md.slice(fim)}`);
+  }
   for (const f of r.arquivos.referencias) conteudo[f.slice(dirPrincipal.length + 1)] = ler(f);
   for (const f of r.arquivos.regras) conteudo[`regras/${basename(f)}`] = ler(f);
   const runtime: Arquivos = {};

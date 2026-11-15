@@ -1,0 +1,47 @@
+# Rascunho gerado por scripts/prontidao-skills.ts a partir do catálogo e da estrutura do repositório.
+# Na migração (F6), este arquivo vai para a raiz do repositório da skill, revisado.
+id: sf-discovery
+nome: Discovery-to-Backlog
+dominio: salesforce
+dono: mantenedor
+descricao: Transforma entrevistas, transcrições e documentos do negócio em backlog rastreável, com critérios de aceite e regras de negócio com fonte, e publica as histórias no Jira.
+intencoes:
+  - transformar a transcrição da reunião em backlog
+  - fazer o discovery com o cliente e levantar requisitos
+  - escrever as histórias de usuário com critérios de aceite
+  - levantar as regras de negócio que o negócio quer
+  - publicar o backlog no Jira
+  - priorizar as capacidades do produto
+  - preparar o material de discovery para a PO
+  - gerar épicos e histórias a partir da entrevista
+  - texto: escrever a spec técnica da jornada
+    negativa: true
+  - texto: mapear as regras que existem no código legado
+    negativa: true
+perfis_sugeridos:
+  - po
+proximo:
+  - sf-data-architect
+  - sf-journey-designer
+skills:
+  - path: .claude/skills/sf-discover/SKILL.md
+  - path: .claude/skills/sf-backlog-publish/SKILL.md
+  - path: .claude/skills/sf-discovery-status/SKILL.md
+  - path: .claude/skills/sf-po-pack/SKILL.md
+agentes:
+  - .claude/agents/sf-disc-comprehension.md
+  - .claude/agents/sf-disc-domain-fit.md
+  - .claude/agents/sf-disc-extractor.md
+  - .claude/agents/sf-disc-prototype-review.md
+  - .claude/agents/sf-disc-story-quality.md
+  - .claude/agents/sf-disc-traceability.md
+  - .claude/agents/sf-disc-zoom-out.md
+regras:
+  - .claude/rules/discovery-governance.md
+  - .claude/rules/jira-write.md
+runtime:
+  dir: .claude/skills/sf-discover/scripts
+  node: ">=20"
+  prerequisitos:
+    - node
+    - git

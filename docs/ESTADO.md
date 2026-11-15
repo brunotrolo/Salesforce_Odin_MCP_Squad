@@ -6,6 +6,7 @@
 ## Agora
 - **Fase:** desenvolvimento **local primeiro** (decisão 53, ADR 0020). O caminho completo já roda e é testado na máquina: `npm run demo` mostra tudo em segundos; `npm run dev` sobe o Odin para o Claude Code local.
 - **Pronto e testado (44 testes, CI em Linux e Windows):** emissor de tokens (`apps/sts`), servidor MCP com as 7 ferramentas e a API `/v1` (`apps/mcp-server`), roteador e catálogo das 10 skills (`packages/router`, `catalog/`), `odin lint` e pipeline de publicação assinada (`packages/lint`, `pipeline/`), publisher que confere a assinatura (`apps/jobs`), guard com PG-01 a PG-08 (`packages/guard`), CLI (`packages/cli`), skill de apoio `odin-ambiente`.
+- **Skills reais:** 8 das 10 já passam no `odin lint` e sobem no Odin local em modo rascunho (`npm run dev`, com os repositórios clonados ao lado); Data Architect e Apex Callouts Developer estão bloqueadas por problemas reais listados em [MIGRACAO-SKILLS.md](MIGRACAO-SKILLS.md).
 - **Ainda não existe:** portal (a ativação usa uma página de desenvolvimento), implementações de nuvem (Firestore, Cloud Storage, KMS, Vertex AI), Terraform, cofre do sistema, binário do CLI, migração das 10 skills reais (F6), avaliações de comportamento.
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
@@ -24,7 +25,7 @@
 3. Depois: implementações de nuvem atrás das interfaces, Terraform no estágio E0 e a F0 com o Claude Code real e o LiteLLM.
 
 ## Pendências
-- Entregáveis das decisões: `docs/F0-ROTEIRO.md`, `docs/MIGRACAO-SKILLS.md`, `prototipo/` (o protótipo inicial está na apresentação). `schemas/` entregue.
+- Entregáveis das decisões: `docs/F0-ROTEIRO.md`, `prototipo/` (o protótipo inicial está na apresentação). `schemas/` e `docs/MIGRACAO-SKILLS.md` (gerado por `node scripts/prontidao-skills.ts`) entregues.
 - Portão 2 (antes do time): organização GitHub, projeto `prod` em E1 com disjuntor ensaiado, segundo super-admin, jurídico, e-mail, pentest, ensaio do corte. Domínio próprio, Load Balancer, Cloud Armor e Cloud SQL deixaram de ser itens fixos: entram por gatilho.
 - Pontos `[VERIFICAR]`: ver `node scripts/sessao.mjs inicio`.
 
