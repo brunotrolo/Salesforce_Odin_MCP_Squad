@@ -37,7 +37,8 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 - **Entregar:** `packages/cli` (setup, login, token, ensure, doctor, guard-ping, update, uninstall, restore-copias), `packages/guard` com PG-01 a PG-08 e as políticas das skills, skill local `odin`, `ODIN.md`, blocos marcados, cópia local de 7 dias, versão fixa por sessão.
 - **Testes:** matriz Windows nativo (PowerShell e `cmd`), macOS e Linux no CI; CT-15, CT-24 e CT-26 (arquivo do runtime alterado → detectado, reinstalado, DT-19); isolamento (nada escrito no projeto); `uninstall` devolve os arquivos idênticos; guard ausente bloqueia.
 
-## F6 · Adaptação das 5 skills (2 semanas)
+## F6 · Adaptação das 10 skills (4,5 semanas)
+- **Ler:** `docs/PIPELINE.md` (etapas, encadeamento, fronteiras, pontos de atenção por skill).
 - Use a skill `odin-curador` para cada uma. **Aceite:** testes atuais de cada skill passam a partir do runtime do Odin; `evals/` com ao menos 10 casos e nota de referência registrada (o Test Automator já tem os bugs plantados como base); uma tarefa real de cada skill completa ponta a ponta.
 
 ## F7 · Conhecimento (1 semana)

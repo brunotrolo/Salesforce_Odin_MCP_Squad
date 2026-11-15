@@ -28,7 +28,7 @@ Um único ponto de entrada, o **MCP Odin**. Qualquer pessoa autorizada (PO, dev,
 | **Sem marketplace** de plugins | O runtime local é distribuído por um instalador próprio, com pacotes assinados |
 | Skills e agentes continuam no **GitHub** | O GitHub é a fonte da verdade; o Odin publica versões fixadas por commit |
 | Claude Code no terminal, no VS Code e na extensão do VS Code; acesso total ao disco | O runtime e os hooks rodam na máquina; a segurança fica em código (hooks), não na confiança no modelo |
-| Todas as skills de uma vez | Fases de **construção**, não de liberação: a prova de conceito já roda as 5 skills |
+| Todas as skills de uma vez | Fases de **construção**, não de liberação: a prova de conceito já roda as 10 skills ([pipeline](PIPELINE.md)) |
 
 ### Fora do escopo desta versão
 Execução das skills no servidor (o trabalho continua na máquina do usuário), interface de chat própria, marketplace de plugins, criação de modelos próprios e substituição do LiteLLM.
@@ -193,9 +193,9 @@ sequenceDiagram
 | Perfil | Skills | Conhecimento |
 |---|---|---|
 | `po` | Discovery-to-Backlog, Journey Designer | `funcional`, `negocio`: ler e propor |
-| `dev` | Journey Developer, Data Architect (leitura), Test Automator | `tecnico`: ler e propor; `negocio`, `dados`: ler |
-| `qa` | Test Automator | `negocio`, `tecnico`, `licoes`: ler |
-| `arquiteto` | Journey Designer, Journey Developer, Data Architect | `tecnico`, `dados`: curar; demais: ler |
+| `dev` | Journey Developer, LWC Developer, Apex Callouts Developer, Apex Cover Loop, Deep Debugger, Test Automator, Data Architect (leitura) | `tecnico`: ler e propor; `negocio`, `dados`: ler |
+| `qa` | Test Automator, Deep Debugger | `negocio`, `tecnico`, `licoes`: ler |
+| `arquiteto` | Archaeologist, Data Architect, Journey Designer, Journey Developer, Apex Callouts Developer, Deep Debugger | `tecnico`, `dados`: curar; demais: ler |
 | `mantenedor` | todas, mais canal `beta` | todas: ler |
 
 **Administração é separada dos perfis de uso:** papéis `super-admin`, `admin-identidade`, `admin-catalogo`, `gestor-squad`, `curador` e `auditor`, com escopo, quatro olhos e passkey ([arquitetura funcional, 4.3](arquitetura/02-arquitetura-funcional.md); [portal 05](portal/05-console-de-administracao.md)). Nenhum perfil de uso dá poder administrativo.
@@ -381,7 +381,7 @@ Poucas ferramentas, porque cada ferramenta ocupa contexto do modelo. Todas receb
 | `odin_proximo_passo` | artefatos presentes | próxima skill do encadeamento (por exemplo, existe `backlog.json` e falta spec → Journey Designer) |
 | `odin_feedback` | id da chamada, nota, comentário | melhora o roteamento e as métricas |
 
-- **Prompts MCP:** um por skill principal (atalhos explícitos para quem prefere digitar o comando). **[CONFIRMADO]** Aparecem como `/odin:discovery (MCP)` e também rodam como `/mcp__odin__discovery`.
+- **Prompts MCP:** um por skill (11 atalhos, em [PIPELINE.md](PIPELINE.md)),  (atalhos explícitos para quem prefere digitar o comando). **[CONFIRMADO]** Aparecem como `/odin:discovery (MCP)` e também rodam como `/mcp__odin__discovery`.
 - **Recursos MCP:** cada skill e referência também é exposta como recurso (`skill://<id>/...`), que o usuário pode citar com `@odin:skill://sf-test/SKILL.md` **[CONFIRMADO: o formato `@servidor:protocolo://caminho`]**. O caminho principal continua sendo a ferramenta, porque o modelo a chama sozinho.
 - **Limite de tamanho de saída [CONFIRMADO]:** o Claude Code avisa acima de 10.000 tokens por resposta de ferramenta e corta em 25.000 por padrão (`MAX_MCP_OUTPUT_TOKENS`); texto acima de 50.000 caracteres vai para arquivo. Regra do Odin: **nenhuma resposta acima de 8.000 tokens**. `SKILL.md` grande é dividido, referências vêm sob demanda e buscas são paginadas. O pipeline mede o tamanho de cada `SKILL.md` e falha acima do limite.
 - **Economia de contexto (ADR 0017):** alvo de cerca de 5.000 tokens por `SKILL.md` e por referência (o `odin lint` avisa entre 5.000 e 8.000). Trabalho pesado (logs, metadados, relatórios, comparação de arquivos grandes) é feito por **script local**, que grava o detalhe em arquivo e devolve ao modelo só o resumo (até 40 linhas), como já faz o relatório do Test Automator.
@@ -444,6 +444,13 @@ Inventário atual (base do esforço):
 | Journey Developer | 24 (inclui bibliotecas de terceiros) | 10 | 5 | PreToolUse (deploy) | ~27 |
 | Data Architect | 1 | 4 | 1 | Pre e PostToolUse | ~19 |
 | Test Automator | 2 | 4 | 2 | PreToolUse (guard-qa) | ~30 |
+| Archaeologist | 2 (inclui 10 playbooks de análise) | 4 | 2 | PostToolUse | ~3 |
+| LWC Developer | 8 (3 próprias + bibliotecas de terceiros) | 0 | 1 | Pre e PostToolUse | ~21 |
+| Apex Callouts Developer | 2 | 4 | 1 | Pre e PostToolUse | ~7 |
+| Apex Cover Loop | 10 (1 própria + bibliotecas de terceiros) | 1 | 1 | PreToolUse | ~6 |
+| Deep Debugger | 1 | 1 | 1 | PreToolUse | ~5 |
+
+As 10 skills estão organizadas por etapa do ciclo em [PIPELINE.md](PIPELINE.md) (ADR 0019).
 
 Mudanças, iguais para todas:
 1. **`odin.yaml`** em cada repositório (8.1), com intenções de exemplo boas, que são o que mais pesa no roteamento.
@@ -504,7 +511,7 @@ O Journey Designer e o Journey Developer embutem skills de terceiros (pastas `sa
 
 ## 16. Fases de construção (prova de conceito com todas as skills)
 
-As fases são a ordem de **construção**. A prova de conceito só termina com as 5 skills funcionando ponta a ponta.
+As fases são a ordem de **construção**. A prova de conceito só termina com as 10 skills funcionando ponta a ponta.
 
 | Fase | Entrega | Critério de aceite |
 |---|---|---|
@@ -514,10 +521,10 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md`, colisão de nome, Unicode oculto ou avaliação determinística falhando é recusado pelo pipeline; promoção sem relatório de avaliação do SHA é recusada |
 | **F4 MCP** | Ferramentas da seção 10, autorização por perfil e projeto, auditoria | PO de teste vê só Discovery e Designer; dev vê Developer, Data e Test; 100% das chamadas auditadas |
 | **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; runtime adulterado depois da instalação é detectado e reinstalado (DT-19); nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
-| **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; cada skill tem `evals/` com ao menos 10 casos (negativos e de injeção incluídos) e nota de referência registrada; uma tarefa real de cada skill completa ponta a ponta |
+| **F6 Adaptação das 10 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; cada skill tem `evals/` com ao menos 10 casos (negativos e de injeção incluídos) e nota de referência registrada; uma tarefa real de cada skill completa ponta a ponta |
 | **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, `KnowledgeStore` no Firestore, implementação pgvector com segurança em nível de linha testada em contêiner (pronta para o gatilho), avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
 | **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Teste de carga com **50 usuários** simultâneos (decisão 33) dentro dos SLOs e do teto de 3 instâncias; partida a frio medida (p95 ≤ 3 s); ensaio do disjuntor de custo; simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
-| **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
+| **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 10 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
 | **F10 Preparação para o time** | Portão 2 da seção 23 (organização GitHub, projeto `prod` em E1, segundo super-admin, jurídico, pentest), guia de onboarding de uma página, repositório de suporte, **ensaio do corte** com 2 ou 3 pessoas | Portão 2 todo verde; 3 pessoas fazem o onboarding sozinhas em menos de 10 min no ensaio |
 
 ### 16.1 Estimativa (mantenedor + Claude, tempo integral; decisão 35)
@@ -530,12 +537,12 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | F3 Catálogo e publicação | 1,5 semana |
 | F4 MCP | 1,5 semana |
 | F5 Runtime local (prioridade Windows nativo e extensão do VS Code) | 2 semanas |
-| F6 Adaptação das 5 skills (inclui as avaliações, ADR 0017) | 2,5 semanas |
+| F6 Adaptação das 10 skills (inclui as avaliações, ADR 0017; 5 skills a mais, ADR 0019) | 4,5 semanas |
 | F7 Conhecimento (Firestore; pgvector testado em contêiner) | 1 semana |
 | F8 Operação | 1 semana |
 | F9 Validação pessoal | 2 semanas |
 | F10 Preparação para o time (inclui organização GitHub, projeto `prod` em E1, segundo super-admin, jurídico) | 1,5 semana |
-| **Total** | **cerca de 16 semanas (± 30%)** |
+| **Total** | **cerca de 18 semanas (± 30%)** |
 
 Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (dependem do comportamento real do Claude Code no Windows e na extensão do VS Code). Revisar a estimativa ao fim da F0.
 
@@ -690,6 +697,7 @@ O plano passou por quinze rodadas de revisão contra os objetivos (fricção, go
 | 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
 | 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
 | 15 | Continuidade | Outro chat não conheceria as regras nem o estado do projeto | ADR 0016: `CLAUDE.md`, `docs/ESTADO.md`, ADRs, skills `odin-dev`/`odin-curador`/`odin-arquiteto`/`odin-operacao`, revisores, hook `guard-docs`, verificações e CI (seções 19 e 22.4) |
+| 18 | Escopo | Entraram 5 skills novas (Archaeologist, LWC Developer, Apex Callouts Developer, Apex Cover Loop, Deep Debugger); faltava a ordem das 10 no ciclo | ADR 0019: [PIPELINE.md](PIPELINE.md) com 6 etapas, encadeamento, fronteiras e perfis; 11 atalhos; F6 passa a 4,5 semanas (total de cerca de 18); decisões 49 a 52 |
 | 17 | Custo e arquitetura | "Produção" superdimensionada para 20 pessoas (centenas de dólares por mês); 5 serviços + 2 jobs + Pub/Sub, com o Pub/Sub entregando a um job (impossível); sem teto de gasto; MCP sem regra para fluxo aberto; trechos ainda supondo proteção de branch; contratos só em prosa | ADR 0018: estágios E0, E1 e E2 com gatilhos (arquitetura 05), 3 serviços + 3 jobs, sem webhooks nem Pub/Sub de aplicação, publisher confere a assinatura, teto de 3 instâncias e disjuntor, MCP com resposta JSON, `schemas/` validados no CI, governança do repositório, CF-11 a CF-14; riscos R20 a R23; decisões 42 a 48 |
 | 16 | Qualidade e segurança | Comparação com práticas de mercado (skills por MCP): faltavam avaliação de comportamento por skill, recusa de Unicode oculto, integridade do runtime no uso e diretriz de economia de contexto | ADR 0017: `evals/` e portão de promoção (8.3, 8.4), Unicode oculto no lint, no RAG e no CI deste repositório (8.3, 11.3, 22.5), `ensure` confere hashes na primeira chamada (7.2, DT-19), alvo de 5.000 tokens e scripts que devolvem resumo (10); risco R19 |
 
@@ -761,6 +769,7 @@ O inventário dos 5 repositórios mostrou:
 - **5 skills com o mesmo nome e conteúdo idêntico** no Journey Designer e no Journey Developer (`design-systems-slds-apply`, `design-systems-slds-validate`, `experience-lwc-generate`, `platform-apex-generate`, `test-driven-development`), vindas das bibliotecas de terceiros embutidas. As pastas `salesforce`, `mattpocock` e `agent-skills` existem nos dois repositórios com conjuntos diferentes.
 - **Uma regra com o mesmo nome e conteúdo diferente** nos dois (`karpathy-guidelines.md`).
 - Os 32 agentes não têm nomes repetidos.
+- **Com as 5 skills novas (ADR 0019):** as mesmas bibliotecas de terceiros aparecem também no Apex Cover Loop (`platform-apex-generate`) e no LWC Developer (`experience-lwc-generate`, `design-systems-slds-apply`), e a regra `karpathy-guidelines.md` está em 7 repositórios. O tratamento abaixo vale igual: um pacote compartilhado e uma versão única da regra.
 
 Tratamento:
 - **Namespace por skill:** tudo o que é entregue leva o id da skill (`odin-sf-build-...`, referências em `skill://sf-build/...`). Duas skills podem ter um arquivo com o mesmo nome sem se sobrepor.
@@ -818,7 +827,7 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 **Não são mais itens do Portão 2** (ADR 0018): domínio próprio, Load Balancer e Cloud Armor. Entram por gatilho, no estágio E2 ([arquitetura 05](arquitetura/05-custos-e-finops.md), seção 3).
 
 ### 23.3 Corte único (decisão 29)
-1. **Ensaio:** 2 a 3 pessoas fazem o onboarding sozinhas, usam as 5 skills por 1 semana e removem as cópias do projeto com o `odin doctor`.
+1. **Ensaio:** 2 a 3 pessoas fazem o onboarding sozinhas, usam as 10 skills por 1 semana e removem as cópias do projeto com o `odin doctor`.
 2. **Janela combinada** com o time (data, horário, canal de suporte).
 3. **No dia:** guia de uma página + vídeo curto; cada pessoa roda o instalador e o `odin setup`; o `odin doctor` remove as cópias antigas de `.claude/` dos projetos (com confirmação) e **arquiva** um pacote delas em `~/.odin/arquivo-copias/`.
 4. **Plano de volta:** por 30 dias, `odin restore-copias` devolve as cópias arquivadas a um projeto, se o Odin falhar para alguém.

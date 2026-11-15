@@ -8,7 +8,7 @@ argument-hint: incluir <repo> | versao <skill> | ajustar <skill> | depreciar <sk
 
 Abra a sessão com `node scripts/sessao.mjs inicio`. Fontes: `docs/PLANO.md` seções 8, 12, 15 e 22; `docs/portal/07-ciclo-de-vida-das-skills.md`; decisões 8 a 13 e 17 em `docs/DECISOES.md`. **Quem decide é o código** (`odin lint` e o pipeline); esta skill prepara e confere.
 
-## incluir <repo>  ·  (também usada na F6 para as 5 skills atuais)
+## incluir <repo>  ·  (também usada na F6 para as 10 skills atuais; ordem e fronteiras em `docs/PIPELINE.md`)
 1. **Inventário** do repositório da skill: `SKILL.md` (principal e subskills), agentes, regras (`.claude/rules`), hooks (`settings.json`), scripts, `CLAUDE.md`/`AGENTS.md`, bibliotecas de terceiros embutidas. Use `references/checklist-migracao.md`.
 2. **`odin.yaml`** a partir de `templates/odin.yaml`: id, nome, domínio, dono, descrição, intenções, perfis sugeridos, entrada, saída, próximo, skills, agentes, regras, runtime (pré-requisitos), políticas, coleções de conhecimento, licenças, `usa`. Só o que estiver declarado é entregue.
 3. **Regras do `CLAUDE.md`** da skill: mova o que é regra operacional para o `SKILL.md` ou uma referência; o `CLAUDE.md` fica só para quem mantém (decisão 13).
@@ -38,7 +38,7 @@ PR no catálogo com a data prevista, a skill substituta e o motivo; na retirada,
 - Só o mantenedor aprova a entrada no catálogo (decisão 31); a decisão final técnica é do `odin lint` e do pipeline.
 
 ## Referências
-- `references/checklist-migracao.md`: checklist por skill, com o inventário atual das 5 skills.
+- `references/checklist-migracao.md`: checklist por skill, com o inventário atual das 10 skills.
 - `references/intencoes.md`: como escrever e avaliar as 20 intenções.
 - `references/avaliacoes.md`: formato dos casos de avaliação de comportamento e portão de promoção.
 - `templates/odin.yaml`: modelo comentado do contrato.

@@ -5,13 +5,14 @@
 
 ## Agora
 - **Fase:** pré-F0, fechando o **Portão 1** ([plano, seção 23.1](PLANO.md)).
-- Documentação completa e alinhada: plano, decisões (48), arquitetura (solução, funcional, técnica, portal, custos), segurança (12 documentos), portal (11 documentos), apresentação interativa.
+- Documentação completa e alinhada: plano, decisões (52), arquitetura (solução, funcional, técnica, portal, custos), segurança (12 documentos), portal (11 documentos), apresentação interativa.
 - **Arquitetura enxuta por estágios de custo (ADR 0018):** 3 serviços + 3 jobs com escala a zero; E0 ≤ US$ 3/mês, E1 ≤ US$ 25/mês; recurso de custo fixo só por gatilho medido; teto de 3 instâncias e disjuntor.
 - **Contratos em `schemas/`** validados no CI: `odin.yaml`, manifesto, avaliações, auditoria, descoberta, 7 ferramentas MCP, OpenAPI `/v1`.
 - Skills de desenvolvimento e sustentação (ADR 0016) e qualidade das skills (ADR 0017: avaliações, Unicode oculto, integridade no uso, economia de contexto).
 - Ainda **não há código** do Odin (servidor, portal, CLI, guard).
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-15 · ADR 0019: 10 skills organizadas no pipeline do ciclo (`docs/PIPELINE.md`), lado a lado, com 11 atalhos; F6 passa a 4,5 semanas e o total a cerca de 18.
 - 2026-11-15 · ADR 0018: revisão geral delegada pelo mantenedor. Estágios de custo e documento de FinOps; topologia de 3 serviços + 3 jobs sem webhooks nem Pub/Sub; publisher confere a assinatura; MCP com resposta JSON; `schemas/` com validador e testes; CF-11 a CF-14; SECURITY, CONTRIBUTING, CHANGELOG, Dependabot, modelo de PR; correção de contradições (GitHub Free, custo da PoC, Pub/Sub para job). Decisões 42 a 48; riscos R20 a R23.
 - 2026-11-15 · ADR 0017: práticas de mercado incorporadas (evals, Unicode oculto, integridade no uso, economia de contexto); `scripts/lib/unicode.mjs` com testes; estimativa total passa a cerca de 16 semanas (F6 +0,5).
 - 2026-11-14 · ADR 0016: skills, agentes, hook, scripts de verificação, testes e CI. O CI no Windows pegou leitura de CRLF: scripts normalizam e `.gitattributes` fixa LF.

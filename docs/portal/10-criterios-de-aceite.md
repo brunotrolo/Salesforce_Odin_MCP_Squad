@@ -52,4 +52,4 @@
 | AC-N07 | Responsivo | Telas do usuário utilizáveis no celular |
 
 ## 4. Massa de teste
-Conjunto sintético com 3 squads, 2 projetos, 12 pessoas (uma por combinação relevante de perfil e papel), 5 skills com histórico (incorporação, 3 versões, um rollback, uma depreciação, uma retirada) e 30 dias de consumo gerado (incluindo picos e `negado`). Sem dados reais de pessoas.
+Conjunto sintético com 3 squads, 2 projetos, 12 pessoas (uma por combinação relevante de perfil e papel), 10 skills com histórico (incorporação, 3 versões, um rollback, uma depreciação, uma retirada) e 30 dias de consumo gerado (incluindo picos e `negado`). Sem dados reais de pessoas.

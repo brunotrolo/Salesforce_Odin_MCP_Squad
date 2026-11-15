@@ -8,8 +8,15 @@
 | Salesforce_Journey_Developer | 24 (inclui terceiros) | 10 | 5 (`apex`, `journey-developer`, `karpathy-guidelines`, `lwc`, `metadata`) | PreToolUse (deploy) | ~27 | Mesmas bibliotecas, conjunto diferente |
 | Salesforce_Data_Architect | 1 | 4 | 1 (`data-governance`) | Pre e PostToolUse | ~19 | — |
 | Salesforce_Test_Automator | 2 | 4 | 2 (`qa-governance`, `sandbox-only`) | PreToolUse (`guard-qa`) | ~30 | Playwright; 71 testes |
+| Salesforce_Archaeologist | 2 (`sf-archaeologist` + 10 playbooks) | 4 | 2 (`karpathy-guidelines`, `salesforce-standards`) | PostToolUse | ~3 | Lê a org inteira: política somente leitura |
+| Salesforce_LWC-Developer | 8 (3 próprias + terceiros) | 0 | 1 (`karpathy-guidelines`) | Pre e PostToolUse | ~21 | Grava em `.lwc-spec-writer/` e `.lwc-pattern-documenter/` |
+| Salesforce_Apex_Callouts_Developer | 2 | 4 | 1 (`karpathy-guidelines`) | Pre e PostToolUse | ~7 | **Ajustar de FSC para Service Cloud** (decisão 51) |
+| Salesforce_Apex-Cover-Loop | 10 (1 própria + terceiros) | 1 | 1 (`karpathy-guidelines`) | PreToolUse | ~6 | Grava em `.apex-test-loop/` |
+| Salesforce_Deep_Debugger | 1 | 1 | 1 (`karpathy-guidelines`) | PreToolUse | ~5 | Quick deploy sem teste só com pedido explícito e só em sandbox: vira política do guard |
 
-**Colisões conhecidas:** 5 skills idênticas em Designer e Developer (`design-systems-slds-apply`, `design-systems-slds-validate`, `experience-lwc-generate`, `platform-apex-generate`, `test-driven-development`) → pacote de biblioteca único. `karpathy-guidelines.md` com conteúdo diferente nos dois → fundir numa versão (decisão 12).
+Ordem no ciclo, encadeamento (`proximo`), fronteiras (intenções negativas) e perfis: `docs/PIPELINE.md`.
+
+**Colisões conhecidas:** as mesmas bibliotecas também no Apex Cover Loop e no LWC Developer, e `karpathy-guidelines.md` em 7 repositórios (tratamento igual). 5 skills idênticas em Designer e Developer (`design-systems-slds-apply`, `design-systems-slds-validate`, `experience-lwc-generate`, `platform-apex-generate`, `test-driven-development`) → pacote de biblioteca único. `karpathy-guidelines.md` com conteúdo diferente nos dois → fundir numa versão (decisão 12).
 
 ## Checklist por skill
 - [ ] Inventário feito (skills, agentes, regras, hooks, scripts, `CLAUDE.md`, terceiros)

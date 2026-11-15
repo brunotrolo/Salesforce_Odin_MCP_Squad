@@ -19,7 +19,7 @@
 |---|---|---|
 | 8 | **Um repositório por skill** (D3 fechada) | Catálogo central fixando o SHA de cada uma |
 | 9 | Entram as **skills principais + subskills que elas usam**; bibliotecas só se alguma skill depender | Levantamento de dependências na especificação de migração |
-| 10 | **6 atalhos**: `/odin:discovery`, `/odin:spec`, `/odin:build`, `/odin:data`, `/odin:test`, `/odin:status` | Prompts MCP correspondentes |
+| 10 | **6 atalhos**: `/odin:discovery`, `/odin:spec`, `/odin:build`, `/odin:data`, `/odin:test`, `/odin:status` (ampliados para 11 pela decisão 52) | Prompts MCP correspondentes |
 | 11 | Bibliotecas de terceiros: **manter só as usadas**, como pacote compartilhado com `LICENSE` e `NOTICE`; o Claude levanta as licenças e o mantenedor valida | Remoção das não usadas |
 | 12 | `karpathy-guidelines.md`: **fundir numa versão**, proposta pelo Claude e aprovada pelo mantenedor | Fim da colisão |
 | 13 | Regras dos `CLAUDE.md` **movidas para as skills**; `CLAUDE.md` fica para mantenedores | Item da especificação de migração |
@@ -83,6 +83,14 @@
 | 46 | **Topologia de 3 serviços + 3 jobs (uma imagem), sem webhooks e sem Pub/Sub de aplicação**; o publisher confere a assinatura | Menos componentes para uma pessoa operar; saída pelo GitHub detectada em até 15 min (R21) |
 | 47 | **MCP com resposta JSON e sem fluxo SSE permanente** | Os serviços escalam a zero; confirmar na F0 |
 | 48 | **Contratos em `schemas/`** e governança do repositório (política de segurança, guia de contribuição, Dependabot, registro de mudanças) | Entregável 3 concluído; CI valida os contratos |
+
+## I. Pipeline com 10 skills (15/11/2026, ADR 0019)
+| # | Decisão | Consequência |
+|---|---|---|
+| 49 | **10 skills no Odin**: às 5 iniciais somam-se Archaeologist, LWC Developer, Apex Callouts Developer, Apex Cover Loop e Deep Debugger | Pipeline de 6 etapas em [PIPELINE.md](PIPELINE.md); F6 passa a 4,5 semanas |
+| 50 | **Skills lado a lado, sem hierarquia**: nenhuma orquestra as outras | O roteador escolhe pela intenção; fronteiras entre skills parecidas viram intenções negativas e casos de avaliação |
+| 51 | **Apex Callouts Developer ajustado para Service Cloud** na migração (hoje fala em arquitetura FSC) | Tarefa da F6, com o `odin-curador` |
+| 52 | **11 atalhos**: aos 6 da decisão 10 somam-se `/odin:legado`, `/odin:lwc`, `/odin:callout`, `/odin:cobertura` e `/odin:debug` | Prompts MCP correspondentes |
 
 ## G. Entregáveis
 | # | Decisão | Consequência |

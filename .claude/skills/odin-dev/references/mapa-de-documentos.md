@@ -29,6 +29,7 @@ Leia só o necessário para a tarefa. Em conflito, vale a ordem: `docs/DECISOES.
 | Guard, políticas PG-01 a PG-08, Windows, injeção, Jira | `docs/seguranca/06-seguranca-do-endpoint.md` |
 | IAM, rede, teto e disjuntor de custo, criptografia, logs de auditoria GCP | `docs/seguranca/07-infraestrutura-gcp.md` |
 | Estágios de custo (E0, E1, E2), gatilhos, modelo de custo, FinOps | `docs/arquitetura/05-custos-e-finops.md` |
+| As 10 skills no ciclo: etapas, encadeamento, fronteiras, perfis, atalhos | `docs/PIPELINE.md` |
 | Contratos (odin.yaml, manifesto, ferramentas MCP, auditoria, avaliações, API `/v1`) | `schemas/` |
 | LGPD, retenção, expurgo | `docs/seguranca/08-dados-e-lgpd.md` |
 | Detecções e playbooks | `docs/seguranca/09-deteccao-e-resposta.md` |

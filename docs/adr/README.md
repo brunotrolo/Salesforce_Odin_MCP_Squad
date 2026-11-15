@@ -34,4 +34,5 @@ O hook `.claude/hooks/guard-docs.mjs` bloqueia a edição dos documentos protegi
 |---|---|---|
 | [0016](0016-skill-de-desenvolvimento-e-sustentacao-do-odin.md) | Aceito | Skill de desenvolvimento e sustentação do Odin |
 | [0017](0017-evals-por-skill-unicode-oculto-integridade-no-uso-e-economia.md) | Aceito | Evals por skill, Unicode oculto, integridade no uso e economia de contexto |
+| [0019](0019-pipeline-do-ciclo-de-desenvolvimento-com-10-skills.md) | Aceito | Pipeline do ciclo de desenvolvimento com 10 skills |
 | [0018](0018-arquitetura-enxuta-por-estagios-de-custo-contratos-em-schema.md) | Aceito | Arquitetura enxuta por estágios de custo, contratos em schema e governança do repositório |
