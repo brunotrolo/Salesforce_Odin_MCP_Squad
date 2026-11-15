@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}.pipe{display:flex;gap:6px;flex-wrap:wrap}
+.pipe button{flex:1 1 130px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 10px;cursor:pointer;font:inherit;position:relative}
+.pipe button small{display:block;color:var(--muted);font-size:12px}
+.pipe button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pipepanel{margin-top:10px;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.pipepanel .sk{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface)}
+.pipepanel .sk b{display:block}.pipepanel .sk span{color:var(--muted);font-size:13px}
+.pipepanel .sk code{font-size:12px}
+</style>
 <title>Odin MCP Squad</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -236,12 +244,12 @@ pre.payload{margin:0;background:var(--surface-2);border-radius:8px;padding:12px;
   </div>
   <div class="scene" id="scene"></div>
   <div class="grid2">
-    <div class="card">
-      <h3>As 5 skills que entram no Odin</h3>
-      <p class="note" style="margin:6px 0 10px">Um ciclo de entrega Salesforce, do discovery ao teste de tela.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <span class="chip">Discovery-to-Backlog</span><span class="chip">Journey Designer</span><span class="chip">Journey Developer</span><span class="chip">Data Architect</span><span class="chip">Test Automator</span>
-      </div>
+    <div class="card" id="pipeCard" style="grid-column:1/-1">
+      <h3>As 10 skills do Odin, no ciclo de desenvolvimento</h3>
+      <p class="note" style="margin:6px 0 10px">Clique numa etapa. As skills ficam lado a lado: o Odin escolhe pelo pedido, e o Odin só sugere o próximo passo.</p>
+      <div class="pipe" id="pipeSteps" role="tablist" aria-label="Etapas do ciclo"></div>
+      <div class="pipepanel" id="pipePanel" aria-live="polite"></div>
+      <p class="note" id="pipeNote" style="margin-top:10px"></p>
     </div>
     <div class="card ravens">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 30c5-12 19-17 27-10-5 0-9 3-10 7 4 0 7 2 9 5-9-2-16-1-26-2z" style="fill:var(--gh)"/><path d="M20 38c4-8 13-11 19-7-3 0-6 2-7 5 3 0 5 1 6 3-6-1-11-1-18-1z" style="fill:var(--accent)"/></svg>
@@ -624,6 +632,21 @@ $('#gate1').innerHTML=[chk(1,'Decisões do mantenedor registradas'),chk(1,'Arqui
 $('#gate2').innerHTML=[chk(0,'Organização GitHub e repositórios transferidos'),chk(0,'Ambiente do time no estágio E1, com disjuntor de custo ensaiado'),chk(0,'Nenhum conhecimento confidencial sem Cloud SQL'),chk(0,'Segundo super-admin com passkey'),chk(0,'Jurídico: LGPD, termos e licenças'),chk(0,'Pentest externo sem achado alto'),chk(0,'Ensaio do corte único')].join('');
 
 go(location.hash.slice(1));
+/* ---------- pipeline das 10 skills ---------- */
+(function(){
+const E=[
+['1 · Entender','o que existe',[['Archaeologist','Engenharia reversa da org: regras de negócio, assessment e diagramas.','/odin:legado']],'Só em org existente, migração ou refatoração. Alimenta o Discovery e o Data Architect.'],
+['2 · Descobrir','e priorizar',[['Discovery-to-Backlog','Transforma entrevistas em backlog rastreável e publica no Jira.','/odin:discovery']],'Projeto novo começa aqui.'],
+['3 · Especificar','',[['Data Architect','Modelo e contrato de dados.','/odin:data'],['Journey Designer','Spec, plano técnico e protótipo navegável.','/odin:spec']],'Depois do backlog aprovado.'],
+['4 · Construir','',[['Journey Developer','Constrói a capacidade ponta a ponta e implanta na sandbox.','/odin:build'],['LWC Developer','Aprende o design system da org e gera componentes.','/odin:lwc'],['Apex Callouts Developer','Cria ou refatora callouts HTTP.','/odin:callout']],'Lado a lado, sem hierarquia: o pedido decide qual entra.'],
+['5 · Verificar','',[['Apex Cover Loop','Leva uma classe Apex a 99% de cobertura.','/odin:cobertura'],['Test Automator','QA de tela na sandbox: bug, previsto ou a confirmar.','/odin:test']],'Cobertura primeiro, tela depois.'],
+['6 · Sustentar','',[['Deep Debugger','Diagnostica um bug com causa raiz e sugere a correção.','/odin:debug']],'Bug confirmado volta para a skill de construção; regra não documentada volta para o Discovery.']];
+const st=$('#pipeSteps'),pn=$('#pipePanel'),nt=$('#pipeNote');
+function sel(i){[...st.children].forEach((b,j)=>b.setAttribute('aria-selected',String(i===j)));
+ pn.innerHTML=E[i][2].map(s=>`<div class="sk"><b>${s[0]}</b><span>${s[1]}</span><br><code>${s[2]}</code></div>`).join('');nt.textContent=E[i][3]}
+E.forEach((e,i)=>{const b=el('button',{role:'tab'},`${e[0]}<small>${e[2].map(s=>s[0]).join(" · ")}</small>`);b.onclick=()=>sel(i);st.appendChild(b)});
+sel(0);
+})();
 })();
 </script>
 
