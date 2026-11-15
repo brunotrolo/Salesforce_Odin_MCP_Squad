@@ -1,0 +1,16 @@
+# Atualizações automáticas de dependências (segurança 05). Versões novas só depois de 7 dias publicadas,
+# contra pacotes sequestrados recentes. Os PRs passam pelo mesmo CI; o merge é do mantenedor.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "ci" }
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps" }

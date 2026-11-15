@@ -19,7 +19,7 @@
 | DT-02 | Uso de conta de emergência | Auditoria do portal e do Google Cloud | SEV1 (até revisão) |
 | DT-03 | Assinatura do KMS fora do workflow `publish.yml` | Logs de acesso a dados do KMS | SEV1 |
 | DT-04 | Pacote com assinatura inválida reportado por um CLI | Telemetria do CLI | SEV1 |
-| DT-05 | Mudança de IAM, de Cloud Armor, do coletor de logs ou de chave KMS fora do Terraform | Logs de atividade administrativa | SEV2 |
+| DT-05 | Mudança de IAM, de ingress ou teto de instâncias, de Cloud Armor (E2), do coletor de logs ou de chave KMS fora do Terraform | Logs de atividade administrativa | SEV2 |
 | DT-06 | Criação de chave de conta de serviço | Logs administrativos | SEV1 |
 | DT-07 | Muitas falhas de MFA (≥ 5 em 15 min) para uma pessoa | Portal | SEV3 (SEV2 se seguidas de sucesso) |
 | DT-08 | Login ou ativação de país ou rede inéditos | Portal, STS | SEV3 |
@@ -30,16 +30,17 @@
 | DT-13 | Consulta ao RAG fora dos projetos da pessoa (bloqueada pela política de linha) | Banco + MCP | SEV2 (indica falha da primeira camada) |
 | DT-14 | Guard inativo ou desligado em uma máquina | Telemetria do CLI | SEV3 |
 | DT-15 | Agente `odin-*` em pasta de projeto (sombra) | Guard, doctor | SEV3 |
-| DT-16 | Publicação no catálogo sem PR aprovado | Pipeline, `odin-publisher` | SEV1 |
-| DT-17 | Pico de custo no projeto GCP | Orçamento | SEV3 |
-| DT-18 | Pico de 4xx/5xx ou de limites do Cloud Armor | Monitoring | SEV3 |
+| DT-16 | Publicação no catálogo sem PR aprovado, ou execução do `odin-publisher` com manifesto de assinatura inválida | Pipeline, `odin-publisher` | SEV1 |
+| DT-17 | Pico de custo no projeto GCP | Orçamento | SEV3 em 100%; SEV2 em 200%; **disjuntor** em 300% (RB-13) |
+| DT-18 | Pico de 4xx/5xx ou de limites por IP (no serviço; no Cloud Armor em E2) | Monitoring | SEV3; recorrente vindo de IPs anônimos é gatilho para Cloud Armor |
+| DT-20 | Disjuntor de custo acionado (ingress fechado) | `odin-disjuntor` | SEV2 |
 | DT-19 | Runtime instalado diverge do manifesto assinado (arquivo alterado depois da instalação) | Telemetria do CLI (`odin ensure`, `doctor`) | SEV2 |
 
 Alertas SEV1 e SEV2: notificação imediata e registro de incidente. **Na PoC** (notificações só no portal, decisão 36): canal de e-mail do **Cloud Monitoring** para o mantenedor (recurso nativo, sem provedor de e-mail) + portal. **Com o time:** também o provedor de e-mail escolhido. SEV3: painel e resumo diário.
 
 ## 3. Ciclo de resposta
 1. **Detectar e registrar:** abrir o incidente (id, hora, detecção, quem responde).
-2. **Conter:** revogar (dispositivo, pessoa, token, global), bloquear no Cloud Armor, desabilitar versão de chave, tirar uma versão do canal.
+2. **Conter:** revogar (dispositivo, pessoa, token, global), fechar o ingress de um serviço (ou bloquear no Cloud Armor, em E2), desabilitar versão de chave, tirar uma versão do canal.
 3. **Investigar:** auditoria no BigQuery, logs do Google Cloud, histórico do Git, telemetria do CLI.
 4. **Erradicar:** remover a causa (credencial, versão, dependência, permissão).
 5. **Recuperar:** reemitir, republicar, restaurar backup; acompanhar por 7 dias.

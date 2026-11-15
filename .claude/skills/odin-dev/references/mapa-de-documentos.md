@@ -27,11 +27,13 @@ Leia só o necessário para a tarefa. Em conflito, vale a ordem: `docs/DECISOES.
 | Perfis, papéis, avaliação de política, quatro olhos | `docs/seguranca/04-autorizacao.md` |
 | Assinatura, dependências, GitHub Free, distribuição do CLI | `docs/seguranca/05-cadeia-de-suprimentos.md` |
 | Guard, políticas PG-01 a PG-08, Windows, injeção, Jira | `docs/seguranca/06-seguranca-do-endpoint.md` |
-| IAM, rede, Cloud Armor, criptografia, logs de auditoria GCP | `docs/seguranca/07-infraestrutura-gcp.md` |
+| IAM, rede, teto e disjuntor de custo, criptografia, logs de auditoria GCP | `docs/seguranca/07-infraestrutura-gcp.md` |
+| Estágios de custo (E0, E1, E2), gatilhos, modelo de custo, FinOps | `docs/arquitetura/05-custos-e-finops.md` |
+| Contratos (odin.yaml, manifesto, ferramentas MCP, auditoria, avaliações, API `/v1`) | `schemas/` |
 | LGPD, retenção, expurgo | `docs/seguranca/08-dados-e-lgpd.md` |
 | Detecções e playbooks | `docs/seguranca/09-deteccao-e-resposta.md` |
-| Controles CT-01 a CT-24 e testes de segurança por fase | `docs/seguranca/10-controles-e-testes.md` |
-| Runbooks RB-01 a RB-12 | `docs/seguranca/11-runbooks.md` |
+| Controles CT-01 a CT-29 e testes de segurança por fase | `docs/seguranca/10-controles-e-testes.md` |
+| Runbooks RB-01 a RB-13 | `docs/seguranca/11-runbooks.md` |
 | Portal: solução, funcional, telas, guia do MCP, console, consumo e cotas, ciclo de vida, UX, API, aceite | `docs/portal/01` a `docs/portal/10` |
 | Visão ilustrada para apresentar | `apresentacao/odin-apresentacao.html` |
 

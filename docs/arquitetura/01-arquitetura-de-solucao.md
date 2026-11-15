@@ -1,6 +1,6 @@
 # 01. Arquitetura de solução
 
-> Parte da série de arquitetura do Odin MCP Squad: **01 Solução** · [02 Funcional](02-arquitetura-funcional.md) · [03 Técnica](03-arquitetura-tecnica.md) · [04 Portal e perfilamento](04-portal-e-perfilamento.md). Base: [plano](../PLANO.md).
+> Parte da série de arquitetura do Odin MCP Squad: **01 Solução** · [02 Funcional](02-arquitetura-funcional.md) · [03 Técnica](03-arquitetura-tecnica.md) · [04 Portal e perfilamento](04-portal-e-perfilamento.md) · [05 Custos](05-custos-e-finops.md). Base: [plano](../PLANO.md).
 > **Status:** desenho, nada foi desenvolvido. [VERIFICAR] = ponto a confirmar na prova de conceito (fase F0 do plano).
 
 ## 1. Propósito
@@ -29,6 +29,8 @@ O trabalho em si (ler e escrever arquivos, rodar scripts, Playwright, `sf` CLI) 
 | P8 | **Fricção mínima** | 3 passos de onboarding, 0 passos de manutenção |
 | P9 | **Tudo como código** | Terraform para a infraestrutura, GitOps para o catálogo e o conhecimento, políticas com testes |
 | P10 | **Mínimo privilégio e separação de funções** | Uma conta de serviço por componente; quem implanta não assina; quem administra não aprova o próprio acesso |
+| P11 | **Custo proporcional ao uso** | Tudo escala a zero; recurso com custo fixo só entra por gatilho medido; teto de instâncias e disjuntor de custo ([05 Custos](05-custos-e-finops.md)) |
+| P12 | **Contratos como código** | `odin.yaml`, manifesto, ferramentas MCP e API `/v1` têm schema em `schemas/`, validado no CI |
 
 ## 3. Contexto (visão C4, nível 1)
 
@@ -44,7 +46,7 @@ flowchart TB
   end
   ODIN(["Odin MCP Squad<br/>(Google Cloud)"])
   CC["Claude Code<br/>terminal · VS Code"]
-  GH["GitHub<br/>repos de skills, catálogo, conhecimento<br/>login (OAuth), times, webhooks, Actions"]
+  GH["GitHub<br/>repos de skills, catálogo, conhecimento<br/>login (OAuth), times, Actions"]
   LL["LiteLLM → modelos Claude"]
   SF["Orgs Salesforce<br/>(sandbox)"]
 
@@ -55,8 +57,7 @@ flowchart TB
   U & GS & AD & CU & AU -- "portal (SSO GitHub)" --> ODIN
   MT -- "pull requests" --> GH
   GH -- "Actions via Workload Identity<br/>(publicação)" --> ODIN
-  ODIN -- "GitHub App<br/>(times, conteúdo, PRs)" --> GH
-  GH -- "webhooks assinados" --> ODIN
+  ODIN -- "GitHub App<br/>(times, conteúdo, PRs; varredura de 15 min)" --> GH
 ```
 
 **Fora do Odin, de propósito:** a inferência dos modelos (continua no LiteLLM), o acesso às orgs Salesforce (continua na máquina, com as credenciais do dev) e o código dos projetos (nunca sai da máquina para o Odin).
@@ -72,61 +73,68 @@ flowchart LR
     RT["~/.odin<br/>runtime · políticas · ODIN.md"]
   end
 
-  subgraph Borda["Borda (Google Cloud)"]
-    LB["HTTPS Load Balancer<br/>+ Cloud Armor (WAF, limites)"]
-  end
-
-  subgraph Servicos["Serviços (Cloud Run)"]
+  subgraph Servicos["Serviços (Cloud Run, escala a zero)"]
     MCP["odin-mcp<br/>MCP Streamable HTTP + API /v1<br/>(orquestrador)"]
     STS["odin-sts<br/>emissor de tokens<br/>device flow · JWKS"]
     POR["odin-portal<br/>UI + BFF admin"]
-    WH["odin-webhooks<br/>eventos do GitHub"]
-    PUB["odin-publisher<br/>(interno)"]
-    IDX["odin-indexer<br/>(Cloud Run Job)"]
-    JOB["odin-jobs<br/>(sincronização, expiração, auditoria)"]
+  end
+
+  subgraph Jobs["Jobs (Cloud Run, uma imagem)"]
+    PUB["odin-publisher<br/>confere assinatura e registra"]
+    IDX["odin-indexer<br/>ingestão do RAG"]
+    JOB["odin-jobs<br/>rotinas a cada 15 min"]
   end
 
   subgraph Dados["Dados e segurança"]
-    FS[("Firestore<br/>identidade · acesso · catálogo")]
-    SQL[("Cloud SQL Postgres<br/>+ pgvector<br/>RAG · roteamento")]
+    FS[("Firestore<br/>identidade · acesso · catálogo<br/>RAG e roteamento")]
+    SQL[("Cloud SQL Postgres + pgvector<br/>só com conhecimento confidencial")]
     GCS[("Cloud Storage<br/>pacotes assinados")]
     BQ[("BigQuery<br/>auditoria · métricas")]
-    KMS["Cloud KMS<br/>assinatura · JWT · CMEK"]
+    KMS["Cloud KMS<br/>assinatura · JWT"]
     SM["Secret Manager"]
     IDP["Identity Platform<br/>(provedor GitHub)"]
-    PS["Pub/Sub"]
     VX["Vertex AI<br/>embeddings"]
+  end
+
+  subgraph Custo["Teto de custo"]
+    TICK["odin-tick<br/>(Scheduler)"]
+    DJ["orçamento → odin-disjuntor"]
   end
 
   GH["GitHub"]
 
-  CC -->|MCP + Bearer| LB
-  CLI -->|device flow, token, /v1| LB
-  LB --> MCP & STS & POR & WH
+  CC -->|MCP + Bearer| MCP
+  CLI -->|device flow, token| STS
+  CLI -->|/v1| MCP
   CLI -->|URL assinada| GCS
-  MCP --> FS & SQL & GCS
+  MCP --> FS & GCS & VX
+  MCP -.-> SQL
   STS --> FS & KMS
   POR --> FS & IDP & BQ
   POR -.->|aprova ativação via Firestore| FS
-  WH --> FS & PS
-  GH -->|Actions + WIF| PUB
-  GH -->|Actions + WIF| GCS & KMS
-  PUB --> FS & PS
-  PS --> IDX & JOB
-  IDX --> SQL & VX & GH
+  GH -->|Actions + identidade federada: assina e envia| GCS & KMS
+  GH -->|Actions executa| PUB
+  PUB --> FS & GCS & VX
+  TICK --> JOB
   JOB --> FS & GH
-  MCP & STS & POR & WH & PUB & IDX & JOB -.->|logs| BQ
+  JOB -->|se o conhecimento mudou| IDX
+  IDX --> FS & VX & GH
+  IDX -.-> SQL
+  DJ -.->|300% do orçamento: fecha o ingress| MCP & STS & POR
+  MCP & STS & POR & PUB & IDX & JOB -.->|logs| BQ
 ```
+
+Em E0 e E1 não há borda dedicada: os serviços usam os endereços `run.app`. Load Balancer, Cloud Armor e `odin-webhooks` só entram no estágio E2, por gatilho ([05 Custos](05-custos-e-finops.md)).
 
 | Contêiner | Papel | Exposição |
 |---|---|---|
-| `odin-mcp` | **Orquestrador.** Valida o token, resolve os direitos, roteia o pedido para a skill, entrega skill, referências e agentes, busca conhecimento e audita. Também serve a API REST `/v1` usada pelo CLI | Pública, pela borda |
-| `odin-sts` | Emissor de tokens: device flow (RFC 8628), credencial de dispositivo, token de acesso (JWT), revogação, chaves públicas (JWKS) | Pública, pela borda |
-| `odin-portal` | Interface para usuários e administradores, com backend (BFF) para a API administrativa | Pública, pela borda |
-| `odin-webhooks` | Recebe eventos do GitHub (membros e times, tags, pushes), confere a assinatura e publica no Pub/Sub | Pública, pela borda (só GitHub) |
-| `odin-publisher` | Registra versões publicadas pelo pipeline no catálogo | **Interna**: só a conta de serviço do CI pode chamar |
-| `odin-indexer` | Ingestão do conhecimento (divisão, máscara de PII, embeddings) e índice de roteamento | Job interno |
-| `odin-jobs` | Tarefas agendadas: sincronizar times do GitHub, expirar concessões, exportações, relatório do auditor | Job interno |
+| `odin-mcp` | **Orquestrador.** Valida o token, resolve os direitos, roteia o pedido para a skill, entrega skill, referências e agentes, busca conhecimento e audita. Também serve a API REST `/v1` usada pelo CLI | Pública (`run.app`), toda rota com token |
+| `odin-sts` | Emissor de tokens: device flow (RFC 8628), credencial de dispositivo, token de acesso (JWT), revogação, chaves públicas (JWKS) | Pública (`run.app`) |
+| `odin-portal` | Interface para usuários e administradores, com backend (BFF) para a API administrativa | Pública (`run.app`) |
+| `odin-publisher` | Job executado pelo pipeline: **confere a assinatura do manifesto** e só então registra a versão no catálogo e o índice de roteamento | Sem porta; execução por IAM, só pela conta de assinatura do CI |
+| `odin-indexer` | Job de ingestão do conhecimento (divisão, máscara de PII, embeddings) | Sem porta; executado pelo `odin-jobs` ou pelo portal |
+| `odin-jobs` | Job de rotinas, a cada 15 min: sincronizar times do GitHub, expirar concessões, detectar mudança no conhecimento, teste sintético, agregados, exportações, relatório do auditor | Sem porta; executado pelo `odin-tick` |
+| `odin-disjuntor` | Função que fecha o ingress dos serviços quando o gasto chega a 300% do orçamento | Sem porta; acionada pelo aviso de orçamento |
 
 ## 5. Decisões de arquitetura (ADRs resumidos)
 
@@ -137,14 +145,14 @@ flowchart LR
 | ADR-03 | **Device flow próprio** (RFC 8628) com página de ativação no portal, e credencial de dispositivo **ligada a uma chave do dispositivo** | Device flow do próprio GitHub; token copiado do portal | Um só fluxo, independente do provedor; a credencial roubada não serve sem a chave privada que fica no cofre do sistema |
 | ADR-04 | Token de acesso **Bearer JWT de 15 min** entregue ao Claude Code pelo `headersHelper` | Token de longa duração; OAuth nativo do MCP | O `headersHelper` é renovado sozinho (confirmado na documentação); OAuth do MCP fica como evolução (ADR-12) |
 | ADR-05 | **Direitos resolvidos no servidor** a cada chamada (cache de 30 s), não gravados no token | Perfis dentro do JWT | Mudança de acesso no portal vale em até 30 s, sem esperar o token expirar |
-| ADR-06 | **MCP sem estado** (Streamable HTTP) no Cloud Run | Sessões com afinidade | Escala horizontal sem afinidade; reinício de instância não derruba ninguém |
-| ADR-07 | **Firestore** para identidade, acesso e catálogo; **Cloud SQL Postgres + pgvector** para RAG e roteamento | Tudo no Firestore; AlloyDB; banco vetorial dedicado | Firestore é sem servidor e barato para documentos de controle; Postgres dá busca híbrida (vetor + texto) e segurança em nível de linha para separar clientes |
+| ADR-06 | **MCP sem estado** (Streamable HTTP, resposta JSON, sem fluxo SSE permanente) no Cloud Run | Sessões com afinidade; fluxo SSE aberto | Escala horizontal e **a zero**; reinício de instância não derruba ninguém; fluxo aberto manteria a instância cobrada (ADR 0018) |
+| ADR-07 | **Firestore** para identidade, acesso, catálogo e, enquanto não houver conhecimento confidencial, também RAG e roteamento; **Cloud SQL Postgres + pgvector** quando houver (atualizado pelo ADR 0018) | Cloud SQL desde o início; AlloyDB; banco vetorial dedicado | Firestore é sem servidor e cabe na faixa gratuita; Postgres dá busca híbrida e segurança em nível de linha para separar clientes, e só se paga quando esse isolamento é necessário |
 | ADR-08 | **GitHub Actions + Workload Identity Federation** para publicar | Cloud Build com conexão GitHub; chave de conta de serviço | Sem chave guardada; condições por repositório e branch; o pipeline fica junto do código |
-| ADR-09 | **GitHub App** para o Google Cloud ler o GitHub (times, conteúdo, PRs, webhooks) | Token pessoal de alguém | Permissões mínimas por recurso, token de instalação de 1 h, não depende de uma pessoa |
+| ADR-09 | **GitHub App** para o Google Cloud ler o GitHub (times, conteúdo, PRs) | Token pessoal de alguém | Permissões mínimas por recurso, token de instalação de 1 h, não depende de uma pessoa |
 | ADR-10 | Pacotes **assinados no Cloud KMS** (ECDSA P-256), chave pública **embutida no CLI** | Só checksum; assinatura com chave em arquivo | A chave nunca sai do KMS; o CI só tem permissão de assinar |
 | ADR-11 | **Catálogo por GitOps** (o que existe e em que versão) e **acesso pelo portal** (quem usa) | Tudo no portal; tudo no Git | Conteúdo exige revisão de código; acesso exige agilidade e trilha de aprovação |
 | ADR-12 | **OAuth 2.1 do MCP como evolução**: o `odin-sts` já nasce com metadados OAuth (RFC 8414) e JWKS | Implementar desde o início | O Claude Code suporta OAuth em servidores HTTP (confirmado); fica para depois da F0, porque o CLI continua necessário para o runtime |
-| ADR-13 | **Borda única** (Load Balancer + Cloud Armor) na frente de todos os serviços públicos | Endereços `run.app` diretos | WAF, limite de taxa, certificado e domínio próprio num lugar só; `run.app` só na prova de conceito |
+| ADR-13 | **Borda por estágio** (atualizado pelo ADR 0018): `run.app` em E0 e E1; Load Balancer + Cloud Armor só em E2, por gatilho | Borda única desde a liberação ao time | Toda rota útil exige token e valida entrada; o custo fixo da borda não se justifica para o time atual; teto de instâncias e disjuntor limitam o abuso |
 | ADR-14 | **Região `southamerica-east1`** para dados e serviços | `us-central1` | Residência de dados no Brasil (LGPD) e latência; [VERIFICAR] disponibilidade de cada serviço na região |
 | ADR-15 | **Segundo fator próprio do Odin** (TOTP obrigatório; passkey para administradores), além do GitHub | Confiar só no 2FA do GitHub | Conta do GitHub tomada não basta; a conta pessoal da prova de conceito não permite exigir 2FA |
 
@@ -165,13 +173,13 @@ flowchart LR
 ### 6.3 Publicação de uma skill
 1. Mantenedor abre um PR no repositório da skill → merge → tag.
 2. PR no catálogo (`catalog/skills.yaml`) trocando o SHA → merge.
-3. GitHub Actions (identidade federada) valida, testa, roda o `odin lint`, empacota, **assina no KMS**, envia ao Cloud Storage e chama o `odin-publisher`.
-4. O publisher registra a versão no canal `beta`; o `odin-indexer` atualiza o índice de roteamento.
+3. GitHub Actions (identidade federada) valida, testa, roda o `odin lint`, empacota, **assina no KMS**, envia ao Cloud Storage e executa o job `odin-publisher`.
+4. O publisher **confere a assinatura**, registra a versão no canal `beta` e atualiza o índice de roteamento.
 5. Promoção a `stable` por um novo PR. Usuários não fazem nada.
 
 ### 6.4 Mudança de acesso
 - **Pelo portal:** o gestor do squad adiciona uma pessoa → aprovação (quando a regra exigir) → vale em até 30 s.
-- **Pelo GitHub:** a pessoa sai do time do GitHub → webhook → o Odin remove a pertença ao squad, revoga os dispositivos se ela não tiver outro vínculo, e audita.
+- **Pelo GitHub:** a pessoa sai do time do GitHub → a varredura de 15 min detecta → o Odin remove a pertença ao squad, revoga os dispositivos se ela não tiver outro vínculo, e audita. Para efeito imediato, o administrador revoga no portal.
 
 ## 7. Visões transversais
 
@@ -179,30 +187,34 @@ flowchart LR
 - **Identidade:** login com GitHub (2FA exigido pela organização do GitHub) **mais o segundo fator do Odin** (TOTP ou passkey; passkey para administradores), sessão no portal com cookie seguro e reautenticação para ações administrativas. Detalhe na pasta [`docs/seguranca/`](../seguranca/README.md).
 - **Acesso:** perfis de uso × papéis administrativos separados; squads e projetos como recorte; concessões com validade; aprovação a quatro olhos para papéis administrativos.
 - **Credenciais:** token de 15 min; credencial de dispositivo rotativa e ligada a chave; revogação em até 30 s; token pessoal só como exceção.
-- **Cadeia de suprimentos:** pacotes e dependências assinados; imagens com varredura e (em produção) Binary Authorization; Dependabot.
-- **Dados:** criptografia com chave própria (CMEK) nos dados sensíveis; RAG separado por projeto no banco; auditoria sem conteúdo dos pedidos por padrão.
-- **Borda:** Cloud Armor (regras OWASP, limite de taxa), TLS gerenciado, cabeçalhos de segurança no portal.
+- **Cadeia de suprimentos:** pacotes e dependências assinados, com a assinatura conferida no registro e na máquina; imagens com varredura (Binary Authorization em E2); Dependabot.
+- **Dados:** campos sensíveis cifrados por envelope no KMS; RAG separado por projeto (na aplicação; no banco quando houver conhecimento confidencial); CMEK em E2; auditoria sem conteúdo dos pedidos por padrão.
+- **Borda:** TLS gerenciado, limites no serviço, teto de instâncias, disjuntor de custo e cabeçalhos de segurança no portal; Cloud Armor em E2.
 
 ### 7.2 Escalabilidade
 | Dimensão | Como escala | Primeiro limite esperado |
 |---|---|---|
 | Usuários (20 → centenas) | Cloud Run sem estado, de 0 a N instâncias; Firestore sem servidor | Nenhum relevante até milhares |
 | Skills (5 → dezenas) | Catálogo e roteamento com filtro por perfil e domínio antes da similaridade | Precisão do roteamento: entra a reordenação por modelo se as métricas caírem |
-| Conhecimento (centenas → milhões de trechos) | pgvector com índice HNSW; Cloud SQL maior ou réplicas de leitura; AlloyDB se preciso | Memória do índice vetorial |
+| Conhecimento (centenas → milhões de trechos) | Firestore vetorial até dezenas de milhares de trechos; pgvector com índice HNSW; Cloud SQL maior ou réplicas de leitura; AlloyDB se preciso | Memória do índice vetorial |
 | Times e domínios | Multidomínio (`dominio` no `odin.yaml`), squads e projetos | Governança: delegar curadoria por coleção |
-| Ambientes | Um projeto GCP por ambiente (poc → dev, stage, prod), mesmo Terraform | Organização GCP necessária para políticas centrais (seção 8) |
+| Ambientes | Um projeto GCP por ambiente, mesmo Terraform, com o estágio de custo como variável | Organização GCP necessária para políticas centrais (seção 8) |
+| Custo | Estágios E0 → E1 → E2, cada recurso pago por gatilho medido | Cloud SQL é o primeiro custo fixo |
 
 ### 7.3 Disponibilidade e continuidade
-- Meta inicial: 99,5% (prova de conceito); 99,9% em produção, com uma instância quente por serviço público.
+- Meta: 99,5% em horário comercial, sem plantão (decisão 32), com escala a zero. Instância quente só por gatilho medido, e só no `odin-mcp`.
 - Se o Odin estiver fora, as skills já usadas continuam funcionando pela **cópia local assinada por até 7 dias** (decisão 14; arquitetura técnica 4.3.2). Skills novas e conhecimento ficam indisponíveis até a volta.
-- Backups: Firestore com recuperação a um ponto no tempo e exportação diária; Cloud SQL com backup automático e PITR; Cloud Storage versionado. Metas: RPO de 1 h e RTO de 4 h.
+- Backups: Firestore com exportação diária (e recuperação a um ponto no tempo a partir do E1); Cloud Storage versionado; RAG reconstruível do Git. Metas: RTO de 4 h; RPO na [arquitetura técnica, seção 12](03-arquitetura-tecnica.md).
 
 ## 8. Ambientes e evolução
 
-| Ambiente | Projeto GCP | Quem usa | Diferenças |
-|---|---|---|---|
-| `poc` | Projeto pessoal do mantenedor | Mantenedor + 2 usuários de teste | **Custo perto de zero** (decisão 7): escala até zero, endereços `run.app`, **RAG no Firestore** (sem Cloud SQL), **sem Load Balancer e sem Cloud Armor**, notificações só no portal, desenvolvimento com emuladores locais |
-| `prod` | Projeto da empresa (idealmente numa organização GCP) | Time | Domínio próprio, Cloud Armor, instância quente, Binary Authorization, VPC Service Controls, políticas da organização |
+| Ambiente | Projeto GCP | Estágio | Quem usa | Diferenças |
+|---|---|---|---|---|
+| `poc` | Projeto pessoal do mantenedor | **E0** | Mantenedor + 2 usuários de teste | Custo perto de zero (decisão 7): escala a zero, `run.app`, RAG no Firestore, notificações só no portal, desenvolvimento com emuladores locais |
+| `prod` | Projeto da empresa (idealmente numa organização GCP) | **E1** | Time | A **mesma topologia** do E0, com o Portão 2 cumprido. Cloud SQL mínimo quando entrar conhecimento confidencial |
+| `prod` | Idem | **E2** (por gatilho) | Vários times ou exigência contratual | Domínio próprio com Load Balancer e Cloud Armor, instância quente, alta disponibilidade, HSM, CMEK, Binary Authorization, VPC Service Controls |
+
+Não há ambiente de teste permanente na nuvem: os testes rodam com emuladores e contêineres no CI, e o `poc` segue como ambiente de ensaio depois que o `prod` existir.
 
 **Limite do projeto pessoal:** sem uma organização GCP não há políticas de organização nem VPC Service Controls. O desenho funciona sem eles, mas a produção deve ficar numa organização.
 
@@ -220,3 +232,4 @@ flowchart LR
 | Superfície MCP (plano, seção 10) | Técnica, seção 6 |
 | RAG (plano, seção 11) | Técnica, seção 4.3; Funcional, seção 6 |
 | Isolamento (plano, seção 22) | Técnica, seção 9.3 |
+| Infraestrutura e custo (plano, seção 14) | [05 Custos e FinOps](05-custos-e-finops.md) |

@@ -23,7 +23,7 @@ decidir(pessoa, acao, alvo):
   caso contrário                                     → NEGAR (sem_acesso)
   sempre: auditar(decisão, motivo)
 ```
-- **Duas barreiras no conhecimento** (em produção, com Cloud SQL; na PoC com Firestore só a primeira, por isso sem conhecimento confidencial): a aplicação filtra e o banco filtra de novo (política de linha com os projetos e as coleções da pessoa). Um erro na aplicação não vaza dados de outro cliente.
+- **Duas barreiras no conhecimento** (com Cloud SQL; no Firestore só a primeira, por isso sem conhecimento confidencial): a aplicação filtra e o banco filtra de novo (política de linha com os projetos e as coleções da pessoa). Um erro na aplicação não vaza dados de outro cliente.
 - **Política versionada:** toda mudança administrativa incrementa o `policyVersion` das pessoas afetadas, o que invalida o cache delas na hora.
 
 ## 3. Princípios aplicados
@@ -44,7 +44,7 @@ decidir(pessoa, acao, alvo):
 
 ## 5. Autorização entre serviços (Google Cloud)
 - Uma conta de serviço por componente, com papéis mínimos (tabela completa em [07](07-infraestrutura-gcp.md)).
-- `odin-publisher` e os jobs só aceitam chamadas autenticadas por IAM (`run.invoker` concedido só a quem precisa).
+- Os jobs (`odin-publisher`, `odin-indexer`, `odin-jobs`) não têm porta: só são executados por IAM (`run.invoker` no job, concedido só a quem precisa). O `odin-publisher` ainda confere a assinatura do manifesto antes de registrar.
 - Firestore: regras de segurança negam qualquer acesso de cliente; só contas de serviço.
 - Cloud SQL: usuário do MCP sem permissão de escrita e **sem** `BYPASSRLS`.
 

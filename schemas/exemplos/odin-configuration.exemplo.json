@@ -1,0 +1,11 @@
+{
+  "emissor": "https://odin-sts-000000000000.southamerica-east1.run.app",
+  "mcp": "https://odin-mcp-000000000000.southamerica-east1.run.app/mcp",
+  "sts": "https://odin-sts-000000000000.southamerica-east1.run.app",
+  "portal": "https://odin-portal-000000000000.southamerica-east1.run.app",
+  "audiencias": [
+    "https://odin-mcp-000000000000.southamerica-east1.run.app"
+  ],
+  "cli_min": "1.2.0",
+  "estagio": "e0"
+}

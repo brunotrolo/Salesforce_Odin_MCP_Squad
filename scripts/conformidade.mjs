@@ -16,6 +16,10 @@ function arquivos(raiz, dir, filtro) {
   return out;
 }
 const ler = (p) => readFileSync(p, 'utf8');
+// Ambientes do Terraform (infra/envs/<amb>) e o estágio de custo de cada um (e0 | e1 | e2).
+const ambientes = (r) => { const d = join(r, 'infra/envs'); return existsSync(d) ? readdirSync(d).map((f) => join(d, f)).filter((p) => statSync(p).isDirectory()) : []; };
+const textoTf = (d) => readdirSync(d).filter((f) => /\.(tf|tfvars)$/.test(f)).map((f) => ler(join(d, f))).join('\n');
+const estagio = (d) => (textoTf(d).match(/\bestagio\s*=\s*"(e[012])"/) || [])[1] || null;
 
 export const REGRAS = [
   {
@@ -67,6 +71,38 @@ export const REGRAS = [
     id: 'CF-10', nome: 'Ações de terceiros nos workflows fixadas por SHA completo', fonte: 'segurança 05; CT-13',
     alvo: (r) => arquivos(r, '.github/workflows', (p) => /\.ya?ml$/.test(p)),
     checar: (fs) => fs.filter((p) => ler(p).split('\n').some((l) => { const m = l.match(/uses:\s*([^@\s]+)@(\S+)/); return m && !m[1].startsWith('./') && !/^[0-9a-f]{40}$/.test(m[2]); })),
+  },
+  // Conformidade de custo (ADR 0018; docs/arquitetura/05-custos-e-finops.md, seção 9)
+  {
+    id: 'CF-11', nome: 'Estágio de custo declarado; em E0 e E1, mínimo de 0 e máximo de 3 instâncias', fonte: 'arquitetura 05; decisões 42 e 45',
+    alvo: ambientes,
+    checar: (ds) => ds.filter((d) => {
+      const e = estagio(d);
+      if (!e) return true;
+      if (e === 'e2') return false;
+      const t = textoTf(d);
+      return [...t.matchAll(/min_instance_count\s*=\s*(\d+)/g)].some((m) => Number(m[1]) > 0) || [...t.matchAll(/max_instance_count\s*=\s*(\d+)/g)].some((m) => Number(m[1]) > 3);
+    }),
+  },
+  {
+    id: 'CF-12', nome: 'Sem recurso de custo fixo fora do estágio (borda, NAT, conector, Memorystore; Cloud SQL em E0)', fonte: 'arquitetura 05, seção 3; decisões 43 e 44',
+    alvo: ambientes,
+    checar: (ds) => ds.filter((d) => {
+      const e = estagio(d); const t = textoTf(d);
+      if (!e || e === 'e2') return false;
+      if (/google_compute_(global_)?forwarding_rule|google_compute_security_policy|google_redis_instance|google_compute_router_nat|google_vpc_access_connector|module\s+"edge"/.test(t)) return true;
+      return e === 'e0' && /google_sql_database_instance|module\s+"sql"|cloud_sql\s*=\s*true/.test(t);
+    }),
+  },
+  {
+    id: 'CF-13', nome: 'Todo ambiente declara orçamento (com o disjuntor do módulo finops)', fonte: 'arquitetura 05, seção 5; decisão 45',
+    alvo: ambientes,
+    checar: (ds) => ds.filter((d) => !/google_billing_budget|module\s+"finops"/.test(textoTf(d))),
+  },
+  {
+    id: 'CF-14', nome: 'Artifact Registry com política de limpeza', fonte: 'arquitetura 05, seção 6',
+    alvo: (r) => arquivos(r, 'infra', (p) => p.endsWith('.tf')).filter((p) => /resource\s+"google_artifact_registry_repository"/.test(ler(p))),
+    checar: (fs) => fs.filter((p) => !/cleanup_policies/.test(ler(p))),
   },
 ];
 

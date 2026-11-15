@@ -5,7 +5,7 @@ name: deploy
 on:
   workflow_dispatch:
     inputs:
-      servico: { description: "odin-mcp | odin-sts | odin-portal | odin-webhooks | odin-publisher", required: true }
+      servico: { description: "odin-mcp | odin-sts | odin-portal | odin-jobs (imagem dos três jobs)", required: true }
 permissions:
   contents: read
   id-token: write
@@ -17,6 +17,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>
       - uses: google-github-actions/auth@<SHA-gh-auth>

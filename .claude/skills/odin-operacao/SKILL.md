@@ -1,12 +1,12 @@
 ---
 name: odin-operacao
-description: Operação e resposta a incidentes do Odin - revogar dispositivo ou pessoa, revogação global, rotação de chaves (JWT, pacotes, CLI) e segredos, tirar uma versão de skill de circulação, restaurar dados, expurgo de projeto, revisão de acessos e investigação de alertas - seguindo as severidades, detecções, playbooks e runbooks documentados. Use para "incidente", "token vazou", "revogar acesso", "rotacionar chave", "versão quebrada em produção", "restaurar backup", "alerta SEV1/SEV2", "revisão trimestral".
+description: Operação e resposta a incidentes do Odin - revogar dispositivo ou pessoa, revogação global, rotação de chaves (JWT, pacotes, CLI) e segredos, tirar uma versão de skill de circulação, restaurar dados, expurgo de projeto, revisão de acessos e investigação de alertas - seguindo as severidades, detecções, playbooks e runbooks documentados. Use para "incidente", "token vazou", "revogar acesso", "rotacionar chave", "versão quebrada em produção", "restaurar backup", "alerta SEV1/SEV2", "revisão trimestral", "custo disparou", "disjuntor acionado", "revisão de custos".
 argument-hint: incidente <descrição> | runbook RB-<nn> | alerta DT-<nn> | rotina <semanal|mensal|trimestral|semestral|anual>
 ---
 
 # odin-operacao: incidentes e runbooks
 
-Fontes obrigatórias: `docs/seguranca/09-deteccao-e-resposta.md` (severidades, detecções DT-01 a DT-19, playbooks) e `docs/seguranca/11-runbooks.md` (RB-01 a RB-12). Rotinas em `../odin-dev/references/sustentacao.md`.
+Fontes obrigatórias: `docs/seguranca/09-deteccao-e-resposta.md` (severidades, detecções DT-01 a DT-20, playbooks) e `docs/seguranca/11-runbooks.md` (RB-01 a RB-13). Rotinas em `../odin-dev/references/sustentacao.md`.
 
 ## incidente <descrição>
 1. **Classifique** a severidade (SEV1 a SEV4) pela tabela da segurança 09. SEV1/SEV2: avise o mantenedor imediatamente e registre a hora.

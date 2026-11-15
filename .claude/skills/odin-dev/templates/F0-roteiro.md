@@ -25,6 +25,9 @@
 | T13 | Onde fica o token OAuth do MCP do Jira | Inspecionar após `/mcp` | Local identificado para a política PG-01 | Segurança 06, 3.1 |
 | T14 | Cofre do sistema pelo CLI | Gravar e ler segredo de teste no Windows Credential Manager | Funciona sem prompt | Segurança 06, 7 |
 | T15 | Empacotamento do CLI | Executável único com acesso ao cofre | Funciona no Windows, macOS e Linux | Decisão 39 |
+| T16 | MCP sem fluxo SSE permanente | Servidor de teste sem estado, com resposta JSON e `GET` no endpoint MCP respondendo 405 | Claude Code conecta, lista e chama ferramentas normalmente, no terminal e na extensão; nenhuma conexão fica aberta entre chamadas | Arquitetura 03, 6.1; decisão 47 |
+| T17 | Partida a frio | Servidor de teste no Cloud Run com `min 0`: medir a primeira chamada após 20 min ocioso (10 amostras) | p95 ≤ 3 s; o Claude Code não marca o servidor como falho nem perde a chamada | Arquitetura 05; risco R23 |
+| T18 | Preços e disponibilidade na região | Calculadora do Google Cloud para `southamerica-east1`: Cloud Run, KMS, Firestore, Identity Platform, Cloud SQL mínimo; Firebase Hosting na frente do Cloud Run | Metas de E0 (≤ US$ 3) e E1 (≤ US$ 25) confirmadas ou ajustadas por ADR | Arquitetura 05 |
 
 ## Fechamento
 Para cada teste: `[CONFIRMADO]` ou ADR com a mudança. Atualizar `docs/ESTADO.md` e a tabela de revisões (plano, seção 20).

@@ -117,7 +117,7 @@ flowchart LR
   D --> E["Pertença ativa"]
   E --> F["Pessoa ativa o CLI<br/>(odin setup → /ativar)"]
 ```
-Com organização GitHub: incluir a pessoa no time do GitHub mapeado basta (o webhook cria a pertença com os perfis padrão do squad).
+Com organização GitHub: incluir a pessoa no time do GitHub mapeado basta (a varredura de 15 min cria a pertença com os perfis padrão do squad).
 
 ### 7.2 Solicitação de acesso
 Usuário pede (skill ou coleção, motivo, prazo) → o aprovador do escopo recebe → aprova (concessão com prazo) ou recusa (com motivo) → vale em até 30 s → expira sozinha no prazo (`odin-jobs`).
@@ -126,7 +126,7 @@ Usuário pede (skill ou coleção, motivo, prazo) → o aprovador do escopo rece
 admin-identidade pede "tornar Maria `curador` de `negocio` do projeto X" → fica pendente → outro administrador com papel suficiente aprova → papel ativo, com auditoria das duas pessoas.
 
 ### 7.4 Saída de uma pessoa
-Remoção do time do GitHub (webhook) ou suspensão no portal → pertenças encerradas → dispositivos e tokens revogados → sessão do portal encerrada → auditoria. Conhecimento e propostas da pessoa permanecem (autoria pseudonimizada se houver pedido de exclusão).
+Remoção do time do GitHub (detectada pela varredura em até 15 min) ou suspensão no portal (imediata) → pertenças encerradas → dispositivos e tokens revogados → sessão do portal encerrada → auditoria. Conhecimento e propostas da pessoa permanecem (autoria pseudonimizada se houver pedido de exclusão).
 
 ### 7.5 Incidente
 super-admin abre **Segurança → Revogação global** → reautentica → confirma com motivo → `revocations/global` é gravado com o carimbo de tempo → tokens e credenciais emitidos antes dele deixam de valer, e todos os CLIs pedem login de novo → alerta e relatório para todos os administradores. Se a própria chave de JWT estiver comprometida, a troca da chave segue o runbook (fora do portal).

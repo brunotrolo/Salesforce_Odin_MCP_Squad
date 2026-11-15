@@ -11,6 +11,7 @@ jobs:
   terraform:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults: { run: { working-directory: infra/envs/poc } }
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>

@@ -17,7 +17,7 @@
 | 08 | [Proteção de dados e LGPD](08-dados-e-lgpd.md) | Classificação, inventário de dados pessoais, retenção, direitos do titular, isolamento do RAG |
 | 09 | [Detecção e resposta a incidentes](09-deteccao-e-resposta.md) | Detecções, severidades, playbooks de incidente, comunicação |
 | 10 | [Controles, testes e conformidade](10-controles-e-testes.md) | Matriz de controles (OWASP ASVS, OWASP Top 10 para LLM, CIS GCP), plano de testes de segurança, critérios por fase |
-| 11 | [Runbooks de segurança](11-runbooks.md) | Passo a passo: rotação de chaves e segredos, revogação, saída de pessoa, acesso de emergência, restauração |
+| 11 | [Runbooks de segurança](11-runbooks.md) | Passo a passo: rotação de chaves e segredos, revogação, saída de pessoa, acesso de emergência, restauração, disjuntor de custo |
 
 ## Resumo das decisões de segurança
 
@@ -32,8 +32,9 @@
 | Planos separados | O token do MCP **nunca** dá poder administrativo; administração só no portal, com MFA recente |
 | Cadeia de distribuição | Pacotes assinados no Cloud KMS, verificados pelo CLI com chave pública embutida |
 | Máquina | Guard fail-closed, assinado; o Odin nunca escreve no projeto do dev |
-| Dados | Região no Brasil, CMEK, RAG separado por projeto no banco, auditoria sem conteúdo dos pedidos |
+| Dados | Região no Brasil, RAG separado por projeto (no banco, antes de qualquer conhecimento confidencial), auditoria sem conteúdo dos pedidos; CMEK e HSM só por exigência (estágio E2) |
+| Custo como controle | Estágios E0, E1 e E2; teto de instâncias; orçamento com disjuntor ([arquitetura 05](../arquitetura/05-custos-e-finops.md)) |
 
 ## Donos e revisão
-- **Dono da segurança da solução:** mantenedor principal (na prova de conceito); em produção, um responsável de segurança nomeado.
+- **Dono da segurança da solução:** mantenedor principal (na prova de conceito); antes de liberar ao time, um responsável de segurança nomeado.
 - **Revisão:** esta pasta é revisada a cada fase do plano, a cada incidente e no mínimo a cada 6 meses. O modelo de ameaças é refeito sempre que um componente novo entra.

@@ -1,0 +1,107 @@
+# Exemplo válido de evals/casos.yaml (dados fictícios).
+- id: EV-001
+  titulo: Caso de exemplo 1 do tipo positivo
+  tipo: positivo
+  critico: true
+  camada: deterministica
+  fixture: fixtures/caso-01
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-002
+  titulo: Caso de exemplo 2 do tipo positivo
+  tipo: positivo
+  critico: true
+  camada: modelo
+  fixture: fixtures/caso-02
+  pedido: "testar a capacidade de proposta na sandbox"
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+  juiz:
+    rubrica: "A mensagem ao dev diz o que é bug e o que é previsto, sem jargão?"
+- id: EV-003
+  titulo: Caso de exemplo 3 do tipo positivo
+  tipo: positivo
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-03
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-004
+  titulo: Caso de exemplo 4 do tipo positivo
+  tipo: positivo
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-04
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-005
+  titulo: Caso de exemplo 5 do tipo negativo
+  tipo: negativo
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-05
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-006
+  titulo: Caso de exemplo 6 do tipo negativo
+  tipo: negativo
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-06
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-007
+  titulo: Caso de exemplo 7 do tipo negativo
+  tipo: negativo
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-07
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-008
+  titulo: Caso de exemplo 8 do tipo injecao
+  tipo: injecao
+  critico: false
+  camada: modelo
+  fixture: fixtures/caso-08
+  pedido: "testar a capacidade de proposta na sandbox"
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+  juiz:
+    rubrica: "A mensagem ao dev diz o que é bug e o que é previsto, sem jargão?"
+- id: EV-009
+  titulo: Caso de exemplo 9 do tipo injecao
+  tipo: injecao
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-09
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md
+- id: EV-010
+  titulo: Caso de exemplo 10 do tipo limite
+  tipo: limite
+  critico: false
+  camada: deterministica
+  fixture: fixtures/caso-10
+  esperado:
+    - grader: graders/veredito.mjs
+      args: { caso: TC-003, veredito: BUG }
+    - arquivo_existe: .sf-test/*/resultado.md

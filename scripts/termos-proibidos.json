@@ -1,10 +1,62 @@
 [
-  { "termo": "/admin/v1", "motivo": "API administrativa unificada em /api/admin (portal 09)" },
-  { "termo": "aposentada", "motivo": "estados do catálogo são beta, ativa, depreciada, retirada" },
-  { "termo": "Login (Google, Microsoft)", "motivo": "login decidido: GitHub (decisão D1)" },
-  { "termo": "aud=odin-mcp", "motivo": "aud do token é https://mcp.<dominio> (segurança 03)" },
-  { "termo": "bucket de leitura pública", "motivo": "CLI servido pelo portal a partir de bucket privado (rodada 14)" },
-  { "termo": "conta corporativa", "motivo": "login com GitHub + segundo fator do Odin" },
-  { "termo": "120 chamadas/min por pessoa", "motivo": "limites por perfil (portal 06)" },
-  { "termo": "X-Odin-User", "motivo": "sem correlação com o LiteLLM (decisão 27)" }
+  {
+    "termo": "/admin/v1",
+    "motivo": "API administrativa unificada em /api/admin (portal 09)"
+  },
+  {
+    "termo": "aposentada",
+    "motivo": "estados do catálogo são beta, ativa, depreciada, retirada"
+  },
+  {
+    "termo": "Login (Google, Microsoft)",
+    "motivo": "login decidido: GitHub (decisão D1)"
+  },
+  {
+    "termo": "aud=odin-mcp",
+    "motivo": "aud do token é https://mcp.<dominio> (segurança 03)"
+  },
+  {
+    "termo": "bucket de leitura pública",
+    "motivo": "CLI servido pelo portal a partir de bucket privado (rodada 14)"
+  },
+  {
+    "termo": "conta corporativa",
+    "motivo": "login com GitHub + segundo fator do Odin"
+  },
+  {
+    "termo": "120 chamadas/min por pessoa",
+    "motivo": "limites por perfil (portal 06)"
+  },
+  {
+    "termo": "X-Odin-User",
+    "motivo": "sem correlação com o LiteLLM (decisão 27)"
+  },
+  {
+    "termo": "instância quente em produção",
+    "motivo": "instância quente só por gatilho medido, e só no odin-mcp (ADR 0018, arquitetura 05)"
+  },
+  {
+    "termo": "dominado pelo Cloud SQL",
+    "motivo": "a PoC não usa Cloud SQL; custo por estágio em arquitetura 05 (ADR 0018)"
+  },
+  {
+    "termo": "odin-sintetico-15min",
+    "motivo": "o sintético é tarefa do odin-jobs, pelo agendamento único odin-tick (ADR 0018)"
+  },
+  {
+    "termo": "apps/webhooks",
+    "motivo": "sem webhooks em E0 e E1; 3 serviços + 3 jobs (ADR 0018)"
+  },
+  {
+    "termo": "chama o `odin-publisher`",
+    "motivo": "o odin-publisher é um job executado pelo CI, que confere a assinatura (ADR 0018)"
+  },
+  {
+    "termo": "HSM em prod",
+    "motivo": "HSM só no estágio E2, por gatilho (ADR 0018)"
+  },
+  {
+    "termo": "com aprovação de ambiente no GitHub",
+    "motivo": "GitHub Free não tem ambientes com aprovação em repositório privado (decisão 41)"
+  }
 ]

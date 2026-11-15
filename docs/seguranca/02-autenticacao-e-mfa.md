@@ -14,7 +14,7 @@
 | AU-6 | Evolução → MCP | **OAuth 2.1 do MCP** (Authorization Code + PKCE, metadados RFC 8414 e RFC 9728) | Mesmo login do portal (com MFA) |
 | AU-7 | GitHub Actions → Google Cloud | **Workload Identity Federation** (troca de token OIDC do GitHub, RFC 8693) | Identidade do workflow (dono, repositório, ref) |
 | AU-8 | Google Cloud → GitHub | **GitHub App** (JWT do app → token de instalação) | Chave privada do app no Secret Manager |
-| AU-9 | GitHub → webhooks | **HMAC SHA-256** + faixa de IP do GitHub | Segredo compartilhado |
+| AU-9 | GitHub → webhooks (só E2; em E0 e E1 não há webhooks) | **HMAC SHA-256** + faixa de IP do GitHub | Segredo compartilhado |
 | AU-10 | Serviço → serviço | **IAM do Cloud Run** (ID token OIDC da conta de serviço) | Identidade gerenciada pelo Google |
 | AU-11 | Serviço → Cloud SQL | **Autenticação IAM do banco** | Identidade gerenciada pelo Google |
 

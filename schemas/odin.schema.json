@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odin.exemplo.com.br/schemas/odin.schema.json",
+  "title": "odin.yaml: contrato de skill do Odin",
+  "description": "Arquivo na raiz do repositório de cada skill (plano, seção 8.1). Só o que estiver declarado em skills, agentes, regras e runtime é empacotado e entregue.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "nome", "dominio", "dono", "descricao", "intencoes", "skills"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$", "description": "Minúsculas, números e hífens; prefixo de tudo que vai para a máquina." },
+    "nome": { "type": "string", "minLength": 3, "maxLength": 60 },
+    "dominio": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,29}$", "examples": ["salesforce", "web", "dados", "devops", "mobile"] },
+    "dono": { "type": "string", "minLength": 2, "maxLength": 60 },
+    "descricao": { "type": "string", "minLength": 20, "maxLength": 600, "description": "Pesa no roteamento." },
+    "intencoes": {
+      "type": "array", "minItems": 2, "maxItems": 60,
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 8, "maxLength": 200 },
+          { "type": "object", "additionalProperties": false, "required": ["texto"],
+            "properties": { "texto": { "type": "string", "minLength": 8, "maxLength": 200 }, "negativa": { "type": "boolean", "description": "Pedido parecido que é de outra skill." } } }
+        ]
+      }
+    },
+    "perfis_sugeridos": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "uniqueItems": true },
+    "entrada": { "$ref": "#/$defs/globs" },
+    "saida": { "$ref": "#/$defs/globs" },
+    "proximo": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" }, "uniqueItems": true },
+    "skills": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["path"],
+        "properties": { "path": { "type": "string", "pattern": "^\\.claude/skills/[a-z0-9-]+/SKILL\\.md$" } } }
+    },
+    "agentes": { "type": "array", "items": { "type": "string", "pattern": "^\\.claude/agents/[^/]+\\.md$" } },
+    "regras": { "type": "array", "items": { "type": "string", "pattern": "^\\.claude/rules/[^/]+\\.md$" } },
+    "runtime": {
+      "type": "object", "additionalProperties": false, "required": ["dir"],
+      "properties": {
+        "dir": { "$ref": "#/$defs/caminhoRelativo" },
+        "node": { "type": "string", "pattern": "^>=\\d+(\\.\\d+){0,2}$" },
+        "dependencias": { "type": "string", "pattern": "package-lock\\.json$" },
+        "prerequisitos": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(:[a-z0-9-]+)?$" } }
+      }
+    },
+    "politicas": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "uniqueItems": true },
+    "conhecimento": { "type": "array", "uniqueItems": true, "items": { "enum": ["funcional", "negocio", "tecnico", "licoes", "dados"] } },
+    "avaliacoes": { "type": "string", "pattern": "^evals/?$", "description": "Casos de avaliação de comportamento (ADR 0017)." },
+    "licenca_terceiros": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["nome", "licenca"],
+        "properties": { "nome": { "type": "string" }, "licenca": { "type": "string" }, "caminho": { "$ref": "#/$defs/caminhoRelativo" } } }
+    },
+    "usa": { "type": "array", "items": { "type": "string", "pattern": "^lib-[a-z0-9-]+@[\\^~]?\\d+(\\.\\d+){0,2}$" }, "uniqueItems": true }
+  },
+  "$defs": {
+    "caminhoRelativo": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$", "description": "Relativo à raiz do repositório, sem '..' e sem barra invertida." },
+    "globs": { "type": "array", "items": { "$ref": "#/$defs/caminhoRelativo" } }
+  }
+}

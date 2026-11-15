@@ -24,9 +24,9 @@
 flowchart LR
   MCP["odin-mcp / API /v1<br/>evento de auditoria por chamada"] --> LOG["Cloud Logging"]
   LOG -->|coletor| RAW[("BigQuery<br/>odin_audit.eventos<br/>(detalhe, ~1 min)")]
-  RAW -->|consulta agendada a cada 15 min| AGG[("BigQuery<br/>odin_metrics.uso_15min<br/>odin_metrics.uso_diario")]
+  RAW -->|"agregação a cada 15 min<br/>(rotina do odin-jobs)"| AGG[("BigQuery<br/>odin_metrics.uso_15min<br/>odin_metrics.uso_diario")]
   MCP -->|contador em memória| RL["Limite por minuto<br/>(por instância)"]
-  MCP -->|contador diário| QT[("Firestore<br/>quotas/{pessoa}/{dia}")]
+  MCP -->|"contador diário, gravado em lote<br/>(30 s ou 20 chamadas)"| QT[("Firestore<br/>quotas/{pessoa}/{dia}")]
   AGG --> POR["Portal: gráficos e rankings"]
   RAW --> POR2["Portal: últimas chamadas e detalhe"]
   QT --> POR3["Portal: uso da cota (tempo real)"]
@@ -55,7 +55,7 @@ odin_metrics.uso_diario(dia, pessoa_id, squad_id, projeto_id, perfil, skill, fer
 ### 3.1 Dois mecanismos
 | Mecanismo | Para quê | Onde | Ao exceder |
 |---|---|---|---|
-| **Limite por minuto** | Proteger o serviço de laços e abusos | Em memória no `odin-mcp` (por pessoa) + Cloud Armor por IP (em produção; na PoC, sem Load Balancer, só o limite por pessoa) | `limite_excedido` com "tente em N s" |
+| **Limite por minuto** | Proteger o serviço de laços e abusos | Em memória no `odin-mcp` (por pessoa, e por IP nas rotas anônimas); Cloud Armor por IP só em E2 | `limite_excedido` com "tente em N s" |
 | **Cota diária** | Governança de uso por perfil, squad ou pessoa | Contador no Firestore (`quotas/{pessoa}/{dia}`), incrementado de forma atômica | `limite_excedido` com a hora de renovação e o link "pedir aumento" |
 
 ### 3.2 Valores iniciais (configuráveis no portal)

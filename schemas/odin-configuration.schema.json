@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odin.exemplo.com.br/schemas/odin-configuration.schema.json",
+  "title": "/.well-known/odin-configuration: documento de descoberta lido pelo CLI",
+  "description": "Publicado pelo portal. Permite trocar endereços (run.app → domínio próprio) sem reinstalar o CLI (ADR 0018, risco R22).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["emissor", "mcp", "sts", "portal", "audiencias", "cli_min", "estagio"],
+  "properties": {
+    "emissor": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "mcp": { "type": "string", "format": "uri", "pattern": "^https://.+/mcp$" },
+    "sts": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "portal": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "audiencias": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "type": "string", "format": "uri", "pattern": "^https://" }, "description": "Valores de aud aceitos; dois só durante uma troca de domínio." },
+    "cli_min": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "estagio": { "enum": ["e0", "e1", "e2"] },
+    "manutencao": { "type": "string", "maxLength": 300 }
+  }
+}

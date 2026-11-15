@@ -1,0 +1,36 @@
+{
+  "schema": "odin.bundle/1",
+  "skill": "sf-test",
+  "versao": "1.4.2",
+  "canal": "beta",
+  "fonte": {
+    "repo": "dono-exemplo/Salesforce_Test_Automator",
+    "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "pipeline": {
+    "run": "https://github.com/dono-exemplo/Salesforce_Odin_MCP_Squad/actions/runs/1",
+    "sha": "cccccccccccccccccccccccccccccccccccccccc"
+  },
+  "pacotes": {
+    "conteudo": {
+      "uri": "gs://odin-bundles-poc/sf-test/1.4.2/conteudo.tar.zst",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "runtime": {
+      "uri": "gs://odin-bundles-poc/sf-test/1.4.2/runtime.tar.zst",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "arquivos": {
+    "runtime/scripts/executar.mjs": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "conteudo/SKILL.md": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "sbom": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "avaliacao": {
+    "nota": 92,
+    "resultado_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "runtime_min_cli": "1.2.0",
+  "emitido_em": "2026-11-15T12:00:00Z",
+  "kid": "bundle-2026-a"
+}

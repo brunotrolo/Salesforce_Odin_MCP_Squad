@@ -1,0 +1,165 @@
+openapi: 3.1.0
+info:
+  title: Odin API /v1
+  version: 1.0.0
+  summary: API REST usada pelo odin CLI (não é o endpoint MCP)
+  description: >-
+    Servida pelo odin-mcp (arquitetura técnica, seção 6.3). Toda rota exige o Bearer JWT de 15 minutos
+    emitido pelo odin-sts. Erros têm código estável. Nenhuma resposta passa de 8.000 tokens.
+servers:
+  - url: https://{host}
+    variables:
+      host: { default: odin-mcp-000000000000.southamerica-east1.run.app, description: Lido de /.well-known/odin-configuration }
+security:
+  - bearerJwt: []
+paths:
+  /v1/me:
+    get:
+      operationId: obterPessoa
+      summary: Pessoa, squads, perfis e direitos efetivos (usado pelo odin doctor)
+      responses:
+        "200": { description: Direitos efetivos, content: { application/json: { schema: { $ref: "#/components/schemas/Pessoa" } } } }
+        "401": { $ref: "#/components/responses/Erro" }
+        "429": { $ref: "#/components/responses/Erro" }
+  /v1/manifest/{skill}:
+    get:
+      operationId: obterManifesto
+      summary: Manifesto assinado da versão vigente da skill para a pessoa
+      parameters:
+        - { $ref: "#/components/parameters/Skill" }
+        - { name: sessao, in: query, required: false, schema: { type: string, maxLength: 80 }, description: Identificador da sessão do Claude Code (versão fixa por sessão) }
+      responses:
+        "200":
+          description: Manifesto e assinatura
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [manifesto, assinatura, versoes_proibidas]
+                properties:
+                  manifesto: { type: object, description: Conforme schemas/manifesto.schema.json }
+                  assinatura: { type: string, description: ECDSA P-256 em base64, de manifesto.sig }
+                  versoes_proibidas: { type: array, items: { type: string } }
+        "401": { $ref: "#/components/responses/Erro" }
+        "403": { $ref: "#/components/responses/Erro" }
+        "404": { $ref: "#/components/responses/Erro" }
+  /v1/bundles/{skill}/{versao}/url:
+    post:
+      operationId: criarUrlDoPacote
+      summary: URL assinada (5 minutos) para baixar um pacote
+      parameters:
+        - { $ref: "#/components/parameters/Skill" }
+        - { name: versao, in: path, required: true, schema: { type: string, pattern: '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$' } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [pacote]
+              properties:
+                pacote: { enum: [conteudo, runtime] }
+      responses:
+        "200":
+          description: URL assinada
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url, expira_em, sha256]
+                properties:
+                  url: { type: string, format: uri }
+                  expira_em: { type: string, format: date-time }
+                  sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        "401": { $ref: "#/components/responses/Erro" }
+        "403": { $ref: "#/components/responses/Erro" }
+        "404": { $ref: "#/components/responses/Erro" }
+  /v1/policies:
+    get:
+      operationId: obterPoliticas
+      summary: Manifesto assinado das políticas do guard e do ODIN.md
+      responses:
+        "200":
+          description: Manifesto das políticas
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [versao, manifesto, assinatura]
+                properties:
+                  versao: { type: string }
+                  manifesto: { type: object }
+                  assinatura: { type: string }
+        "401": { $ref: "#/components/responses/Erro" }
+  /v1/telemetry:
+    post:
+      operationId: registrarTelemetria
+      summary: Eventos do CLI (versões instaladas, falhas de ensure, guard inativo, runtime divergente)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [eventos]
+              properties:
+                eventos:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { $ref: "#/components/schemas/EventoTelemetria" }
+      responses:
+        "204": { description: Registrado }
+        "400": { $ref: "#/components/responses/Erro" }
+        "401": { $ref: "#/components/responses/Erro" }
+components:
+  securitySchemes:
+    bearerJwt: { type: http, scheme: bearer, bearerFormat: JWT, description: "ES256, typ at+jwt, 15 minutos (segurança 03)" }
+  parameters:
+    Skill: { name: skill, in: path, required: true, schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,39}$' } }
+  responses:
+    Erro:
+      description: Erro com código estável
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Erro" }
+  schemas:
+    Erro:
+      type: object
+      additionalProperties: false
+      required: [codigo, mensagem, request_id]
+      properties:
+        codigo: { enum: [sem_acesso, skill_inexistente, versao_indisponivel, limite_excedido, revogado, manutencao, invalido, interno] }
+        mensagem: { type: string }
+        request_id: { type: string }
+        tentar_em_s: { type: integer, minimum: 0 }
+    Pessoa:
+      type: object
+      additionalProperties: false
+      required: [id, status, squads, skills, colecoes, policy_version]
+      properties:
+        id: { type: string }
+        status: { enum: [ativo, suspenso] }
+        squads: { type: array, items: { type: string } }
+        perfis: { type: array, items: { type: string } }
+        projetos: { type: array, items: { type: string } }
+        skills: { type: array, items: { type: object, additionalProperties: false, required: [id, canal], properties: { id: { type: string }, canal: { enum: [beta, stable] } } } }
+        colecoes: { type: object, additionalProperties: { enum: [ler, propor, curar] } }
+        policy_version: { type: integer }
+    EventoTelemetria:
+      type: object
+      additionalProperties: false
+      required: [tipo, ts, cli]
+      properties:
+        tipo: { enum: [ensure_ok, ensure_falha, guard_inativo, assinatura_invalida, runtime_divergente, agente_sombra, versao_instalada] }
+        ts: { type: string, format: date-time }
+        cli: { type: string }
+        so: { enum: [windows, macos, linux] }
+        skill: { type: string }
+        versao: { type: string }
+        detalhe: { type: string, maxLength: 300, description: Sem caminhos do projeto e sem conteúdo de arquivos }

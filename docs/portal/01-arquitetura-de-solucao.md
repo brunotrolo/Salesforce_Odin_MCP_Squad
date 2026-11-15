@@ -84,7 +84,7 @@ flowchart TB
 | Login | SDK web do Identity Platform (GitHub) + MFA; cookie de sessão emitido no servidor | Ver [segurança 02](../seguranca/02-autenticacao-e-mfa.md) |
 | Passkeys | WebAuthn com biblioteca de servidor madura | Fator resistente a phishing |
 | Dados | SDK de servidor do Firestore e do BigQuery com a conta `sa-portal` | Mínimo privilégio |
-| Hospedagem | Cloud Run (`odin-portal`), atrás do Load Balancer com Cloud Armor | Mesma borda dos outros serviços |
+| Hospedagem | Cloud Run (`odin-portal`), escala a zero, endereço `run.app` em E0 e E1 (Load Balancer com Cloud Armor só em E2) | Sem custo fixo; mesma regra dos outros serviços ([arquitetura 05](../arquitetura/05-custos-e-finops.md)) |
 | Observabilidade | OpenTelemetry → Cloud Trace e Logging | Rastreio de ponta a ponta |
 
 ## 6. Segurança do portal (resumo)

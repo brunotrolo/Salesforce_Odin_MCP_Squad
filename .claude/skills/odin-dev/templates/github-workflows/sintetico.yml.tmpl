@@ -1,7 +1,7 @@
-# Modelo: dispara o teste sintético e a carga leve no Google Cloud; abre issue se falhar.
+# Modelo: execução manual do teste sintético e da carga leve no Google Cloud; abre issue se falhar.
+# O sintético contínuo roda no job odin-jobs, pelo agendamento odin-tick (ADR 0018); este workflow é para conferência sob demanda.
 name: sintetico
 on:
-  schedule: [{ cron: "17 11 * * 1-5" }]   # 08:17 em Brasília, dias úteis
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,6 +10,7 @@ permissions:
 jobs:
   sintetico:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>
       - uses: google-github-actions/auth@<SHA-gh-auth>
@@ -18,7 +19,7 @@ jobs:
           service_account: sa-ci-deploy@odin-poc.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@<SHA-setup-gcloud>
       - name: Executar o job sintético
-        run: gcloud run jobs execute odin-sintetico --region southamerica-east1 --wait
+        run: gcloud run jobs execute odin-jobs --args=sintetico --region southamerica-east1 --wait
       - name: Carga leve (5 usuários, 1 min)
         uses: grafana/k6-action@<SHA-k6>
         with:

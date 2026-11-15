@@ -26,7 +26,7 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | # | Regra | Fonte |
 |---|---|---|
 | A1 | Negado por padrão; direitos resolvidos no servidor (cache 30 s, `policyVersion`) | Segurança 04; ADR-05 |
-| A2 | Isolamento por projeto na aplicação e, em produção, no banco (política de linha) | Segurança 04; decisão 7 |
+| A2 | Isolamento por projeto na aplicação e, antes de qualquer conhecimento confidencial, também no banco (política de linha no Cloud SQL) | Segurança 04; decisões 7 e 43 |
 | A3 | Ninguém aprova o próprio pedido; quatro olhos em papéis e configurações | Segurança 04; portal 05 |
 
 ## MCP e orquestração
@@ -37,6 +37,7 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | M3 | Versão da skill fixa por sessão; versão proibida bloqueia na hora | Decisão 15 |
 | M4 | Modo degradado: cópia local assinada por até 7 dias | Decisão 14 |
 | M5 | O MCP grava os metadados das ferramentas em `mcp_tools` (o portal lê) | Portal 09 |
+| M7 | MCP com resposta JSON por requisição, sem fluxo SSE permanente; contratos das ferramentas em `schemas/mcp-tools.json` | Arquitetura 03, 6.1; decisões 47 e 48 |
 | M6 | Economia de contexto: trabalho pesado por script local que devolve só o resumo; alvo de 5.000 tokens por `SKILL.md` e referência | Plano 10; ADR 0017 |
 
 ## Máquina do usuário
@@ -56,7 +57,8 @@ Mudar qualquer uma exige ADR (`odin-arquiteto`). As marcadas com **[CF-nn]** tê
 | N2 | Pacotes e CLI assinados no KMS; o CLI verifica com chave embutida; bucket do CLI privado, servido pelo portal **[CF-03]** | Segurança 05 |
 | N3 | Ações do GitHub Actions fixadas por SHA completo **[CF-10]** | Segurança 05 |
 | N4 | Cloud SQL só com IP privado **[CF-02]** (quando existir) | Segurança 07 |
-| N5 | PoC perto de custo zero: Firestore no RAG, sem Load Balancer/Cloud Armor, sem dado confidencial | Decisão 7 |
+| N5 | Custo por estágio: `min 0` e `max 3` instâncias, sem Load Balancer, Cloud Armor, NAT, conector de VPC ou Memorystore em E0 e E1; Cloud SQL só com conhecimento confidencial; orçamento com disjuntor; limpeza do Artifact Registry **[CF-11 a CF-14]** | Arquitetura 05; decisões 7 e 42 a 45 |
+| N9 | 3 serviços + 3 jobs; sem webhooks e sem Pub/Sub de aplicação em E0 e E1; o `odin-publisher` confere a assinatura antes de registrar | ADR 0018; decisão 46 |
 | N6 | Região `southamerica-east1` | ADR-14 |
 | N7 | Nenhum Unicode oculto em documento, skill, pacote ou conhecimento **[verificar:docs, verificar:skills]** | Segurança 06 §5; ADR 0017 |
 | N8 | Promoção para `stable` só com avaliação de comportamento do SHA, sem queda maior que 5 pontos nem caso crítico falhando | Plano 8.4; ADR 0017 |

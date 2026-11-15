@@ -1,7 +1,7 @@
 # 03. Arquitetura técnica
 
-> Série: [01 Solução](01-arquitetura-de-solucao.md) · [02 Funcional](02-arquitetura-funcional.md) · **03 Técnica** · [04 Portal e perfilamento](04-portal-e-perfilamento.md). Base: [plano](../PLANO.md).
-> [VERIFICAR] = confirmar na prova de conceito. Nomes de recursos usam `<amb>` = `poc` ou `prod`.
+> Série: [01 Solução](01-arquitetura-de-solucao.md) · [02 Funcional](02-arquitetura-funcional.md) · **03 Técnica** · [04 Portal e perfilamento](04-portal-e-perfilamento.md) · [05 Custos](05-custos-e-finops.md). Base: [plano](../PLANO.md).
+> [VERIFICAR] = confirmar na prova de conceito. Nomes de recursos usam `<amb>` = `poc` ou `prod`. **Estágios de custo** E0 (prova de conceito), E1 (time) e E2 (corporativo) em [05 Custos](05-custos-e-finops.md): um recurso pago só entra por gatilho (ADR 0018).
 
 ## 1. Inventário de recursos do Google Cloud
 
@@ -9,77 +9,89 @@
 |---|---|---|---|
 | Projeto | `odin-<amb>` | Um por ambiente; APIs habilitadas pelo Terraform | Isolamento |
 | Região | `southamerica-east1` | Todos os recursos regionais | Residência de dados, latência |
-| **Cloud Run (serviço)** | `odin-mcp` | Node 22, 1 vCPU, 512 MiB, concorrência 80, min 0 (poc) / 1 (prod), max 20, ingress "interno + Load Balancer" | Orquestrador MCP + API `/v1` |
-| Cloud Run (serviço) | `odin-sts` | Node 22, 1 vCPU, 512 MiB, min 0/1, max 10 | Device flow, tokens, JWKS |
-| Cloud Run (serviço) | `odin-portal` | Next.js, 1 vCPU, 1 GiB, min 0/1, max 10 | UI + BFF administrativo |
-| Cloud Run (serviço) | `odin-webhooks` | Node 22, 0,5 vCPU, 256 MiB, min 0, max 5 | Eventos do GitHub |
-| Cloud Run (serviço) | `odin-publisher` | Node 22, 0,5 vCPU, 256 MiB, min 0, max 3, **ingress interno**, invocação só por IAM | Registro de versões publicadas |
-| **Cloud Run (job)** | `odin-indexer` | 2 vCPU, 2 GiB, tempo máximo 60 min | Ingestão do RAG, índice de roteamento |
-| Cloud Run (job) | `odin-jobs` | 1 vCPU, 512 MiB | Sincronização de times, expirações, exportações, auditor |
-| Cloud Scheduler | `odin-sync-*` | Cron por tarefa | Disparar `odin-jobs` |
-| Pub/Sub | `catalog-published`, `knowledge-changed`, `identity-events`, `github-events` | Com fila de mensagens mortas | Eventos assíncronos |
-| **Load Balancer** | `odin-edge` | HTTPS externo global (Application LB), backends serverless (NEG), certificado gerenciado | Borda única |
-| **Cloud Armor** | `odin-edge-policy` | Regras OWASP pré-configuradas, limite de taxa por IP, bloqueio por país opcional | WAF |
-| Cloud DNS | `odin-<dominio>` | `odin.`, `mcp.`, `auth.`, `hooks.` | Domínios |
+| **Cloud Run (serviço)** | `odin-mcp` | Node 22, 1 vCPU, 512 MiB, concorrência 80, **min 0, max 3** (E0 e E1), reforço de CPU na inicialização, cobrança por requisição | Orquestrador MCP + API `/v1` |
+| Cloud Run (serviço) | `odin-sts` | Node 22, 1 vCPU, 512 MiB, min 0, max 3 | Device flow, tokens, JWKS |
+| Cloud Run (serviço) | `odin-portal` | Next.js, 1 vCPU, 1 GiB, min 0, max 3 | UI + BFF administrativo + download do CLI |
+| **Cloud Run (job)** | `odin-publisher` | 1 vCPU, 512 MiB; executado pelo CI depois de assinar | **Confere a assinatura do manifesto** e registra a versão no catálogo; calcula os embeddings das intenções |
+| Cloud Run (job) | `odin-indexer` | 2 vCPU, 2 GiB, tempo máximo 60 min | Ingestão do RAG |
+| Cloud Run (job) | `odin-jobs` | 1 vCPU, 512 MiB; executado pelo `odin-tick` | Rotinas: sincronizar times, expirar concessões, verificar mudança no `odin-knowledge`, teste sintético, agregados de consumo, exportações, relatório do auditor |
+| Imagens | 4 (`mcp`, `sts`, `portal`, `jobs`) | Os três jobs usam a **mesma imagem** com tarefas diferentes e **contas de serviço diferentes** | Menos para construir e manter |
+| Cloud Scheduler | `odin-tick` | Um agendamento, a cada 15 min | Executa o `odin-jobs`, que decide o que está vencido |
+| Pub/Sub | `budget-alerts` | Único tópico do desenho | Avisos do orçamento para o disjuntor |
+| Cloud Run (função) | `odin-disjuntor` | Acionada por `budget-alerts`; min 0 | Fecha o ingress dos serviços públicos a 300% do orçamento ([05 Custos](05-custos-e-finops.md), seção 5) |
+| Verificações de disponibilidade | Cloud Monitoring | `/healthz` de cada serviço, a cada 5 min | Disponibilidade vista de fora (faixa gratuita) |
+| **Load Balancer** — só E2 | `odin-edge` | HTTPS externo global, backends serverless (NEG), certificado gerenciado | Borda única, por gatilho |
+| **Cloud Armor** — só E2 | `odin-edge-policy` | Regras OWASP pré-configuradas, limite de taxa por IP | WAF, por gatilho |
+| Cloud DNS — só com domínio próprio | `odin-<dominio>` | `odin.`, `mcp.`, `auth.` | Domínios |
+| `odin-webhooks` — só E2 | Cloud Run (serviço) | 0,5 vCPU, 256 MiB, min 0 | Eventos do GitHub em segundos (em E1, varredura de 15 min) |
 | **Identity Platform** | — | Provedor **GitHub** (OAuth App do GitHub), opcional Google e Microsoft; domínios autorizados | Login das pessoas |
-| **Firestore** (nativo) | `(default)` | Modo nativo, `southamerica-east1`, PITR ligado, CMEK [VERIFICAR suporte de CMEK no Firestore na região] | Identidade, acesso, catálogo, revogações |
-| **Firestore (busca vetorial)** — só PoC | coleções `kb_chunks_<projeto>`, `routing_intents` | Índice vetorial, filtros por coleção e projeto; isolamento na aplicação (coleção por projeto); **sem conhecimento confidencial** | RAG e roteamento na PoC (decisão 7) |
-| **Cloud SQL** (a partir da liberação de orçamento) | `odin-kb-<amb>` | PostgreSQL 16, **IP privado apenas**, extensão `vector`, autenticação IAM, backups + PITR; poc: menor instância de núcleo compartilhado, prod: 2 vCPU com alta disponibilidade | RAG e roteamento |
-| VPC | `odin-vpc` | Sub-rede regional; Cloud Run com **saída direta para VPC** | Acesso privado ao Cloud SQL |
-| **Cloud Storage** | `odin-bundles-<amb>` | Versionamento, retenção de 365 dias, acesso uniforme, prevenção de acesso público, CMEK | Pacotes assinados |
+| **Firestore** (nativo) | `(default)` | Modo nativo, `southamerica-east1`; E0: exportação diária para bucket (30 dias); E1: PITR de 7 dias + exportação; CMEK só em E2 (precisa ser definido na criação do banco) [VERIFICAR na região] | Identidade, acesso, catálogo, revogações |
+| **Firestore (busca vetorial)** — E0 e E1 sem conhecimento confidencial | coleções `kb_chunks_<projeto>`, `routing_intents` | Índice vetorial, filtros por coleção e projeto; isolamento na aplicação (coleção por projeto); **sem conhecimento confidencial** | RAG e roteamento (decisões 7 e 43) |
+| **Cloud SQL** — por gatilho (primeiro conhecimento `confidencial`) | `odin-kb-<amb>` | PostgreSQL 16, **IP privado apenas**, extensão `vector`, autenticação IAM, backup diário de 7 dias. E1: menor instância de núcleo compartilhado, disco de 10 GB, **sem alta disponibilidade e sem réplica** (o RAG se refaz do Git); E2: dimensionado pela carga | RAG e roteamento com segunda barreira no banco |
+| VPC — só com Cloud SQL | `odin-vpc` | Sub-rede regional; Cloud Run com **saída direta para VPC** (sem conector e sem Cloud NAT) | Acesso privado ao Cloud SQL |
+| **Cloud Storage** | `odin-bundles-<amb>` | Versionamento, retenção de 365 dias, acesso uniforme, prevenção de acesso público; objetos por hash (runtime igual não é enviado nem baixado de novo); CMEK só em E2 | Pacotes assinados |
 | Cloud Storage | `odin-kb-snapshots-<amb>` | Versionamento, ciclo de vida de 180 dias | Cópia do que foi ingerido |
 | Cloud Storage | `odin-tfstate-<amb>` | Versionamento, acesso só do CI de infraestrutura | Estado do Terraform |
 | Cloud Storage | `odin-cli-<amb>` | **Privado** (prevenção de acesso público mantida), escrita só pelo CI, versionamento | Binários do CLI. O download é servido pelo **portal** (`/download/cli/<versao>/<plataforma>`), sem login, porque o binário não é segredo e os repositórios são privados (decisão 5) |
 | Cloud KMS | chave `cli-signing` | Assimétrica P-256 | Assinatura dos binários do CLI (autoatualização) |
-| **Cloud KMS** | chaveiro `odin` | `bundle-signing` (assimétrica, `EC_SIGN_P256_SHA256`, HSM em prod); `jwt-signing` (assimétrica, `EC_SIGN_P256_SHA256`); `cmek` (simétrica, rotação de 90 dias) | Assinatura de pacotes, JWT e criptografia |
-| **Secret Manager** | `github-app-key`, `github-webhook-secret`, `github-oauth-client-secret`, `session-secret` | Replicação na região, versões com rotação | Segredos |
-| Artifact Registry | `odin-images` | Docker, varredura de vulnerabilidades | Imagens dos serviços |
+| **Cloud KMS** | chaveiro `odin` | `bundle-signing` e `jwt-signing` (assimétricas, `EC_SIGN_P256_SHA256`, em software em E0 e E1, HSM em E2); `campos` (simétrica, envelope do segredo TOTP); `cmek` só em E2 | Assinatura de pacotes, JWT e criptografia de campos |
+| **Secret Manager** | `github-app-key`, `github-oauth-client-secret`, `session-secret` (e `github-webhook-secret` só em E2) | Replicação na região, versões com rotação | Segredos |
+| Artifact Registry | `odin-images` | Docker, varredura de vulnerabilidades, **política de limpeza** (3 últimas versões; sem tag após 7 dias) | Imagens dos serviços |
 | Vertex AI | — | Modelo de embeddings de texto multilíngue [VERIFICAR o nome atual do modelo e a disponibilidade na região] | Vetores do RAG e do roteamento |
-| **BigQuery** | `odin_audit`, `odin_metrics` | Partição por dia, retenção de 365 dias, acesso por papel | Auditoria e métricas |
-| Cloud Logging | coletor `odin-audit-sink` | Filtro por `jsonPayload.tipo="auditoria"` → BigQuery | Trilha de auditoria |
+| **BigQuery** | `odin_audit`, `odin_metrics` | Partição por dia, expiração de partição em 365 dias, acesso por papel; tabela agregada diária para o portal, consultas com limite de bytes | Auditoria e métricas |
+| Cloud Logging | coletor `odin-audit-sink` | Filtro por `jsonPayload.tipo="auditoria"` → BigQuery; exclusão dos logs de verificação de saúde | Trilha de auditoria |
 | Cloud Monitoring | painéis e alertas | SLOs por serviço | Operação |
 | **Workload Identity Federation** | pool `github`, provedor `github-oidc` | Emissor `https://token.actions.githubusercontent.com`, com condição por dono, repositório e ref | CI sem chave |
-| Binary Authorization (prod) | política `odin` | Só imagens atestadas pelo CI | Cadeia de suprimentos |
+| Binary Authorization (E2) | política `odin` | Só imagens atestadas pelo CI | Cadeia de suprimentos |
 | Security Command Center | nível padrão | Achados de configuração | Postura |
-| Orçamento | `odin-<amb>-budget` | Alertas em 50%, 90% e 100% | Custo |
+| Orçamento | `odin-<amb>-budget` | Alertas em 50%, 90%, 100%, 200% e 300% (e-mail + `budget-alerts`) | Custo, com disjuntor |
 
 ## 2. Rede e borda
 
 ```mermaid
 flowchart LR
-  I((Internet)) --> LB["odin-edge<br/>HTTPS LB + Cloud Armor<br/>certificado gerenciado"]
-  LB -- "mcp.&lt;dominio&gt;" --> MCP[odin-mcp]
-  LB -- "auth.&lt;dominio&gt;" --> STS[odin-sts]
-  LB -- "odin.&lt;dominio&gt;" --> POR[odin-portal]
-  LB -- "hooks.&lt;dominio&gt;" --> WH[odin-webhooks]
-  subgraph VPC["odin-vpc (privada)"]
+  I((Internet)) -- "TLS gerenciado (run.app)" --> MCP[odin-mcp]
+  I --> STS[odin-sts]
+  I --> POR[odin-portal]
+  MCP & STS & POR --> FS[(Firestore)]
+  GH[GitHub Actions] -- "identidade federada<br/>executa o job" --> PUB[odin-publisher]
+  TICK[odin-tick<br/>a cada 15 min] --> JOB[odin-jobs]
+  JOB -- "se o odin-knowledge mudou" --> IDX[odin-indexer]
+  PUB & JOB & IDX --> FS
+  BUD[Orçamento] -- "budget-alerts" --> DJ[odin-disjuntor]
+  DJ -. "300%: ingress interno" .-> MCP & STS & POR
+  subgraph E2["Só no estágio E2 (por gatilho)"]
+    LB["odin-edge<br/>Load Balancer + Cloud Armor"]
+    WH[odin-webhooks]
+  end
+  subgraph SQLG["Com conhecimento confidencial"]
     SQL[(Cloud SQL<br/>IP privado)]
   end
   MCP -- "saída direta VPC" --> SQL
-  IDX[odin-indexer] -- "saída direta VPC" --> SQL
-  MCP & STS & POR & WH --> FS[(Firestore)]
-  GH[GitHub Actions] -- "IAM (ID token)" --> PUB[odin-publisher<br/>ingress interno]
+  IDX -- "saída direta VPC" --> SQL
 ```
 
-- **Domínios:** `odin.<dominio>` (portal), `mcp.<dominio>` (MCP e `/v1`), `auth.<dominio>` (STS), `hooks.<dominio>` (webhooks). Na prova de conceito, os endereços `run.app` servem; a borda entra antes de chamar o time.
-- **Ingress:** em produção, os serviços públicos aceitam tráfego **só do Load Balancer** (configuração de ingress do Cloud Run), para que o Cloud Armor não possa ser contornado. **Na PoC** (sem Load Balancer, decisão 6) os serviços usam o endereço `run.app` com ingress público; a proteção fica na autenticação, nos limites por pessoa no próprio serviço e, nos webhooks, na assinatura HMAC. O `odin-publisher` é interno e exige IAM nos dois casos.
-- **Cloud Armor:** regras OWASP (injeção de SQL, XSS, LFI, RCE); limite de 300 requisições/min por IP no MCP e de 30/min nos endpoints de token e ativação; `hooks.` aceita apenas as faixas de IP do GitHub (publicadas em `api.github.com/meta`, atualizadas por job) além da assinatura HMAC.
-- **TLS:** 1.2+ com política moderna; HSTS no portal.
+- **Endereços:** em E0 e E1, os endereços `run.app` de cada serviço (TLS gerenciado pelo Google). O CLI não fixa endereços: lê `/.well-known/odin-configuration` do portal (emissor, MCP, STS, versão mínima do CLI), e o token aceita dois valores de `aud` durante uma troca de domínio. Domínio próprio em E1, se desejado, sem Load Balancer ([05 Custos](05-custos-e-finops.md), seção 6).
+- **Ingress:** em E0 e E1 os três serviços têm ingress público; a proteção fica na autenticação de toda rota útil, na validação de entrada por schema, nos limites por pessoa e por IP no próprio serviço, no **teto de 3 instâncias** e no **disjuntor**. Os jobs não têm porta: são executados pelo CI ou pelo `odin-tick`, por IAM. Em E2, os serviços aceitam tráfego **só do Load Balancer**, para que o Cloud Armor não possa ser contornado.
+- **Rotas públicas sem token de pessoa** (toda a superfície anônima): `/entrar`, `/ativar` e `/download/cli/*` no portal; `/oauth/device_authorization`, `/oauth/token` e `/.well-known/*` no STS; `/healthz`. Cada uma com limite por IP (30/min nos fluxos de login e ativação).
+- **Sem webhooks em E0 e E1:** nenhuma porta recebe eventos do GitHub. Mudanças de time e de organização são lidas pela varredura do `odin-jobs` (GitHub App), a cada 15 min.
+- **TLS:** 1.2+; HSTS no portal.
 
 ## 3. Serviços e contas de serviço (mínimo privilégio)
 
 | Serviço | Conta de serviço | Papéis (escopo mínimo) |
 |---|---|---|
 | `odin-mcp` | `sa-mcp` | `datastore.user`; `cloudsql.client` + usuário IAM no banco (somente leitura no RAG); `storage.objectViewer` no bucket de pacotes; `iam.serviceAccountTokenCreator` **em si mesma** (para gerar URLs assinadas); `kms` **verificador** na chave `jwt-signing` (ou JWKS em cache); `aiplatform.user` (embedding da consulta) |
-| `odin-sts` | `sa-sts` | `datastore.user`; `cloudkms.signerVerifier` **só** na chave `jwt-signing` |
+| `odin-sts` | `sa-sts` | `datastore.user`; `cloudkms.signerVerifier` **só** na chave `jwt-signing`; `cloudkms.cryptoKeyEncrypterDecrypter` **só** na chave `campos` |
 | `odin-portal` | `sa-portal` | `datastore.user`; `firebaseauth.admin` (verificar ID tokens e cookies de sessão); `bigquery.dataViewer` + `jobUser` nos conjuntos de auditoria e de métricas (auditor e consumo); `secretmanager.secretAccessor` em `session-secret` e `github-app-key`; `storage.objectViewer` no bucket `odin-cli-<amb>` (download do CLI) |
-| `odin-webhooks` | `sa-webhooks` | `secretmanager.secretAccessor` em `github-webhook-secret`; `pubsub.publisher` em `github-events` |
-| `odin-publisher` | `sa-publisher` | `datastore.user` (só coleção do catálogo, imposto pelas regras da aplicação); `pubsub.publisher` em `catalog-published` |
-| `odin-indexer` | `sa-indexer` | `cloudsql.client` + usuário IAM com escrita no RAG; `aiplatform.user`; `storage.objectAdmin` no bucket de snapshots; `secretmanager.secretAccessor` em `github-app-key` |
-| `odin-jobs` | `sa-jobs` | `datastore.user`; `secretmanager.secretAccessor` em `github-app-key`; `pubsub.publisher` em `identity-events` |
+| `odin-publisher` (job) | `sa-publisher` | `datastore.user` (só coleções do catálogo, imposto pela aplicação); `storage.objectViewer` no bucket de pacotes (lê o manifesto); `cloudkms.publicKeyViewer` em `bundle-signing` (confere a assinatura); `aiplatform.user` (embeddings das intenções) |
+| `odin-indexer` (job) | `sa-indexer` | `datastore.user` nas coleções do RAG (ou `cloudsql.client` + usuário IAM com escrita, quando houver Cloud SQL); `aiplatform.user`; `storage.objectAdmin` no bucket de snapshots; `secretmanager.secretAccessor` em `github-app-key` |
+| `odin-jobs` (job) | `sa-jobs` | `datastore.user`; `secretmanager.secretAccessor` em `github-app-key`; `run.invoker` no job `odin-indexer`; `bigquery.dataEditor` na tabela agregada |
+| `odin-tick` (Scheduler) | `sa-tick` | `run.invoker` **só** no job `odin-jobs` |
+| `odin-disjuntor` (função) | `sa-disjuntor` | `run.services.update` (papel próprio) **só** em `odin-mcp`, `odin-sts` e `odin-portal` |
 | CI: deploy de serviços | `sa-ci-deploy` | `run.developer` nos serviços do Odin; `artifactregistry.writer`; `iam.serviceAccountUser` nas contas de execução |
-| CI: assinatura de pacotes | `sa-ci-signer` | `cloudkms.signerVerifier` **só** em `bundle-signing`; `storage.objectCreator` no bucket de pacotes; `run.invoker` no `odin-publisher` |
-| CI: infraestrutura | `sa-ci-infra` | Papéis administrativos para Terraform, **só** a partir de `main` do repositório Odin, com aprovação de ambiente no GitHub |
+| CI: assinatura de pacotes | `sa-ci-signer` | `cloudkms.signerVerifier` **só** em `bundle-signing`; `storage.objectCreator` no bucket de pacotes; executar o job `odin-publisher` com argumentos (`run.jobs.runWithOverrides`) |
+| CI: infraestrutura | `sa-ci-infra` | Papéis administrativos para Terraform, **só** a partir de `main` do repositório Odin e **só** quando o disparo é do mantenedor (condição no `actor_id`; no GitHub Free não há ambiente com aprovação) |
 
 Nenhuma conta de serviço tem chave exportada. Os papéis amplos (`owner`, `editor`) não são usados em nenhum lugar, nem por pessoas no dia a dia: administradores usam papéis específicos e elevação temporária quando necessário.
 
@@ -89,21 +101,21 @@ Nenhuma conta de serviço tem chave exportada. Os papéis amplos (`owner`, `edit
 
 | Dado | Onde | Retenção | Proteção |
 |---|---|---|---|
-| Código do Odin, catálogo (`catalog/`), políticas do guard | GitHub (repositório Odin) | Histórico Git | Proteção de branch, CODEOWNERS, revisão obrigatória |
+| Código do Odin, catálogo (`catalog/`), políticas do guard | GitHub (repositório Odin) | Histórico Git | Só o mantenedor escreve (GitHub Free, decisão 41); PR com CI verde; publicação só com assinatura no KMS |
 | Fonte das skills e agentes | GitHub (repositório de cada skill) | Histórico Git | Idem |
 | Fonte do conhecimento | GitHub (`odin-knowledge`) | Histórico Git | Idem; conteúdo `confidencial` em repositório **privado** |
-| Pacotes assinados (conteúdo, runtime, políticas, agentes, `ODIN.md`) | Cloud Storage `odin-bundles-<amb>` | 365 dias por versão | CMEK, URL assinada por pessoa (5 min), versionamento |
-| Índice do catálogo (versões, canais, hashes, manifestos) | Firestore `catalog_*` | Enquanto existir a versão | Escrita só pelo publisher |
+| Pacotes assinados (conteúdo, runtime, políticas, agentes, `ODIN.md`) | Cloud Storage `odin-bundles-<amb>` | 365 dias por versão | URL assinada por pessoa (5 min), versionamento (CMEK em E2) |
+| Índice do catálogo (versões, canais, hashes, manifestos) | Firestore `catalog_*` | Enquanto existir a versão | Escrita só pelo job `odin-publisher`, depois de conferir a assinatura |
 | Pessoas, squads, projetos, perfis, concessões, solicitações | Firestore | Enquanto ativos; pseudonimização na exclusão | Regras de acesso, só pelos serviços |
 | Dispositivos (chave pública, hash da credencial) | Firestore `devices` | Até revogar + 90 dias | Nunca guarda a credencial em claro |
 | Revogações | Firestore `revocations` (com TTL) | Até o fim da validade do que foi revogado | — |
-| Trechos do conhecimento e vetores | Cloud SQL `kb_*` | Enquanto vigentes; histórico marcado | IP privado, segurança em nível de linha, CMEK |
-| Índice de roteamento (intenções das skills) | Cloud SQL `routing_*` | Por versão do catálogo | Idem |
-| Cópia do que foi ingerido | Cloud Storage `odin-kb-snapshots-<amb>` | 180 dias | CMEK |
+| Trechos do conhecimento e vetores | Firestore `kb_chunks_<projeto>`; Cloud SQL `kb_*` quando houver conhecimento confidencial | Enquanto vigentes; histórico marcado | Firestore: isolamento na aplicação. Cloud SQL: IP privado e segurança em nível de linha |
+| Índice de roteamento (intenções das skills) | Firestore `routing_intents` (ou Cloud SQL `routing_*`) | Por versão do catálogo | Idem |
+| Cópia do que foi ingerido | Cloud Storage `odin-kb-snapshots-<amb>` | 180 dias | Acesso só do indexer |
 | Auditoria | Cloud Logging → BigQuery `odin_audit` | 365 dias | Acesso só do papel auditor e super-admin |
 | Métricas | BigQuery `odin_metrics` + Cloud Monitoring | 13 meses | — |
 | Segredos | Secret Manager | Versões com rotação | IAM por segredo, logs de acesso |
-| Chaves | Cloud KMS | Rotação (seção 8.2) | HSM em produção |
+| Chaves | Cloud KMS | Rotação (seção 8.2) | Não exportáveis; HSM em E2 |
 | Na máquina do usuário | `~/.odin/` (runtime, políticas, cache cifrado, `ODIN.md`), cofre do sistema (credencial e chave do dispositivo) | Até `odin uninstall` | Assinatura conferida; guard protege as pastas |
 
 ### 4.2 Firestore: modelo
@@ -175,11 +187,11 @@ CREATE TABLE routing_intents (
 ```
 - **Busca híbrida:** combinação da similaridade vetorial com a busca textual (`ts_rank`) por fusão de ranking (RRF), depois o filtro de vigência e precedência (autoridade, `substituido_por`).
 - **Usuários do banco:** `odin_mcp` (só `SELECT`, sujeito à política de linha, **sem** `BYPASSRLS`) e `odin_indexer` (escrita). Os dois por autenticação IAM, sem senha.
-- **Teste obrigatório:** no CI, uma consulta com os projetos de A não pode retornar nenhuma linha de B.
+- **Teste obrigatório:** no CI, uma consulta com os projetos de A não pode retornar nenhuma linha de B. O teste roda num **contêiner Postgres + pgvector** do próprio CI, com o mesmo esquema e as mesmas políticas: não exige banco pago ligado.
 
-### 4.3.1 RAG na PoC (Firestore) e troca para o Cloud SQL
-- O `odin-mcp` e o `odin-indexer` falam com o RAG por uma interface única (`KnowledgeStore`: `upsert`, `search`, `purgeProject`). Na PoC a implementação é o **Firestore com busca vetorial**; depois, o **Cloud SQL** do esquema acima.
-- Na PoC: uma coleção por projeto (`kb_chunks_<projeto>`), filtro obrigatório de coleção e projeto na aplicação, só busca vetorial (sem a textual), e **nenhum conhecimento confidencial**.
+### 4.3.1 RAG no Firestore e troca para o Cloud SQL
+- O `odin-mcp` e o `odin-indexer` falam com o RAG por uma interface única (`KnowledgeStore`: `upsert`, `search`, `purgeProject`). Em E0, e em E1 enquanto não houver conhecimento confidencial, a implementação é o **Firestore com busca vetorial**; o **Cloud SQL** do esquema acima entra pelo gatilho de [05 Custos](05-custos-e-finops.md), seção 3.
+- No Firestore: uma coleção por projeto (`kb_chunks_<projeto>`), filtro obrigatório de coleção e projeto na aplicação, só busca vetorial (sem a textual), e **nenhum conhecimento confidencial**.
 - Troca: configuração (`ODIN_KB_BACKEND=cloudsql`) + cópia dos trechos e vetores pelo `odin-indexer` + reexecução da avaliação de recuperação e dos testes de isolamento. Sem mudança no código das ferramentas MCP.
 
 ### 4.3.2 Cópia local para o modo degradado (decisão 14)
@@ -211,7 +223,8 @@ Tabela `odin_audit.eventos` (a partir do coletor): `ts`, `servico`, `ator` (user
 | Evolução | **OAuth 2.1 do MCP** (STS como servidor de autorização: RFC 8414, RFC 9728, PKCE, registro de cliente) | — | — |
 | GitHub Actions → Google Cloud | **Workload Identity Federation** (OIDC do GitHub) | Token federado de curta duração | ~1 h |
 | Google Cloud → GitHub | **GitHub App**: JWT assinado com a chave do app → token de instalação | Token de instalação | 1 h |
-| GitHub → webhooks | **HMAC SHA-256** (`X-Hub-Signature-256`) + faixa de IP | Segredo compartilhado | Rotação semestral |
+| GitHub → webhooks (só E2) | **HMAC SHA-256** (`X-Hub-Signature-256`) + faixa de IP | Segredo compartilhado | Rotação semestral |
+| CI ou agendador → job | **IAM do Cloud Run** (`run.invoker` no job) | Token da conta de serviço | ~1 h |
 | Serviço → serviço | **IAM do Cloud Run** (ID token da conta de serviço) | ID token | ~1 h |
 | Serviço → Cloud SQL | **Autenticação IAM do banco** | Token IAM | ~1 h |
 
@@ -226,7 +239,7 @@ sequenceDiagram
   B->>P: GET /entrar
   P-->>B: página com "Entrar com GitHub"
   B->>IP: signInWithPopup/Redirect (provedor GitHub)
-  IP->>GH: OAuth 2.0 (escopos mínimos: read:user, user:email; read:org se houver organização)
+  IP->>GH: OAuth 2.0 (escopos mínimos: read:user e user:email, mais read:org se houver organização)
   GH-->>IP: autorização
   IP-->>B: ID token do Identity Platform (+ id numérico do GitHub)
   B->>P: POST /sessao {idToken} (com CSRF)
@@ -308,9 +321,10 @@ flowchart LR
   Z --> H[Executar]
   H --> U[Auditar<br/>ok, negado ou erro]
 ```
-- **Transporte:** Streamable HTTP em modo **sem estado** (sem `Mcp-Session-Id` com afinidade), para escalar no Cloud Run sem sessão. [VERIFICAR] a compatibilidade do modo sem estado com o Claude Code.
+- **Transporte:** Streamable HTTP em modo **sem estado** (sem `Mcp-Session-Id` com afinidade) e com **resposta JSON por requisição**: o servidor não abre fluxo SSE permanente (`GET` no endpoint MCP responde `405`) e não envia notificações iniciadas pelo servidor. Motivo: com cobrança por requisição, um fluxo aberto manteria a instância cobrada o dia todo. [VERIFICAR na F0] a compatibilidade com o Claude Code.
+- **Contrato das ferramentas** em `schemas/mcp-tools.json` (entrada, saída estruturada e anotações `readOnlyHint`/`idempotentHint`); o servidor carrega as definições desse arquivo, e o CI valida.
 - **Instruções do servidor:** até 4.096 caracteres (o gatilho do plano, seção 7.6), versionadas com o catálogo.
-- **Limite de taxa e cota:** limite por minuto conforme o perfil (em memória por instância) e cota diária por pessoa (contador no Firestore), definidos em [portal 06](../portal/06-consumo-cotas-e-metricas.md). O Cloud Armor cuida do volume por IP. Em produção, se necessário, um Memorystore para limite global.
+- **Limite de taxa e cota:** limite por minuto conforme o perfil e por IP nas rotas anônimas (em memória por instância; com o teto de 3 instâncias, o erro máximo é de 3 vezes o limite) e cota diária por pessoa (contada em memória e gravada no Firestore em lote, a cada 30 s ou 20 chamadas), definidos em [portal 06](../portal/06-consumo-cotas-e-metricas.md). Em E2, o Cloud Armor cuida do volume por IP.
 
 ### 6.2 Ferramentas MCP (contratos)
 | Ferramenta | Entrada (resumo) | Saída (resumo) | Autorização |
@@ -336,7 +350,7 @@ Toda resposta respeita o teto de 8.000 tokens (plano, seção 10). Erros têm c�
 
 ### 6.4 Roteamento
 1. Candidatas = skills dos direitos efetivos (filtro por perfil, canal e domínio).
-2. Embedding do pedido (Vertex AI) → similaridade com `routing_intents` das candidatas.
+2. Embedding do pedido (Vertex AI, com cache de 10 min por texto normalizado) → similaridade com `routing_intents` das candidatas (embeddings das intenções calculados na publicação).
 3. Regras por artefato: por exemplo, `backlog.json` presente e spec ausente aumentam a nota do Journey Designer.
 4. Limiar de confiança (inicial 0,55, calibrado pelos testes de intenção); abaixo dele, `nao_sei`.
 5. Métricas: escolha aceita, troca de skill logo depois, feedback.
@@ -379,28 +393,31 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 | Metadata | leitura | Obrigatória |
 | Contents | leitura | Ler `odin-knowledge` (indexer) e os **repositórios privados das skills** (pipeline de publicação, por token de instalação gerado no próprio workflow) |
 | Pull requests | escrita | Abrir PR de conhecimento aprovado no portal (curadoria) e PRs de catálogo (promover, rollback, depreciar, retirar) a partir do portal |
-| Contents (repositório Odin) | escrita, **só branches `portal/*`** (regra de proteção) | Criar a branch do PR de catálogo; a `main` continua protegida, com revisão humana e CI |
+| Contents (repositório Odin) | escrita; o portal só cria branches `portal/*` (imposto no código do portal, porque o GitHub Free não tem regra de proteção em repositório privado) | Criar a branch do PR de catálogo; o merge é do mantenedor, com o CI verde; nada é publicado sem a assinatura do pipeline em `main` |
 | Members (organização) | leitura | Sincronizar times → squads |
-| Eventos de webhook | `push`, `create` (tags), `membership`, `organization` (membro removido), `team` | Atualização de conhecimento, sincronização de acesso, saída de pessoas |
+| Eventos de webhook (só E2) | `membership`, `organization` (membro removido), `team` | Saída de pessoas em segundos; em E0 e E1 não há webhooks |
 
 - A chave privada do app fica no Secret Manager (`github-app-key`), com rotação semestral. Só `odin-indexer`, `odin-jobs` e `odin-portal` a leem.
+- **Risco assumido:** como o app tem escrita de conteúdo no repositório Odin, uma falha no portal poderia gravar na `main`. Compensações: publicação só pelo workflow `publish.yml` disparado pelo mantenedor (condição `actor_id` na identidade federada), assinatura no KMS, e alerta de push na `main` que não seja do mantenedor.
 - Instalado só nos repositórios necessários (Odin, `odin-knowledge`) e, com organização, na organização para a leitura de membros.
 - **Na conta pessoal (prova de conceito):** o app funciona para conteúdo e PRs; times e membros só existem em organização.
 
-### 7.3 Webhooks
-`odin-webhooks` → confere `X-Hub-Signature-256` com o segredo, confere a origem (faixa do GitHub) e o `X-GitHub-Delivery` (para não processar duas vezes) → publica em `github-events` → `odin-jobs` processa:
-- `membership`/`team`: atualiza as pertenças dos squads mapeados e incrementa o `policyVersion`;
-- `organization.member_removed`: suspende a pessoa e revoga os dispositivos (RN-07);
-- `push` em `odin-knowledge` `main`: dispara o `odin-indexer`.
+### 7.3 Sincronização com o GitHub (sem webhooks em E0 e E1)
+A cada 15 min o `odin-tick` executa o `odin-jobs`, que, pelo GitHub App:
+- **times e organização** (quando houver organização): compara os membros dos times mapeados com as pertenças; quem saiu do time perde a pertença, e quem saiu da organização é suspenso e tem os dispositivos revogados (RN-07). Toda mudança incrementa o `policyVersion`;
+- **conhecimento:** compara o SHA da `main` do `odin-knowledge` com o último indexado; se mudou, executa o `odin-indexer`. O portal tem o botão "indexar agora" para o curador;
+- **demais rotinas:** expirar concessões e convites, teste sintético de ponta a ponta, agregados de consumo, exportação diária do Firestore.
+
+A revogação imediata continua no portal (≤ 30 s). O atraso de até 15 min vale só para a saída detectada pelo GitHub (risco R21). **Em E2**, o `odin-webhooks` pode receber `membership`, `team` e `organization` (HMAC `X-Hub-Signature-256`, faixa de IP do GitHub, `X-GitHub-Delivery` para não repetir) e executar o `odin-jobs` na hora; a varredura continua como reconciliação.
 
 ### 7.4 Pipelines (GitHub Actions, no repositório Odin)
 > Repositórios privados (decisão 5): o `publish.yml` lê os repositórios das skills com um **token de instalação do GitHub App** gerado no próprio workflow (o `GITHUB_TOKEN` só lê o repositório onde roda). A chave do app usada pelo CI fica num segredo do repositório Odin (no Free não há segredo de ambiente com aprovação em repositório privado).
 | Workflow | Gatilho | Faz |
 |---|---|---|
-| `ci.yml` | Todo PR | Lint, testes, testes de política, testes de autorização do RAG, `terraform plan` |
-| `publish.yml` | Merge em `catalog/` na `main` | Baixa skills no SHA, valida, testa, roda as avaliações determinísticas, `odin lint` (inclui Unicode oculto), empacota com dependências, **assina (KMS)**, envia ao bucket, chama o publisher, smoke test de roteamento. No PR de promoção para `stable`, confere `evals/resultado.json` do SHA (ADR 0017) |
-| `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII, injeção e Unicode oculto, roda a avaliação de recuperação; no merge, o webhook dispara o indexer |
-| `deploy.yml` | Tag `v*` | Build das imagens, SBOM, atestação de origem, envio ao Artifact Registry, deploy no Cloud Run (prod com Binary Authorization) |
+| `ci.yml` | Todo PR | Lint, testes, schemas, conformidade (inclusive de custo), testes de política, testes de autorização do RAG (contêiner Postgres + pgvector), `terraform plan`. Windows em todo PR; macOS só em release e semanal (minutos do GitHub Free) |
+| `publish.yml` | Merge em `catalog/` na `main` | Baixa skills no SHA, valida, testa, roda as avaliações determinísticas, `odin lint` (inclui Unicode oculto), empacota com dependências, **assina (KMS)**, envia ao bucket, executa o job `odin-publisher` (que confere a assinatura e registra), smoke test de roteamento. No PR de promoção para `stable`, confere `evals/resultado.json` do SHA (ADR 0017) |
+| `knowledge.yml` (no `odin-knowledge`) | PR e merge | Valida frontmatter, PII, injeção e Unicode oculto, roda a avaliação de recuperação; depois do merge, a varredura de 15 min (ou o botão "indexar agora") executa o indexer. O repositório de conhecimento não tem acesso ao Google Cloud |
+| `deploy.yml` | Tag `v*` | Build das imagens, SBOM, atestação de origem, envio ao Artifact Registry, deploy no Cloud Run sem tráfego, fumaça, migração de tráfego e rollback automático (E2: Binary Authorization) |
 | `cli-release.yml` | Tag `cli-v*` | Binários do CLI por plataforma, checksums, **assinatura no KMS** (`cli-signing`), envio ao bucket privado `odin-cli-<amb>`, atualização do script de instalação servido pelo portal com o checksum fixado; atestação de origem do GitHub quando disponível no plano [VERIFICAR para repositório privado] |
 | `infra.yml` | Disparo manual do mantenedor após merge em `infra/` | `terraform apply` (no Free não há ambientes com aprovação em repositório privado; a condição da identidade federada exige o mantenedor) |
 
@@ -411,13 +428,13 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 ### 8.1 Controles por camada
 | Camada | Controles |
 |---|---|
-| Borda | Produção: Cloud Armor (OWASP, limite de taxa), TLS gerenciado, ingress só pelo LB, faixas do GitHub nos webhooks. PoC: `run.app` com TLS gerenciado, limites no serviço e HMAC nos webhooks |
+| Borda | E0 e E1: `run.app` com TLS gerenciado, autenticação em toda rota útil, limites no serviço, teto de instâncias e disjuntor de custo; nenhuma porta de webhook. E2: Cloud Armor (OWASP, limite de taxa), ingress só pelo Load Balancer |
 | Identidade | GitHub com 2FA (organização), convites, mapeamento por id numérico, reautenticação para administração, conta de emergência com alerta |
 | Sessão do portal | Cookie `HttpOnly`/`Secure`, CSRF, CSP estrita, `X-Frame-Options: DENY`, `Referrer-Policy`, expiração de 8 h |
 | Tokens | JWT de 15 min, assinado no KMS; renovação com prova de posse; rotação com detecção de reuso; revogação ≤ 30 s |
 | Autorização | Negado por padrão; direitos no servidor; quatro olhos em papéis administrativos; separação de funções |
-| Dados | CMEK em bucket e banco; Cloud SQL só com IP privado; segurança em nível de linha; Firestore fechado para clientes |
-| Cadeia de suprimentos | Pacotes e dependências assinados; CLI com atestação; imagens com SBOM, varredura e Binary Authorization; Dependabot; proteção de branch e CODEOWNERS |
+| Dados | Firestore fechado para clientes; campos sensíveis com envelope no KMS; Cloud SQL só com IP privado e segurança em nível de linha (quando houver conhecimento confidencial); CMEK em E2 |
+| Cadeia de suprimentos | Pacotes e dependências assinados; assinatura conferida de novo no registro (`odin-publisher`) e na máquina (CLI); imagens com SBOM e varredura (Binary Authorization em E2); Dependabot; só o mantenedor escreve (compensações do GitHub Free em [segurança 05](../seguranca/05-cadeia-de-suprimentos.md)) |
 | Máquina | Guard fail-closed, blocos protegidos, verificação de assinatura, credencial no cofre do sistema |
 | Detecção | Logs de auditoria do Google Cloud (atividade administrativa + acesso a dados em KMS e Secret Manager), alertas de reuso de credencial, de picos de recusa e de publicação fora do pipeline, Security Command Center |
 | Resposta | Revogação por pessoa, dispositivo ou global; troca de chaves; runbooks (plano, F8) |
@@ -425,11 +442,12 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 ### 8.2 Chaves e segredos
 | Item | Tipo | Rotação | Quem usa |
 |---|---|---|---|
-| `bundle-signing` | KMS assimétrica P-256 (HSM em prod) | Anual, com o CLI aceitando 2 chaves na transição | `sa-ci-signer` assina; o CLI verifica |
+| `bundle-signing` | KMS assimétrica P-256 (HSM em E2) | Anual, com o CLI aceitando 2 chaves na transição | `sa-ci-signer` assina; o CLI verifica |
 | `jwt-signing` | KMS assimétrica P-256 | Semestral (2 chaves no JWKS) | `sa-sts` assina; `odin-mcp` verifica |
-| `cmek` | KMS simétrica | 90 dias automática | Cloud Storage, Cloud SQL |
+| `campos` | KMS simétrica | Anual | Envelope do segredo TOTP (`odin-sts`) |
+| `cmek` (só E2) | KMS simétrica | 90 dias automática | Cloud Storage, Cloud SQL |
 | `github-app-key` | Secret Manager | Semestral | indexer, jobs, portal |
-| `github-webhook-secret` | Secret Manager | Semestral | webhooks |
+| `github-webhook-secret` (só E2) | Secret Manager | Semestral | webhooks |
 | `github-oauth-client-secret` | Identity Platform | Anual | Identity Platform |
 | `session-secret` | Secret Manager | Trimestral | portal |
 
@@ -437,7 +455,7 @@ Os repositórios de skills **não** têm acesso ao Google Cloud. Eles só public
 - Dados pessoais mínimos: id e login do GitHub, nome, e-mail (opcional), IP e agente do dispositivo.
 - Auditoria sem o texto dos pedidos; amostragem só se habilitada, com máscara de PII.
 - Exclusão de pessoa: dados de identidade apagados e auditoria pseudonimizada (o id é trocado por um hash).
-- Conhecimento `confidencial` só em repositório privado, com CMEK e segurança em nível de linha.
+- Conhecimento `confidencial` só em repositório privado e só depois do Cloud SQL com segurança em nível de linha.
 - Região única no Brasil.
 
 ## 9. Máquina do usuário
@@ -466,58 +484,65 @@ Escreve só em `~/.odin/`, `~/.claude/agents/odin-*`, `~/.claude/skills/odin/`, 
 | Rastreamento | Cloud Trace (OpenTelemetry) | Latência entre serviços |
 | Auditoria | BigQuery | Auditor, relatórios |
 
-**SLOs iniciais:** MCP com 99,5% de disponibilidade e p95 < 300 ms; STS com 99,9% e p95 < 200 ms; busca no RAG com p95 < 800 ms.
-**Alertas:** erro > 2% em 5 min; reuso de credencial (imediato); uso da conta de emergência (imediato); assinatura inválida reportada por CLI; publicação fora do pipeline; picos de `negado`; 80% do orçamento.
+**SLOs (decisão 32: horário comercial, sem plantão):**
+
+| Serviço | Disponibilidade | Latência (instância já ativa) | Partida a frio |
+|---|---|---|---|
+| `odin-mcp` | 99,5% | p95 < 300 ms | p95 da primeira chamada ≤ 3 s |
+| `odin-sts` | 99,5% | p95 < 200 ms | ≤ 3 s (o token em cache de 15 min absorve) |
+| `odin-portal` | 99,5% | p95 < 1 s por página | ≤ 5 s |
+| Busca no RAG | 99% | p95 < 800 ms | — |
+
+- **Orçamento de erro:** 0,5% do horário comercial do mês (cerca de 1 h). Estourou → congelar mudanças que não sejam correção até voltar à meta.
+- **Partida a frio** é medida na F8. Se o p95 da primeira chamada passar de 3 s por 2 semanas, liga-se instância quente **só no `odin-mcp`** (gatilho de [05 Custos](05-custos-e-finops.md)).
+- O modo degradado de 7 dias (decisão 14) cobre a indisponibilidade para as skills já usadas.
+
+**Alertas:** erro > 2% em 5 min; reuso de credencial (imediato); uso da conta de emergência (imediato); assinatura inválida reportada por CLI; runtime divergente (DT-19); publicação fora do pipeline; picos de `negado`; orçamento em 50%, 90%, 100%, 200% e 300% (disjuntor).
 
 ## 11. Infraestrutura como código
 
 ```
 infra/
   modules/
-    network/        VPC, saída direta, NAT se preciso
-    edge/           Load Balancer, NEGs, Cloud Armor, certificado, DNS
-    run/            serviços e jobs do Cloud Run (um módulo genérico)
-    data/           Firestore, Cloud SQL, buckets, BigQuery
-    security/       KMS, Secret Manager, contas de serviço e IAM, Binary Authorization
+    run/            serviços, jobs e função do Cloud Run (módulo genérico; min, max e ingress vêm do estágio)
+    data/           Firestore, buckets, BigQuery (e Cloud SQL + VPC, só quando o gatilho disparar)
+    security/       KMS, Secret Manager, contas de serviço e IAM
     identity/       Identity Platform (provedores, domínios)
     wif/            pool e provedor do GitHub, vínculos
-    observability/  coletor de logs, painéis, alertas, orçamento
+    observability/  coletor de logs, verificações de disponibilidade, painéis, alertas
+    finops/         orçamento, tópico budget-alerts, disjuntor, limpeza do Artifact Registry
+    edge/           só E2: Load Balancer, NEGs, Cloud Armor, certificado, DNS, webhooks
   envs/
-    poc/            main.tf, terraform.tfvars (sem segredos)
-    prod/
+    poc/            main.tf com estagio = "e0", terraform.tfvars (sem segredos)
+    prod/           estagio = "e1" (ou "e2", por gatilho)
 ```
+- **Estágio como variável:** os módulos recebem `estagio` e recusam, por validação do Terraform, o que não pertence a ele (por exemplo, `min_instance_count > 0` em `e0`). O CI repete a checagem (CF-11 a CF-14).
 - Estado no bucket `odin-tfstate-<amb>` com versionamento e trava.
-- **Desenvolvimento local** (decisão 34): emuladores do Firestore, do Pub/Sub e do Identity Platform (Firebase Local Emulator Suite), servidor MCP e portal rodando localmente, e um JWKS de teste; o ambiente de teste na nuvem é criado junto com a produção.
+- **Desenvolvimento local** (decisão 34): emuladores do Firestore e do Identity Platform (Firebase Local Emulator Suite), servidor MCP e portal rodando localmente, e um JWKS de teste; o ambiente de teste na nuvem é criado junto com a produção.
 - Segredos nunca no Terraform: o Terraform cria o segredo vazio, e o valor entra por um runbook ou pelo console, com auditoria.
 
 ## 12. Continuidade e backup
 
 | Componente | Backup | Recuperação |
 |---|---|---|
-| Firestore | PITR (7 dias) + exportação diária para bucket | Restaurar ponto no tempo ou importar exportação |
-| Cloud SQL | Backup automático diário + PITR | Clonar no ponto no tempo |
+| Firestore | Exportação diária para bucket (30 dias); PITR de 7 dias a partir do E1 | Importar a exportação ou restaurar ponto no tempo |
+| Cloud SQL (quando houver) | Backup automático diário (7 dias) | Restaurar o backup **ou reindexar do Git** (caminho principal: cerca de 1 h) |
 | Cloud Storage | Versionamento + retenção | Restaurar versão |
 | Conhecimento | Fonte no GitHub | Reindexar do zero com o `odin-indexer` |
 | Catálogo | Fonte no GitHub + pacotes no bucket | Republicar pelo pipeline |
 | Infraestrutura | Terraform | `apply` em projeto novo |
 
-Metas: RPO de 1 h e RTO de 4 h. Exercício de restauração a cada semestre.
+Metas: RTO de 4 h; RPO de 24 h para dados de controle em E0 (exportação diária) e de 1 h a partir do E1 (PITR). Catálogo e conhecimento têm RPO zero na prática, porque a fonte é o Git. Exercício de restauração a cada semestre.
 
-## 13. Custo estimado da prova de conceito (por mês, estimativa)
+## 13. Custo
 
-| Item | Ordem de grandeza |
-|---|---|
-| Cloud Run (escala até zero, uso de 3 pessoas) | perto de zero (faixa gratuita) |
-| Cloud SQL | **não usado na PoC** (decisão 7); quando entrar: dezenas de dólares |
-| Firestore com busca vetorial (RAG na PoC) | dentro da faixa gratuita no volume da PoC |
-| Firestore, Pub/Sub, Scheduler, Secret Manager | centavos a poucos dólares |
-| Cloud KMS (poucas chaves e operações) | poucos dólares |
-| Vertex AI (embeddings) | centavos |
-| Identity Platform | gratuito na faixa inicial [VERIFICAR preços] |
-| Load Balancer + Cloud Armor | dezenas de dólares; **adiar na poc** e usar `run.app` |
-| BigQuery | perto de zero no volume da poc |
+Modelo completo, estágios, gatilhos, teto e disjuntor em [05 Custos e FinOps](05-custos-e-finops.md). Resumo:
 
-**Total esperado na PoC: US$ 1 a 3 por mês** (KMS e embeddings), com alerta de orçamento em US$ 5. O custo sobe por etapas, conforme o mantenedor liberar: Cloud SQL, depois Load Balancer e Cloud Armor. Confirmar na calculadora de preços do Google Cloud antes de criar os recursos.
+| Estágio | Meta por mês | O que paga |
+|---|---|---|
+| E0 Prova de conceito | ≤ US$ 3 (alerta em US$ 5) | KMS, embeddings, rede |
+| E1 Time | ≤ US$ 25 (alerta em US$ 40) | O mesmo, mais Cloud SQL mínimo quando houver conhecimento confidencial |
+| E2 Corporativo | Orçado por gatilho | Load Balancer, Cloud Armor, instância quente, alta disponibilidade, HSM |
 
 ## 14. Pontos a verificar na prova de conceito
 0. **Prioridade da F0** (decisões 23 e 24): **Windows nativo** e **extensão do VS Code** primeiro.
@@ -527,5 +552,7 @@ Metas: RPO de 1 h e RTO de 4 h. Exercício de restauração a cada semestre.
 3. Nome e dimensão do modelo de embeddings multilíngue atual.
 4. Como verificar o 2FA de membros pela API do GitHub com as permissões do app.
 5. Ferramenta de empacotamento do CLI como executável único com acesso ao cofre do sistema.
-6. Preços de Identity Platform, Load Balancer e Cloud Armor.
+6. Preços de Identity Platform, Cloud KMS e Cloud SQL em `southamerica-east1` ([05 Custos](05-custos-e-finops.md)).
+6b. MCP com resposta JSON e sem fluxo SSE (`GET` → 405) no Claude Code; latência de partida a frio dos três serviços.
+6c. Firebase Hosting na frente do Cloud Run na região (domínio próprio sem Load Balancer).
 7. Itens do plano: `headersHelper` na extensão do VS Code, busca de ferramentas via LiteLLM, importação `@~/` no `CLAUDE.md`.

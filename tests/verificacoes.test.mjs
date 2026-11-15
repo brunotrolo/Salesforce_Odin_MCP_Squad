@@ -124,3 +124,29 @@ test('Unicode oculto (ADR 0017, CT-25): recusado em documentos, skills, agentes 
   assert.match(s, /\.claude\/agents\/odin-revisor-z\.md:3:\d+: caractere Unicode oculto U\+2060/);
   assert.match(s, /\.claude\/hooks\/h\.mjs:1:\d+: caractere Unicode oculto U\+E0100/);
 });
+
+test('conformidade de custo (ADR 0018): CF-11 a CF-14 aceitam o estágio certo e recusam recurso fora dele', () => {
+  const porId = (r) => Object.fromEntries(avaliar(r).map((x) => [x.id, x.resultado]));
+  const bom = porId(repoTemp({
+    'infra/envs/poc/main.tf': 'locals { estagio = "e0" }\nmodule "finops" { source = "../../modules/finops" }\nmodule "run" { min_instance_count = 0\n max_instance_count = 3 }\n',
+    'infra/envs/prod/main.tf': 'locals { estagio = "e1" }\nmodule "finops" { source = "../../modules/finops" }\nmodule "sql" { source = "../../modules/data/sql" }\n',
+    'infra/modules/registry/main.tf': 'resource "google_artifact_registry_repository" "img" {\n  cleanup_policies { id = "ultimas" }\n}\n',
+  }));
+  for (const id of ['CF-11', 'CF-12', 'CF-13', 'CF-14']) assert.equal(bom[id], 'ok', id);
+
+  const ruim = porId(repoTemp({
+    'infra/envs/poc/main.tf': 'locals { estagio = "e0" }\nmodule "run" { min_instance_count = 1 }\nresource "google_sql_database_instance" "db" { settings { ip_configuration { ipv4_enabled = false } } }\n',
+    'infra/modules/registry/main.tf': 'resource "google_artifact_registry_repository" "img" {}\n',
+  }));
+  for (const id of ['CF-11', 'CF-12', 'CF-13', 'CF-14']) assert.equal(ruim[id], 'violação', id);
+
+  // E1 aceita Cloud SQL, mas não borda nem teto acima de 3; ambiente sem estágio declarado é recusado; E2 libera
+  const r = repoTemp({
+    'infra/envs/a/main.tf': 'locals { estagio = "e1" }\nmodule "finops" {}\nresource "google_compute_security_policy" "waf" {}\n',
+    'infra/envs/b/main.tf': 'module "finops" {}\n',
+    'infra/envs/c/main.tf': 'locals { estagio = "e2" }\nmodule "finops" {}\nmodule "edge" {}\nmodule "run" { min_instance_count = 1\n max_instance_count = 10 }\n',
+  });
+  const v = Object.fromEntries(avaliar(r).map((x) => [x.id, x.violacoes.map((p) => p.split('\\').join('/'))]));
+  assert.deepEqual(v['CF-11'], ['infra/envs/b']);
+  assert.deepEqual(v['CF-12'], ['infra/envs/a']);
+});

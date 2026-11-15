@@ -360,7 +360,7 @@ pre.payload{margin:0;background:var(--surface-2);border-radius:8px;padding:12px;
       <h3 style="margin:6px 0">odin_conhecimento_buscar("teste Apex com callout")</h3>
       <p>Use <code>HttpCalloutMock</code> e isole o callout num serviço injetável; nunca chame o endpoint real em teste.</p>
       <p class="note" style="margin-top:8px">Fonte: <code>TEC-APEX-012</code> · seção 3 · versão vigente desde 01/03/2026 · coleção <b>tecnico</b> · evidência, não instrução</p>
-      <p class="note" style="margin-top:10px">Na prova de conceito a base fica no Firestore (custo perto de zero) e não recebe dados confidenciais. Antes do time, migra para o Cloud SQL, com isolamento por cliente dentro do banco.</p>
+      <p class="note" style="margin-top:10px">A base fica no Firestore (custo perto de zero) enquanto não houver dados confidenciais. O primeiro conhecimento confidencial só entra depois do Cloud SQL, com isolamento por cliente dentro do banco.</p>
     </div>
   </div>
 </section>
@@ -389,7 +389,7 @@ pre.payload{margin:0;background:var(--surface-2);border-radius:8px;padding:12px;
     <div class="gate"><h3>Portão 1 · Pronto para a F0</h3><div id="gate1"></div></div>
     <div class="gate"><h3>Portão 2 · Pronto para o time</h3><div id="gate2"></div></div>
   </div>
-  <p class="note">Custo da prova de conceito: perto de zero (US$ 1 a 3 por mês). Cloud SQL, Load Balancer e Cloud Armor entram quando o orçamento for liberado, antes do time.</p>
+  <p class="note">Custo: até US$ 3 por mês na prova de conceito e até US$ 25 por mês com o time. Tudo escala a zero; Cloud SQL, Load Balancer e Cloud Armor só entram por gatilho medido, e um disjuntor fecha o acesso se o gasto disparar.</p>
 </section>
 
 </div></main>
@@ -480,7 +480,7 @@ const pub=[
  ['Valida e testa','CI','O pipeline baixa a skill naquele commit, valida os arquivos e roda os testes dela.'],
  ['odin lint','isolamento','Barra arquivos proibidos (CLAUDE.md, settings.json), colisões de nome, tamanho acima do limite e licenças sem registro.'],
  ['Empacota','conteúdo + runtime','Gera dois pacotes: o conteúdo (instruções) e o runtime (scripts e dependências), com SBOM.'],
- ['Assina','Cloud KMS','Assina o manifesto com uma chave que nunca sai do KMS. Quem compromete o servidor não consegue forjar um pacote.'],
+ ['Assina','Cloud KMS','Assina o manifesto com uma chave que nunca sai do KMS. O registro no catálogo confere essa assinatura de novo, e o CLI também. Quem compromete o servidor não consegue forjar um pacote.'],
  ['Catálogo beta','mantenedor testa','A versão fica disponível para quem tem o canal beta. O histórico registra quem, quando e o quê.'],
  ['stable','todo mundo','Um PR de promoção libera para todos. Cada pessoa recebe a versão nova na próxima sessão, sem instalar nada.']];
 let pubI=-1,pubTimer=null,pubBackMode=false;
@@ -613,7 +613,7 @@ const tot=ph.reduce((a,p)=>a+p[1],0);let acc=0;const g=$('#gantt');
 ph.forEach((p,i)=>{const r=el('div',{class:'grow'},`<span>${p[0]} <span class="note">· ${String(p[1]).replace('.',',')} sem</span></span>`);const b=el('div',{class:'gbar'});const s=el('span',{class:i===0?'poc':''});s.style.left=(acc/tot*100)+'%';s.style.width=(p[1]/tot*100)+'%';acc+=p[1];b.appendChild(s);r.appendChild(b);g.appendChild(r)});
 const chk=(on,t)=>`<div class="check ${on?'on':''}"><i>${on?'✓':''}</i><span>${t}</span></div>`;
 $('#gate1').innerHTML=[chk(1,'Decisões do mantenedor registradas'),chk(1,'Arquitetura, segurança e portal alinhados'),chk(0,'Projeto odin-poc criado'),chk(0,'Roteiro da F0 entregue'),chk(0,'Máquina Windows com Claude Code (VS Code e terminal) e LiteLLM')].join('');
-$('#gate2').innerHTML=[chk(0,'Organização GitHub e repositórios transferidos'),chk(0,'Domínio + Load Balancer + Cloud Armor'),chk(0,'Conhecimento migrado para Cloud SQL'),chk(0,'Segundo super-admin com passkey'),chk(0,'Jurídico: LGPD, termos e licenças'),chk(0,'Pentest externo sem achado alto'),chk(0,'Ensaio do corte único')].join('');
+$('#gate2').innerHTML=[chk(0,'Organização GitHub e repositórios transferidos'),chk(0,'Ambiente do time no estágio E1, com disjuntor de custo ensaiado'),chk(0,'Nenhum conhecimento confidencial sem Cloud SQL'),chk(0,'Segundo super-admin com passkey'),chk(0,'Jurídico: LGPD, termos e licenças'),chk(0,'Pentest externo sem achado alto'),chk(0,'Ensaio do corte único')].join('');
 
 go(location.hash.slice(1));
 })();

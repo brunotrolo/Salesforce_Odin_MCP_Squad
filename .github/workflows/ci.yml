@@ -1,12 +1,16 @@
 name: ci
 # Verificações do repositório Odin: testes dos scripts e do hook (Linux e Windows), documentação,
-# skills, agentes e conformidade; em PR, documento protegido alterado exige ADR no mesmo conjunto.
+# skills, agentes, contratos (schemas/) e conformidade de segurança e de custo; em PR, documento
+# protegido alterado exige ADR no mesmo conjunto.
 on:
   pull_request:
   push:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # minutos do GitHub Free
 jobs:
   verificar:
     strategy:
@@ -14,6 +18,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
@@ -21,9 +26,12 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
-      - name: Testes (scripts, hook, ADR, verificações)
+          cache: npm
+      - name: Dependências (só de desenvolvimento, pelo lockfile, sem scripts de instalação)
+        run: npm ci --ignore-scripts
+      - name: Testes (scripts, hook, ADR, verificações, contratos)
         run: npm test
-      - name: Documentação, skills e conformidade
+      - name: Documentação, skills, contratos e conformidade
         run: npm run verificar
       - name: ADR obrigatório para documentos protegidos
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'

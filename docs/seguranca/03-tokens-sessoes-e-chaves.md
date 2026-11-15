@@ -58,7 +58,7 @@ Qualquer falha → `401` com `WWW-Authenticate: Bearer error="invalid_token"`, s
 
 ### 2.3 O que nunca acontece com o token
 - Não vai em URL nem em parâmetro de consulta.
-- Não aparece em log: os cabeçalhos `Authorization` são removidos antes do registro, nos serviços e no Load Balancer.
+- Não aparece em log: os cabeçalhos `Authorization` são removidos antes do registro, nos serviços (e no Load Balancer, em E2).
 - Não é aceito por outros serviços (`aud` restrito ao MCP).
 
 ## 3. Refresh token com prova de posse
@@ -109,12 +109,13 @@ sequenceDiagram
 
 | Chave | Algoritmo | Onde | Quem usa | Rotação |
 |---|---|---|---|---|
-| `jwt-signing` | ECDSA P-256 (ES256) | Cloud KMS (HSM em prod) | `sa-sts` assina; JWKS público | **Semestral.** Versão nova publicada no JWKS 24 h antes de começar a assinar; a antiga fica no JWKS até 24 h depois do último token assinado com ela |
-| `bundle-signing` | ECDSA P-256 | Cloud KMS (HSM em prod) | `sa-ci-signer` assina; o CLI verifica | **Anual**, por cerimônia (05); o CLI aceita 2 chaves na transição |
+| `jwt-signing` | ECDSA P-256 (ES256) | Cloud KMS (em software; HSM em E2) | `sa-sts` assina; JWKS público | **Semestral.** Versão nova publicada no JWKS 24 h antes de começar a assinar; a antiga fica no JWKS até 24 h depois do último token assinado com ela |
+| `bundle-signing` | ECDSA P-256 | Cloud KMS (em software; HSM em E2) | `sa-ci-signer` assina; o CLI verifica | **Anual**, por cerimônia (05); o CLI aceita 2 chaves na transição |
 | `cli-signing` | ECDSA P-256 | Cloud KMS | Workflow `cli-release.yml` assina; o CLI verifica as próprias atualizações | **Anual**, com o CLI aceitando 2 chaves na transição (mesmo processo da `bundle-signing`) |
-| `cmek` | AES-256 | Cloud KMS | Cloud Storage, Cloud SQL | Automática, 90 dias |
+| `campos` | AES-256 | Cloud KMS | `sa-sts` (envelope do segredo TOTP) | Anual |
+| `cmek` (só E2) | AES-256 | Cloud KMS | Cloud Storage, Cloud SQL | Automática, 90 dias |
 | Pimenta dos HMAC | 256 bits | Secret Manager | `sa-sts` | Anual, com versão dupla (tokens antigos validados pela versão anterior até vencerem) |
-| Segredo TOTP de cada pessoa | 160 bits | Firestore, cifrado com envelope no KMS | `sa-sts` | Ao recadastrar |
+| Segredo TOTP de cada pessoa | 160 bits | Firestore, cifrado com envelope no KMS (chave `campos`) | `sa-sts` | Ao recadastrar |
 | Chave do dispositivo | ECDSA P-256 | Cofre do sistema da pessoa | CLI | A cada ativação |
 
 **JWKS:** `https://auth.<dominio>/.well-known/jwks.json`, com `Cache-Control: max-age=600`. Contém só chaves públicas ativas e em transição.
@@ -125,7 +126,7 @@ sequenceDiagram
 |---|---|---|---|
 | Dispositivo | Pessoa ou admin no portal; reuso detectado; 30 dias sem uso; 90 dias de família | Refresh token não renova; JWTs do dispositivo recusados | ≤ 30 s |
 | Máquina sem rede | Revogação acontecida enquanto a máquina estava desconectada | A cópia local das skills (modo degradado) vale até 7 dias desde o último contato; no primeiro contato, os direitos são conferidos e as cópias revogadas apagadas | ≤ 7 dias |
-| Pessoa | Suspensão; saída do GitHub (webhook); saída do último squad | Todos os dispositivos, tokens pessoais e sessões | ≤ 30 s |
+| Pessoa | Suspensão; saída do GitHub (varredura de 15 min); saída do último squad | Todos os dispositivos, tokens pessoais e sessões | ≤ 30 s |
 | Token pessoal | Pessoa ou admin; varredura de segredos encontrou | Recusado | ≤ 30 s |
 | Global | Super-admin em incidente | Todo JWT com `iat` anterior e todo refresh token emitido antes do carimbo | ≤ 30 s; todos fazem login de novo |
 | Chave de JWT | Suspeita sobre a chave | Runbook (11): nova versão, retirada da antiga do JWKS, revogação global | Minutos |

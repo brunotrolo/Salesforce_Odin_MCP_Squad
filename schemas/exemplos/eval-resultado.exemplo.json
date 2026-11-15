@@ -1,0 +1,112 @@
+{
+  "schema": "odin.eval/1",
+  "skill": "sf-test",
+  "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "versao": "1.4.2",
+  "gerado_em": "2026-11-15T12:00:00Z",
+  "repeticoes": 3,
+  "nota": 90,
+  "nota_stable_anterior": 90,
+  "casos": [
+    {
+      "id": "EV-001",
+      "critico": true,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-002",
+      "critico": true,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-003",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-004",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-005",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-006",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-007",
+      "critico": false,
+      "resultado": "falhou",
+      "repeticoes": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "EV-008",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-009",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "EV-010",
+      "critico": false,
+      "resultado": "passou",
+      "repeticoes": [
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ jobs:
   publicar:
     if: github.actor_id == '<ID-NUMERICO-DO-MANTENEDOR>'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>
       - uses: actions/setup-node@<SHA-actions-setup-node>
@@ -29,8 +30,14 @@ jobs:
           workload_identity_provider: projects/<NUMERO-PROJETO>/locations/global/workloadIdentityPools/github/providers/github-oidc
           service_account: sa-ci-signer@odin-poc.iam.gserviceaccount.com
       - run: npm ci
-      - name: Baixar skills no SHA, validar, testar, lint, empacotar, assinar, publicar
+      - uses: google-github-actions/setup-gcloud@<SHA-setup-gcloud>
+      - name: Baixar skills no SHA, validar, testar, avaliar, lint, empacotar, assinar e enviar ao bucket
         env: { GH_TOKEN: "${{ steps.app.outputs.token }}" }
-        run: node pipeline/publicar.mjs --catalogo catalog/skills.yaml --bucket odin-bundles-poc --chave bundle-signing
+        run: node pipeline/publicar.mjs --catalogo catalog/skills.yaml --bucket odin-bundles-poc --chave bundle-signing --saida publicados.txt
+      - name: Registrar no catálogo (o job confere a assinatura do manifesto antes de gravar)
+        run: |
+          while read -r skill versao; do
+            gcloud run jobs execute odin-publisher --region southamerica-east1 --args="$skill,$versao" --wait
+          done < publicados.txt
       - name: Smoke de roteamento (≥ 90% nas intenções de teste)
         run: node pipeline/smoke-roteamento.mjs --minimo 0.9

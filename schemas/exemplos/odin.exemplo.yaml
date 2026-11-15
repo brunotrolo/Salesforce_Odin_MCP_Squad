@@ -1,0 +1,30 @@
+# Exemplo válido de odin.yaml (dados fictícios). Validado por schemas/odin.schema.json no CI.
+id: sf-test
+nome: Test Automator
+dominio: salesforce
+dono: mantenedor
+descricao: QA de tela autônomo em sandbox, que lê o backlog, a spec e o build-report, executa os casos e separa bug de comportamento previsto.
+intencoes:
+  - "testar a capacidade de proposta na sandbox"
+  - "rodar o QA de tela da entrega"
+  - texto: "criar a classe de teste Apex do CaseRouter"
+    negativa: true
+perfis_sugeridos: [dev, qa]
+entrada: [specs/**/spec.md, build-report.md]
+saida: [.sf-test/**, specs/**/test-report.md]
+proximo: []
+skills:
+  - path: .claude/skills/sf-test/SKILL.md
+  - path: .claude/skills/sf-test-status/SKILL.md
+agentes: [.claude/agents/sf-qa-executor.md, .claude/agents/sf-qa-judge.md]
+regras: [.claude/rules/qa-governance.md]
+runtime:
+  dir: .claude/skills/sf-test/scripts
+  node: ">=20"
+  dependencias: package-lock.json
+  prerequisitos: [git, sf, "playwright:chromium"]
+politicas: [guard-qa]
+conhecimento: [tecnico, negocio, licoes]
+avaliacoes: evals/
+licenca_terceiros: []
+usa: []

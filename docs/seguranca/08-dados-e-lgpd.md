@@ -8,7 +8,7 @@
 |---|---|---|
 | **Pública** | README do Odin, documentação geral | Sem restrição |
 | **Interna** | Skills, agentes, padrões técnicos globais, métricas agregadas | Acesso por perfil; repositórios podem ser públicos só por decisão explícita |
-| **Confidencial** | Regras de negócio e decisões de clientes (`negocio`), conhecimento por projeto, auditoria | Repositório privado, CMEK, segurança em nível de linha por projeto, acesso mínimo |
+| **Confidencial** | Regras de negócio e decisões de clientes (`negocio`), conhecimento por projeto, auditoria | Repositório privado, Cloud SQL com segurança em nível de linha por projeto, acesso mínimo (CMEK em E2) |
 | **Restrita** | Credenciais, chaves, segredos TOTP | Nunca em claro fora do cofre, KMS ou Secret Manager; nunca em log |
 
 **Proibido em qualquer lugar do Odin:** segredos de clientes, credenciais Salesforce, dados pessoais de clientes finais e alias de org. As skills já seguem essa regra; o pipeline verifica.
@@ -42,7 +42,7 @@
 
 ## 5. Dados de clientes no conhecimento (RAG)
 - Cada item tem `projeto` e `sensibilidade`. O `confidencial` só fica em repositório **privado**.
-- **Isolamento por projeto em duas camadas** (aplicação e banco, [04](04-autorizacao.md)), com teste automatizado. **Na PoC (Firestore) só a camada da aplicação**: por isso nenhum conhecimento confidencial entra antes da migração para o Cloud SQL.
+- **Isolamento por projeto em duas camadas** (aplicação e banco, [04](04-autorizacao.md)), com teste automatizado. **No Firestore (E0, e E1 sem conhecimento confidencial) só a camada da aplicação**: por isso nenhum conhecimento confidencial entra antes da migração para o Cloud SQL.
 - **Máscara de PII** na ingestão: documentos, e-mails, telefones e nomes de pessoas (reaproveitando o `pii.mjs` das skills), além de rejeitar texto com instrução dirigida a agentes.
 - **Fim de contrato com um cliente:** comando de expurgo do projeto que apaga os trechos do banco, os snapshots e as coleções, mantendo só o registro de que o expurgo aconteceu.
 - Embeddings também são dados do cliente: ficam sob as mesmas regras.
@@ -55,10 +55,10 @@
 ## 7. Retenção (resumo)
 | Item | Retenção |
 |---|---|
-| Auditoria | 365 dias (configurável; trava de retenção em produção) |
+| Auditoria | 365 dias (configurável; trava de retenção a partir do E1) |
 | Pacotes publicados | 365 dias por versão |
 | Snapshots do conhecimento | 180 dias |
 | Dispositivos revogados | 90 dias |
 | Pessoas que saíram | 90 dias, depois pseudonimização |
 | Amostras de pedidos (se habilitadas) | 30 dias |
-| Backups | Firestore: PITR de 7 dias + exportações de 30 dias; Cloud SQL: 7 dias + PITR |
+| Backups | Firestore: exportações de 30 dias (PITR de 7 dias a partir do E1); Cloud SQL: 7 dias |

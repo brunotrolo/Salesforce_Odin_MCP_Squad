@@ -7,25 +7,31 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true   # minutos do GitHub Free: não rodar duas vezes o mesmo PR
 jobs:
   testes:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@<SHA-actions-setup-node>
         with: { node-version: 22 }
       - run: npm ci
-      - name: Emuladores (Firestore, Pub/Sub, Auth)
-        run: npx firebase emulators:exec --only firestore,pubsub,auth "npm test"
+      - name: Emuladores (Firestore, Auth)
+        run: npx firebase emulators:exec --only firestore,auth "npm test"
       - run: npm run verificar
       - name: ADR obrigatório para documentos protegidos
         if: github.event_name == 'pull_request'
         run: node scripts/verificar-docs.mjs --base origin/${{ github.base_ref }}
   matriz-cli-guard:
     strategy:
-      matrix: { os: [windows-latest, macos-latest, ubuntu-latest] }
+      # macOS custa dez vezes mais minutos no GitHub Free: só em release (cli-release.yml) e na execução semanal
+      matrix: { os: [windows-latest, ubuntu-latest] }
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>
       - uses: actions/setup-node@<SHA-actions-setup-node>
@@ -34,6 +40,7 @@ jobs:
       - run: npm test --workspace packages/cli --workspace packages/guard
   seguranca:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@<SHA-actions-checkout>

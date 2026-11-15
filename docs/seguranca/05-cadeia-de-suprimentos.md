@@ -7,14 +7,15 @@ O Odin coloca código para rodar, com acesso total, nas máquinas de todo o time
 ## 1. Cadeia de ponta a ponta
 ```mermaid
 flowchart LR
-  A["Autor (PR)"] --> B["Revisão por outra pessoa<br/>CODEOWNERS"]
-  B --> C["main protegida<br/>commit assinado"]
+  A["Autor (PR)"] --> B["CI verde no PR<br/>revisores independentes"]
+  B --> C["merge pelo mantenedor<br/>(único com escrita)"]
   C --> D["CI do repositório Odin<br/>(identidade federada)"]
   D --> E["valida · testa · odin lint<br/>varre segredos e vulnerabilidades"]
   E --> F["empacota com dependências<br/>SBOM"]
   F --> G["assina no Cloud KMS<br/>(sa-ci-signer, só main)"]
   G --> H["Cloud Storage<br/>versionado, retenção"]
-  H --> I["CLI baixa por URL assinada"]
+  H --> P["odin-publisher confere<br/>a assinatura e registra"]
+  P --> I["CLI baixa por URL assinada"]
   I --> J["CLI verifica a assinatura<br/>com a chave embutida"]
   J --> K["instala de forma atômica"]
 ```
@@ -32,10 +33,11 @@ flowchart LR
 | Segredos no código | Varredura de segredos no CI e no GitHub; padrões `odin_rt_` e `odin_pat_` registrados como padrões personalizados |
 | Conteúdo das skills | `odin lint` (arquivos proibidos, destinos, colisões, **Unicode oculto**, tamanho, licenças); varredura de PII e de alias de org; avaliações determinísticas no pipeline; canal `beta` antes de `stable`, com promoção bloqueada por queda na avaliação de comportamento (ADR 0017) |
 | Empacotamento | Construção reprodutível (mesma entrada → mesmo hash), dentro de contêiner fixado por digest; SBOM (CycloneDX) de cada pacote |
-| Assinatura | Manifesto com o SHA-256 de cada arquivo e do pacote, assinado com `bundle-signing` (KMS, HSM em prod). O CI só tem `signerVerifier` nessa chave |
-| Armazenamento | Bucket com versionamento, retenção de 365 dias, CMEK, sem acesso público; download só por URL assinada de 5 min |
+| Assinatura | Manifesto com o SHA-256 de cada arquivo e do pacote, assinado com `bundle-signing` (KMS; HSM em E2). O CI só tem `signerVerifier` nessa chave |
+| Registro | O job `odin-publisher` **confere a assinatura do manifesto** com a chave pública do KMS antes de gravar a versão no catálogo: poder executar o job não basta para publicar (ADR 0018) |
+| Armazenamento | Bucket com versionamento, retenção de 365 dias, sem acesso público (CMEK em E2); download só por URL assinada de 5 min |
 | Verificação na máquina | O CLI confere a assinatura com a **chave pública embutida** e o hash de cada arquivo antes de instalar; recusa versão menor que a instalada (anti-rebaixamento), exceto em rollback assinado pelo catálogo. **No uso:** na primeira chamada de cada skill na sessão, o `odin ensure` recalcula os hashes do runtime instalado contra o manifesto assinado; divergência reinstala e gera DT-19 (ADR 0017) |
-| Imagens dos serviços | Imagem base mínima fixada por digest; varredura no Artifact Registry; SBOM; **atestação de origem**; Binary Authorization em produção (só imagens atestadas pelo CI) |
+| Imagens dos serviços | Imagem base mínima fixada por digest; varredura no Artifact Registry; SBOM; **atestação de origem**; política de limpeza no Artifact Registry; Binary Authorization em E2 (só imagens atestadas pelo CI) |
 | CLI | Binários assinados no KMS (`cli-signing`), guardados num bucket **privado** e servidos pelo portal (os repositórios são privados); a primeira instalação confere o **checksum fixado** no script servido pelo portal por HTTPS; a autoatualização confere a **assinatura** com a chave embutida. Atestação de origem do GitHub registrada quando o plano do GitHub permitir em repositório privado [VERIFICAR] |
 
 ## 3. Manifesto assinado (formato)
@@ -59,7 +61,7 @@ flowchart LR
 Assinatura: ECDSA P-256 sobre o SHA-256 do manifesto canônico (JSON ordenado), em arquivo separado `manifesto.sig`.
 
 ## 4. Cerimônia da chave de assinatura de pacotes
-- **Criação:** pelo Terraform, no KMS (HSM em produção), sem possibilidade de exportar.
+- **Criação:** pelo Terraform, no KMS (em software em E0 e E1; HSM em E2), sem possibilidade de exportar.
 - **Quem pode assinar:** só `sa-ci-signer`, só pelo workflow `publish.yml` em `main`. Nenhuma pessoa tem `signerVerifier` no dia a dia.
 - **Rotação anual:** (1) criar versão nova da chave; (2) lançar o CLI com as duas chaves públicas; (3) esperar a adoção (métrica de versões do CLI); (4) começar a assinar com a nova; (5) retirar a antiga do CLI na versão seguinte.
 - **Comprometimento:** runbook em [11](11-runbooks.md): desabilitar a versão, publicar CLI com a chave revogada, reassinar os pacotes vigentes e forçar a atualização do CLI.

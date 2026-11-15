@@ -47,7 +47,7 @@ flowchart TB
 | 1. Identidade e acesso | Login, ativação de dispositivo, tokens, revogação, perfis, squads, projetos, concessões, solicitações | `odin-sts`, `odin-portal`, Firestore |
 | 2. Orquestração | Roteamento, entrega de skill, revelação progressiva, próximo passo, feedback | `odin-mcp` |
 | 3. Distribuição | Catálogo, publicação, assinatura, canais, rollback, runtime local, guard, `ODIN.md` | Pipeline, `odin-publisher`, CLI |
-| 4. Conhecimento | Busca híbrida, citação, propostas, curadoria, vigência, avaliação | `odin-mcp`, `odin-indexer`, Cloud SQL |
+| 4. Conhecimento | Busca híbrida, citação, propostas, curadoria, vigência, avaliação | `odin-mcp`, `odin-indexer`, Firestore ou Cloud SQL |
 | 5. Governança | Auditoria, painéis, alertas, revogação em massa, relatórios | BigQuery, Monitoring, `odin-jobs` |
 | 6. Administração | Portal do usuário e console de administração | `odin-portal` |
 
@@ -71,7 +71,7 @@ flowchart TB
 | UC-14 | Curar conhecimento | Curador | Proposta aprovada (vira PR no repositório de conhecimento) ou recusada |
 | UC-15 | Consultar auditoria | Auditor | Trilha filtrada, exportável |
 | UC-16 | Atribuir papel administrativo | Superadministrador ou admin de identidade | Papel concedido após **segunda aprovação** |
-| UC-17 | Sair da empresa ou do time | Sistema (webhook do GitHub) ou admin | Pertenças removidas, dispositivos revogados |
+| UC-17 | Sair da empresa ou do time | Sistema (varredura do GitHub a cada 15 min) ou admin (imediato) | Pertenças removidas, dispositivos revogados |
 | UC-18 | Acesso de emergência | Superadministrador | Conta de emergência usada, com alerta imediato |
 
 ### 3.1 UC-02 em detalhe (o fluxo principal)
@@ -196,9 +196,9 @@ erDiagram
 
 | RNF | Requisito | Meta |
 |---|---|---|
-| RNF-01 | Latência do MCP (roteamento, entrega de skill) | p95 < 300 ms (instância quente) |
+| RNF-01 | Latência do MCP (roteamento, entrega de skill) | p95 < 300 ms com a instância ativa; primeira chamada após ociosidade ≤ 3 s |
 | RNF-02 | Latência da busca de conhecimento | p95 < 800 ms |
-| RNF-03 | Disponibilidade | 99,5% (poc), 99,9% (prod) |
+| RNF-03 | Disponibilidade | 99,5% em horário comercial (decisão 32); 99,9% só no estágio E2 |
 | RNF-04 | Efetividade da revogação | ≤ 30 s |
 | RNF-05 | Validade do token de acesso | 15 min |
 | RNF-06 | Onboarding | ≤ 3 passos, ≤ 10 min |
@@ -206,7 +206,8 @@ erDiagram
 | RNF-08 | Escala | 500 usuários e 100 skills sem mudança de arquitetura |
 | RNF-09 | Residência de dados | `southamerica-east1` |
 | RNF-10 | Retenção de auditoria | 1 ano (configurável) |
-| RNF-11 | Backup | RPO 1 h, RTO 4 h |
+| RNF-11 | Backup | RTO 4 h; RPO 24 h em E0 e 1 h a partir do E1 (catálogo e conhecimento: fonte no Git) |
 | RNF-12 | Acessibilidade do portal | WCAG 2.1 AA |
 | RNF-13 | Sistemas operacionais do CLI | Windows, macOS e Linux |
 | RNF-14 | Superfícies do Claude Code | Terminal e extensão do VS Code |
+| RNF-15 | Custo de nuvem | ≤ US$ 3/mês em E0 e ≤ US$ 25/mês em E1; teto de instâncias e disjuntor ([05 Custos](05-custos-e-finops.md)) |

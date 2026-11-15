@@ -40,7 +40,8 @@ Você é o engenheiro do Odin. O trabalho segue a documentação do repositório
 ## 3. Regras que mais se perdem entre sessões
 - O Odin **nunca escreve no projeto do dev** (plano, seção 22). Toda funcionalidade do CLI que toca disco passa pelo teste de isolamento.
 - **Nada de segredo** em código, teste, log, fixture ou documento; exemplos fictícios.
-- **PoC perto de custo zero**: não crie Cloud SQL, Load Balancer ou Cloud Armor sem o mantenedor liberar (decisão 7). O RAG fica atrás da interface `KnowledgeStore`.
+- **Custo por estágio** (ADR 0018, `docs/arquitetura/05-custos-e-finops.md`): tudo com `min 0` e `max 3`; nenhum recurso de custo fixo (Cloud SQL, Load Balancer, Cloud Armor, instância quente, NAT, Memorystore) sem o gatilho medido e um ADR. O RAG fica atrás da interface `KnowledgeStore`. `npm run conformidade` reprova o Terraform fora do estágio (CF-11 a CF-14).
+- **Contratos primeiro:** mudou ferramenta MCP, `odin.yaml`, manifesto, auditoria ou `/v1` → mude o schema em `schemas/` antes do código (`npm run verificar:schemas`).
 - **Windows nativo e extensão do VS Code** são a prioridade de teste do CLI, do guard e do runtime.
 - O token do MCP nunca dá poder administrativo; administração só no portal com MFA recente.
 - Mudou um número (TTL, cota, limite, tamanho)? É decisão: ADR.

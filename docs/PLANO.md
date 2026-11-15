@@ -52,7 +52,7 @@ flowchart LR
     POR["Portal<br/>Cloud Run"]
     IDP["Identity Platform<br/>(OIDC)"]
     FS[("Firestore<br/>catálogo · perfis · tokens")]
-    PG[("Cloud SQL Postgres<br/>+ pgvector (RAG)")]
+    PG[("RAG: Firestore vetorial<br/>(Cloud SQL + pgvector com<br/>conhecimento confidencial)")]
     GCS[("Cloud Storage<br/>pacotes assinados")]
     KMS["Cloud KMS<br/>assinatura"]
     LOG["Logging → BigQuery<br/>auditoria"]
@@ -75,6 +75,8 @@ Três planos:
 - **Plano de conteúdo (GitHub → pipeline):** as skills são versionadas e revisadas por pull request, validadas, assinadas e publicadas.
 - **Plano de controle (GCP):** identidade, perfis, catálogo, roteamento, RAG e auditoria.
 - **Plano de execução (máquina):** o Claude Code executa; o runtime local fornece scripts e os hooks que impõem as regras de segurança.
+
+**Custo por estágio (ADR 0018):** a nuvem tem 3 serviços e 3 jobs, todos com escala a zero. E0 (prova de conceito) custa até US$ 3 por mês; E1 (time) até US$ 25; recursos de custo fixo (Cloud SQL, Load Balancer, Cloud Armor, instância quente) só entram por gatilho medido. Detalhe em [arquitetura 05](arquitetura/05-custos-e-finops.md).
 
 ---
 
@@ -115,19 +117,21 @@ A pessoa abre o Claude Code em qualquer repositório e pede o que precisa. Não 
 
 | # | Componente | Tecnologia | Responsabilidade |
 |---|---|---|---|
-| C1 | **MCP Odin** | Cloud Run, Node/TypeScript, SDK oficial de MCP, transporte Streamable HTTP | Autenticar, autorizar, rotear, entregar skills, agentes e referências, buscar conhecimento, auditar |
+| C1 | **MCP Odin** | Cloud Run, Node/TypeScript, SDK oficial de MCP, transporte Streamable HTTP sem estado, com resposta JSON e sem fluxo SSE permanente | Autenticar, autorizar, rotear, entregar skills, agentes e referências, buscar conhecimento, auditar |
 | C2 | **Portal** | Cloud Run, Next.js (ou similar), Identity Platform | Login, dispositivos e tokens, autoatendimento; console de administração (usuários, perfis, catálogo, conhecimento, auditoria) |
 | C3 | **Serviço de identidade** | Identity Platform com **login GitHub** (Google ou Microsoft opcionais) + emissor de tokens próprio `odin-sts` (JWT assinado no KMS) | Device login, credencial de dispositivo ligada a chave do dispositivo, tokens de acesso curtos, revogação |
 | C4 | **odin CLI** | Node ≥ 20, binário único por plataforma | `setup`, `login`, `token` (headersHelper), `ensure`, `doctor`, `guard-ping`, `update`, `uninstall`, `restore-copias`, `logout` |
 | C5 | **odin-guard** | Node, um hook `PreToolUse` (e `PostToolUse` quando preciso) | Despachante das políticas de segurança de todas as skills, fail-closed |
 | C6 | **Gatilho e manual do Odin** | Instruções do servidor MCP + `~/.claude/skills/odin/SKILL.md` + `~/.odin/ODIN.md` | Fazer o Claude Code chamar o roteador em qualquer pedido coberto pelo Odin; explicar como o Odin funciona sem sobrepor o `CLAUDE.md` do projeto (7.6, 22.2) |
-| C7 | **Catálogo** | `catalog/` neste repositório (YAML) → Firestore | Quais skills existem, a versão fixada (commit SHA) de cada uma, perfis, canais |
+| C7 | **Catálogo** | `catalog/` neste repositório (YAML) → job `odin-publisher` (confere a assinatura) → Firestore | Quais skills existem, a versão fixada (commit SHA) de cada uma, perfis, canais |
 | C8 | **Pipeline de publicação** | GitHub Actions + Workload Identity Federation (sem chave de serviço) | Validar, testar, empacotar, assinar e publicar skills e conhecimento |
-| C9 | **Base de conhecimento (RAG)** | Repositório `odin-knowledge` (markdown) → Cloud SQL Postgres + pgvector, embeddings Vertex AI | Conhecimento funcional, técnico e de regra de negócio, com citação, vigência e controle de acesso |
+| C9 | **Base de conhecimento (RAG)** | Repositório `odin-knowledge` (markdown) → job `odin-indexer` → Firestore com busca vetorial (Cloud SQL Postgres + pgvector quando houver conhecimento confidencial), embeddings Vertex AI | Conhecimento funcional, técnico e de regra de negócio, com citação, vigência e controle de acesso |
 | C10 | **Observabilidade e auditoria** | Cloud Logging → BigQuery, Cloud Monitoring, Error Reporting | Trilha de auditoria imutável, métricas de uso e de roteamento, alertas |
-| C11 | **Infraestrutura como código** | Terraform (`infra/`) | Recriar o ambiente inteiro; isolar dev/poc e produção |
+| C11 | **Infraestrutura como código** | Terraform (`infra/`), com o estágio de custo como variável | Recriar o ambiente inteiro; isolar `poc` e `prod`; impedir recurso pago fora do estágio |
 | C12 | **`odin lint`** | Node, no pipeline e no `odin doctor` | Regras de isolamento, colisão, tamanho, licença e segredo (22.5) |
-| C13 | **Skills de manutenção** | `odin-curador`, `odin-construtor`, `odin-auditor` (neste repositório) | Ajudar os mantenedores a incorporar skills, construir e auditar o Odin; a decisão fica no código (22.4) |
+| C13 | **Skills de manutenção** | `odin-dev`, `odin-curador`, `odin-arquiteto`, `odin-operacao`, revisores e auditor (neste repositório) | Ajudar os mantenedores a construir, sustentar e auditar o Odin e a incorporar skills; a decisão fica no código (22.4) |
+| C14 | **Rotinas e teto de custo** | Job `odin-jobs` a cada 15 min (`odin-tick`); orçamento com disjuntor (`odin-disjuntor`) | Sincronizar com o GitHub, expirar concessões, teste sintético, agregados; fechar o ingress se o gasto disparar |
+| C15 | **Contratos** | `schemas/` (JSON Schema, ferramentas MCP, OpenAPI) | Fonte única dos contratos, validada no CI e usada pelo código |
 
 ---
 
@@ -348,7 +352,7 @@ O texto de uma skill é instrução para o modelo e não pode ser verificado pel
 - Conhecimento do RAG é **evidência, nunca instrução**: as respostas vêm marcadas e as skills mandam tratá-las como dado. A ingestão rejeita texto com instrução dirigida a agentes (como no caso de documento com "nota para o revisor de IA").
 
 ### 9.3 Governança do repositório
-Proteção de branch em `main` e nas tags, revisão obrigatória de um mantenedor diferente do autor, MFA na conta do GitHub, CODEOWNERS por pasta (`catalog/`, `policies/`, `infra/`), commits assinados nos merges do catálogo e Dependabot nas dependências do runtime.
+GitHub Free (decisão 41): em repositório privado não há proteção de branch nem revisão obrigatória. O que vale: **só o mantenedor tem escrita**; MFA na conta do GitHub; todo merge por PR com o CI verde e os revisores independentes; donos por área registrados no `CONTRIBUTING.md` (o `CODEOWNERS` entra com a organização GitHub); Dependabot nas dependências e nas ações; `SECURITY.md`, `CONTRIBUTING.md` e `CHANGELOG.md` na raiz. A garantia de integridade é a **assinatura no KMS**, conferida no registro e na máquina ([segurança 05](seguranca/05-cadeia-de-suprimentos.md)).
 
 ### 9.4 Modelo de ameaças (resumo)
 | Ameaça | Mitigação |
@@ -470,24 +474,25 @@ Mudanças, iguais para todas:
 
 | Recurso | Uso | Observação |
 |---|---|---|
-| Projeto `odin-poc` (depois `odin-prod`) | Isolamento | Terraform recria tudo |
-| Região `southamerica-east1` | Latência e residência de dados | Conferir disponibilidade dos serviços na região |
-| Cloud Run: `odin-mcp`, `odin-portal` | Serviços | Mínimo de 0 instâncias na prova de conceito (custo perto de zero); 1 instância quente em produção para evitar partida a frio |
+| Projeto `odin-poc` (depois `odin-prod`) | Isolamento | Terraform recria tudo; cada projeto num estágio de custo (E0, E1, E2) |
+| Região `southamerica-east1` | Latência e residência de dados | Conferir disponibilidade e preço dos serviços na região |
+| Cloud Run (serviços): `odin-mcp`, `odin-sts`, `odin-portal` | Atender pessoas | **Mínimo de 0 e máximo de 3 instâncias** em E0 e E1; instância quente só por gatilho medido |
+| Cloud Run (jobs): `odin-publisher`, `odin-indexer`, `odin-jobs` | Publicar, indexar, rotinas | Uma imagem, três contas de serviço; sem porta e sem custo parado |
+| Cloud Scheduler: `odin-tick` | Um agendamento a cada 15 min | Faixa gratuita |
 | Identity Platform | Login com **GitHub** (Google e Microsoft opcionais) e segundo fator (TOTP) | Faixa gratuita ampla para poucos usuários **[VERIFICAR]** os preços e o MFA com login federado |
-| Firestore (nativo) | Catálogo, usuários, perfis, dispositivos, revogações | Sem servidor |
-| Firestore (busca vetorial) → Cloud SQL Postgres + pgvector | RAG | **PoC no Firestore** (faixa gratuita, atrás de uma interface); **Cloud SQL** quando o orçamento for liberado, antes de conhecimento confidencial ou do time (decisão 7); AlloyDB só se o volume exigir |
-| Vertex AI (embeddings) | Roteamento e RAG | Custo por chamada, baixo |
+| Firestore (nativo) | Catálogo, usuários, perfis, dispositivos, revogações; RAG e roteamento (busca vetorial) | Sem servidor, faixa gratuita |
+| Cloud SQL Postgres + pgvector | RAG com segunda barreira no banco | **Só por gatilho:** primeiro conhecimento confidencial. Menor instância, sem alta disponibilidade (decisões 7 e 43) |
+| Vertex AI (embeddings) | Roteamento e RAG | Custo por chamada, baixo; cache |
 | Cloud Storage | Pacotes assinados (versionados, retenção) | URL assinada por pessoa e de curta duração |
-| Cloud KMS | Chave de assinatura dos pacotes e chave dos JWT | Rotação anual |
+| Cloud KMS | Chaves de assinatura dos pacotes, do CLI e dos JWT; envelope de campos | Em software; HSM só em E2 |
 | Secret Manager | Segredos de aplicação | Nada de segredo em variável de ambiente simples |
-| Artifact Registry | Imagens dos serviços | Varredura de vulnerabilidades |
-| Cloud Logging → BigQuery | Auditoria | Coletor dedicado |
-| Cloud Armor (produção) | Limite de taxa e WAF na frente do MCP e do portal | Opcional na prova de conceito |
+| Artifact Registry | Imagens (4) | Varredura de vulnerabilidades e limpeza automática |
+| Cloud Logging → BigQuery | Auditoria | Coletor dedicado; tabela agregada para o portal |
 | Workload Identity Federation | CI do GitHub sem chave de serviço | Escopo mínimo por workflow |
-| Domínio próprio + certificado gerenciado | `odin.<dominio>` e `mcp.odin.<dominio>` | Na prova de conceito pode ser o endereço `run.app` |
-| Orçamento + alertas | Controle de gasto | Alerta em 50%, 90% e 100% |
+| Orçamento + alertas + disjuntor | Controle de gasto | Alertas em 50%, 90%, 100%, 200% e 300%; a 300% o ingress fecha (RB-13) |
+| Load Balancer, Cloud Armor, domínio próprio | Borda com WAF | **Só em E2**, por gatilho; em E0 e E1, endereços `run.app` |
 
-**Custo estimado da prova de conceito:** dezenas de dólares por mês, dominado pelo Cloud SQL. O resto fica perto de zero com escala até zero e faixas gratuitas. **Estimativa**, a confirmar na calculadora de preços do GCP. Para cortar ainda mais na prova de conceito: usar a busca vetorial do Firestore no lugar do Cloud SQL e aceitar busca só vetorial (sem a híbrida).
+**Custo estimado:** até **US$ 3 por mês** na prova de conceito e até **US$ 25 por mês** com o time (o Cloud SQL mínimo é quase todo esse valor, e só entra com conhecimento confidencial). O desenho anterior de "produção" custaria algumas centenas de dólares por mês. Modelo, gatilhos e disjuntor em [arquitetura 05](arquitetura/05-custos-e-finops.md). **Estimativa**, a confirmar na calculadora de preços do Google Cloud.
 
 ---
 
@@ -503,17 +508,17 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 
 | Fase | Entrega | Critério de aceite |
 |---|---|---|
-| **F0 Verificações e ferramentas de manutenção** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; importação `@~/.odin/ODIN.md` no `CLAUDE.md` do usuário (R13); **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa. Também: as skills `odin-construtor` e `odin-curador` (são markdown e agentes, e ajudam a construir as fases seguintes) | Planilha de resultado; o desenho é ajustado antes de F1 |
-| **F1 Fundação** | Projeto GCP, Terraform, WIF, orçamento, Cloud Run vazio, domínio (ou `run.app`) | `terraform apply` do zero em menos de 15 min; CI publica uma imagem sem chave |
+| **F0 Verificações e ferramentas de manutenção** | Um servidor MCP de brinquedo (Cloud Run ou local) para testar no Claude Code, no terminal **e** na extensão do VS Code: `headersHelper` no escopo do usuário com renovação em `401`; prompts como `/`; recursos com `@`; observador de hooks e de agentes; limite de saída; instruções do servidor como gatilho; importação `@~/.odin/ODIN.md` no `CLAUDE.md` do usuário (R13); **busca de ferramentas através do LiteLLM** (R11); OAuth do MCP como alternativa; **MCP com resposta JSON e sem fluxo SSE**, partida a frio com escala a zero e preços na região (ADR 0018). Também: as skills `odin-construtor` e `odin-curador` (são markdown e agentes, e ajudam a construir as fases seguintes) | Planilha de resultado; o desenho é ajustado antes de F1 |
+| **F1 Fundação** | Projeto GCP, Terraform com estágio de custo, WIF, orçamento com disjuntor, limpeza do Artifact Registry, Cloud Run vazio em `run.app`, `schemas/` usados pelo código | `terraform apply` do zero em menos de 15 min; CI publica uma imagem sem chave; conformidade de custo (CF-11 a CF-14) verde |
 | **F2 Identidade** | Identity Platform com GitHub, **segundo fator** (TOTP e passkey, códigos de recuperação), emissor de JWT (KMS), device flow com chave do dispositivo, portal mínimo (login, ativação, dispositivos, revogar), revogação | Login no navegador → credencial no cofre → `odin token` emite JWT; revogar invalida em ≤ 30 s |
 | **F3 Catálogo e publicação** | `odin.yaml` (schema), `catalog/`, `odin lint`, pipeline completo (validar, testar, reescrever caminhos, empacotar com dependências, assinar, publicar), canais | Merge no catálogo publica as 5 skills; pacote adulterado é recusado pelo CLI; pacote com `CLAUDE.md`, colisão de nome, Unicode oculto ou avaliação determinística falhando é recusado pelo pipeline; promoção sem relatório de avaliação do SHA é recusada |
 | **F4 MCP** | Ferramentas da seção 10, autorização por perfil e projeto, auditoria | PO de teste vê só Discovery e Designer; dev vê Developer, Data e Test; 100% das chamadas auditadas |
 | **F5 Runtime local** | CLI completo (`setup`, `ensure`, `doctor`, `token`, `guard-ping`, `update`, `uninstall`), `odin-guard` com as políticas migradas, skill local `odin`, `ODIN.md` e blocos marcados, materialização de agentes | Máquina limpa → 3 passos de onboarding → primeira skill roda; guard ausente bloqueia a skill; runtime adulterado depois da instalação é detectado e reinstalado (DT-19); nenhum arquivo escrito no projeto; `uninstall` deixa `settings.json` e `CLAUDE.md` do usuário como estavam; Windows, macOS e Linux |
 | **F6 Adaptação das 5 skills** | Itens da seção 12 em todos os repositórios, incluindo mover as regras dos `CLAUDE.md` e extrair as bibliotecas de terceiros duplicadas (com o `odin-curador`) | Os testes atuais de cada skill passam rodando a partir do runtime Odin; cada skill tem `evals/` com ao menos 10 casos (negativos e de injeção incluídos) e nota de referência registrada; uma tarefa real de cada skill completa ponta a ponta |
-| **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, pgvector, segurança em nível de linha, avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
-| **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Teste de carga com **50 usuários** simultâneos (decisão 33) dentro dos SLOs; simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
+| **F7 Conhecimento** | Repositório `odin-knowledge`, pipeline, `KnowledgeStore` no Firestore, implementação pgvector com segurança em nível de linha testada em contêiner (pronta para o gatilho), avaliação, propostas e curadoria no portal | Perguntas de avaliação com recuperação ≥ meta definida; pessoa do projeto A não recupera nada do projeto B (teste automatizado) |
+| **F8 Operação** | Painéis, alertas, auditoria no BigQuery, runbooks (incidente, rotação de chave, rollback, entrada e saída de pessoa) | Teste de carga com **50 usuários** simultâneos (decisão 33) dentro dos SLOs e do teto de 3 instâncias; partida a frio medida (p95 ≤ 3 s); ensaio do disjuntor de custo; simulação: revogar uma pessoa, voltar uma versão e trocar a chave, cada uma em menos de 10 min |
 | **F9 Validação pessoal** | Uso real pelo mantenedor por um período com as 5 skills (como PO e como dev, com dois usuários de teste) | Checklist da seção 17 todo verde |
-| **F10 Preparação para o time** | Portão 2 da seção 23 (organização GitHub, domínio, Cloud SQL, Load Balancer e Cloud Armor, segundo super-admin, jurídico), guia de onboarding de uma página, repositório de suporte, **ensaio do corte** com 2 ou 3 pessoas | Portão 2 todo verde; 3 pessoas fazem o onboarding sozinhas em menos de 10 min no ensaio |
+| **F10 Preparação para o time** | Portão 2 da seção 23 (organização GitHub, projeto `prod` em E1, segundo super-admin, jurídico, pentest), guia de onboarding de uma página, repositório de suporte, **ensaio do corte** com 2 ou 3 pessoas | Portão 2 todo verde; 3 pessoas fazem o onboarding sozinhas em menos de 10 min no ensaio |
 
 ### 16.1 Estimativa (mantenedor + Claude, tempo integral; decisão 35)
 
@@ -526,10 +531,10 @@ As fases são a ordem de **construção**. A prova de conceito só termina com a
 | F4 MCP | 1,5 semana |
 | F5 Runtime local (prioridade Windows nativo e extensão do VS Code) | 2 semanas |
 | F6 Adaptação das 5 skills (inclui as avaliações, ADR 0017) | 2,5 semanas |
-| F7 Conhecimento (Firestore na PoC) | 1 semana |
+| F7 Conhecimento (Firestore; pgvector testado em contêiner) | 1 semana |
 | F8 Operação | 1 semana |
 | F9 Validação pessoal | 2 semanas |
-| F10 Preparação para o time (inclui organização GitHub, domínio, Cloud SQL, segundo super-admin, jurídico) | 1,5 semana |
+| F10 Preparação para o time (inclui organização GitHub, projeto `prod` em E1, segundo super-admin, jurídico) | 1,5 semana |
 | **Total** | **cerca de 16 semanas (± 30%)** |
 
 Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (dependem do comportamento real do Claude Code no Windows e na extensão do VS Code). Revisar a estimativa ao fim da F0.
@@ -545,6 +550,7 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 - **Roteamento:** ≥ 90% de acerto no conjunto de intenções de teste; "não sei" em vez de chute abaixo do limiar.
 - **Comportamento das skills:** nenhuma promoção para `stable` com queda de nota maior que 5 pontos ou caso crítico falhando (ADR 0017).
 - **Conhecimento:** toda resposta com citação; meta de recuperação por coleção atingida; nenhuma injeção aceita na ingestão (casos de teste).
+- **Custo:** ≤ US$ 3 por mês em E0 e ≤ US$ 25 em E1; nenhum recurso de custo fixo sem ADR de gatilho; disjuntor ensaiado.
 - **Isolamento:** 0 arquivos escritos pelo Odin dentro de projetos; 0 colisões de nome não resolvidas no catálogo; `odin uninstall` devolve os arquivos do usuário idênticos ao que eram.
 
 ---
@@ -565,12 +571,16 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 | R6 | Manter um instalador e um guard próprios (código com acesso total) | Testes sérios, revisão dupla, assinatura, escopo mínimo |
 | R7 | Qualidade do RAG (conhecimento desatualizado erra com confiança) | Vigência, `substitui`, curadoria, avaliação automática, painel de lacunas |
 | R8 | Redistribuição de skills de terceiros | Seção 15 |
-| R9 | Custo do GCP crescer com o time | Orçamento e alertas; escala até zero; revisar o Cloud SQL depois da prova de conceito |
+| R9 | Custo do GCP crescer com o time | Estágios de custo com gatilhos, escala a zero, teto de 3 instâncias, orçamento com disjuntor, conformidade CF-11 a CF-14 (arquitetura 05) |
 | R10 | ~~Identidade do LiteLLM separada da do Odin~~ | **Encerrado:** o Odin não correlaciona com o LiteLLM (decisão 27) |
 | R15 | Pessoa única na PoC (administração, aprovação de skills, curadoria e suporte) | Segundo super-admin obrigatório antes do time; runbooks escritos (decisões 26 e 31) |
 | R16 | Migração por corte único (decisão 29) | Ensaio do corte, guia de uma página, plano de volta com as cópias arquivadas por 30 dias |
 | R18 | GitHub Free em repositório privado: sem proteção de branch, revisão obrigatória, tags protegidas, ambientes com aprovação nem atestação (decisão 41) | Só o mantenedor escreve; 2FA; condições da identidade federada por `actor_id` e `main`; checagens no próprio workflow; assinatura no KMS como garantia principal |
 | R17 | Sem jurídico ou DPO (decisão 37) | Bloqueio formal: o time não entra sem validação de LGPD, termos e licenças |
+| R20 | Sem WAF em E0 e E1 (ADR 0018) | Token em toda rota útil, entrada validada por schema, superfície anônima listada e testada, limites no serviço, teto de instâncias, disjuntor; pentest antes do time; Cloud Armor por gatilho |
+| R21 | Saída de pessoa pelo GitHub detectada em até 15 min, sem webhooks (ADR 0018) | Revogação imediata pelo portal (≤ 30 s); runbook de saída manda suspender no portal; webhooks em E2 |
+| R22 | Endereços `run.app` no E1: troca futura para domínio próprio | O CLI lê os endereços de `/.well-known/odin-configuration`; o token aceita dois `aud` na transição |
+| R23 | Partida a frio com escala a zero piora a primeira chamada do dia | Reforço de CPU na inicialização, imagens pequenas, token em cache; medir na F8; instância quente só no `odin-mcp`, por gatilho |
 | R19 | Avaliação de comportamento com modelo é não determinística e roda só na máquina do mantenedor (ADR 0017) | 3 repetições por caso, mediana, tolerância de 5 pontos; nota principal por código; camada determinística no CI; casos `critico` sem tolerância |
 | D1 | Provedor de login | **Decidido: GitHub** (SSO), via Identity Platform; Google ou Microsoft podem ser ligados depois. Times do GitHub viram squads quando houver organização GitHub |
 | D2 | Conhecimento por projeto: quem é dono em cada cliente | **PoC: o mantenedor cura tudo** (decisão 20); definir por projeto antes do time |
@@ -580,16 +590,20 @@ Estimativa de ordem de grandeza: as fases F0 e F5 são as mais incertas (depende
 
 ## 19. Estrutura deste repositório
 
-Já existem: `CLAUDE.md`, `AGENTS.md`, `docs/` (com `ESTADO.md` e `adr/`), `apresentacao/`, `.claude/` (skills `odin-dev`, `odin-curador`, `odin-arquiteto`, `odin-operacao`; agentes revisores e auditor; hook `guard-docs`), `scripts/` (ADR, sessão, verificações de documentação, skills e conformidade), `tests/` e `.github/workflows/ci.yml`. O restante entra a partir da F1:
+Já existem: `CLAUDE.md`, `AGENTS.md`, `docs/` (com `ESTADO.md` e `adr/`), `apresentacao/`, `.claude/` (skills `odin-dev`, `odin-curador`, `odin-arquiteto`, `odin-operacao`; agentes revisores e auditor; hook `guard-docs`), `scripts/` (ADR, sessão, verificações de documentação, skills e conformidade), `tests/`, `schemas/`, `.github/` (CI, Dependabot, modelo de PR) e os arquivos de governança da raiz (`SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`). O restante entra a partir da F1:
 
 ```
-apps/mcp-server/        servidor MCP (Cloud Run)
-apps/portal/            portal e emissor de tokens
+apps/mcp-server/        odin-mcp: servidor MCP + API /v1
+apps/sts/               odin-sts: emissor de tokens (device flow, JWKS)
+apps/portal/            odin-portal: interface e BFF administrativo
+apps/jobs/              uma imagem para os jobs odin-publisher, odin-indexer e odin-jobs
+apps/disjuntor/         função que fecha o ingress a 300% do orçamento
+packages/shared/        limites, erros, tipos gerados dos schemas
 packages/cli/           odin CLI
 packages/guard/         odin-guard + módulos de política (migrados das skills)
-packages/manifest/      schema do odin.yaml e do manifesto assinado
 packages/router/        roteamento (embeddings + regras)
-packages/lint/          odin lint (isolamento, colisões, tamanho, licença, segredo)
+packages/lint/          odin lint (isolamento, colisões, Unicode oculto, tamanho, licença, segredo)
+schemas/                contratos: odin.yaml, manifesto, avaliações, auditoria, ferramentas MCP, OpenAPI /v1 (já existe)
 policies/               módulos de política do guard, com testes
 .claude/skills/         odin-dev, odin-curador, odin-arquiteto, odin-operacao (para mantenedores; ADR 0016)
 .claude/agents/         revisores (arquitetura, segurança, testes, documentação) e auditor
@@ -597,8 +611,8 @@ scripts/                ADR, sessão, verificações e conformidade
 libs/                   pacotes de biblioteca de terceiros compartilhados, com LICENSE e NOTICE
 catalog/                skills.yaml, perfis.yaml
 pipeline/               validação, empacotamento, assinatura, publicação
-infra/                  Terraform (poc e prod)
-docs/                   este plano, runbooks, guia de onboarding
+infra/                  Terraform (módulos + envs poc e prod, com estágio de custo)
+docs/                   este plano, arquitetura, segurança, portal, ADRs
 ```
 Conhecimento em repositório separado (`odin-knowledge`), com donos e ritmo próprios.
 
@@ -676,6 +690,7 @@ O plano passou por quinze rodadas de revisão contra os objetivos (fricção, go
 | 14 | Escala | Meta de carga não estava nas fases | Teste com 50 usuários na F8 |
 | 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
 | 15 | Continuidade | Outro chat não conheceria as regras nem o estado do projeto | ADR 0016: `CLAUDE.md`, `docs/ESTADO.md`, ADRs, skills `odin-dev`/`odin-curador`/`odin-arquiteto`/`odin-operacao`, revisores, hook `guard-docs`, verificações e CI (seções 19 e 22.4) |
+| 17 | Custo e arquitetura | "Produção" superdimensionada para 20 pessoas (centenas de dólares por mês); 5 serviços + 2 jobs + Pub/Sub, com o Pub/Sub entregando a um job (impossível); sem teto de gasto; MCP sem regra para fluxo aberto; trechos ainda supondo proteção de branch; contratos só em prosa | ADR 0018: estágios E0, E1 e E2 com gatilhos (arquitetura 05), 3 serviços + 3 jobs, sem webhooks nem Pub/Sub de aplicação, publisher confere a assinatura, teto de 3 instâncias e disjuntor, MCP com resposta JSON, `schemas/` validados no CI, governança do repositório, CF-11 a CF-14; riscos R20 a R23; decisões 42 a 48 |
 | 16 | Qualidade e segurança | Comparação com práticas de mercado (skills por MCP): faltavam avaliação de comportamento por skill, recusa de Unicode oculto, integridade do runtime no uso e diretriz de economia de contexto | ADR 0017: `evals/` e portão de promoção (8.3, 8.4), Unicode oculto no lint, no RAG e no CI deste repositório (8.3, 11.3, 22.5), `ensure` confere hashes na primeira chamada (7.2, DT-19), alvo de 5.000 tokens e scripts que devolvem resumo (10); risco R19 |
 
 **Rodada seguinte, recomendada:** depois de F0 (verificações práticas), revisar o plano com os resultados reais antes de escrever código.
@@ -790,14 +805,17 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 | Item | Por quê |
 |---|---|
 | Organização GitHub criada, com 2FA obrigatório e os repositórios transferidos (decisão 4) | Identidade e times |
-| Domínio próprio + Load Balancer + Cloud Armor, ingress só pela borda (decisão 6) | Borda de segurança |
-| RAG migrado para Cloud SQL, testes de isolamento no banco verdes (decisão 7) | Antes de qualquer conhecimento confidencial |
+| Projeto `prod` criado no **estágio E1** (mesma topologia da PoC), com orçamento, alertas e disjuntor ensaiado (decisões 42 e 45) | Custo sob controle antes de abrir para 20 pessoas |
+| Nenhum conhecimento `confidencial` no ar sem o Cloud SQL e os testes de isolamento no banco verdes (decisões 7 e 43) | Separação entre clientes |
+| Partida a frio e carga medidas dentro dos SLOs; superfície anônima testada (CT-11) | Substitui a borda com WAF em E1 (R20) |
 | Segundo super-admin nomeado e com passkey (decisão 26, R15) | Pessoa única |
 | Exceção registrada do quatro olhos no catálogo (decisões 31 e 41: só o mantenedor escreve) e revisão das compensações do GitHub Free | Integridade da distribuição |
 | Jurídico: base legal LGPD, termos de uso, aviso de privacidade, licenças de terceiros (decisão 37, R17) | Conformidade |
 | E-mail das notificações escolhido (decisão 36) | Avisos de segurança às pessoas |
 | Pentest externo sem achado crítico ou alto em aberto ([segurança 10](seguranca/10-controles-e-testes.md)) | Segurança |
 | Ensaio do corte concluído (23.3) | Corte único (decisão 29, R16) |
+
+**Não são mais itens do Portão 2** (ADR 0018): domínio próprio, Load Balancer e Cloud Armor. Entram por gatilho, no estágio E2 ([arquitetura 05](arquitetura/05-custos-e-finops.md), seção 3).
 
 ### 23.3 Corte único (decisão 29)
 1. **Ensaio:** 2 a 3 pessoas fazem o onboarding sozinhas, usam as 5 skills por 1 semana e removem as cópias do projeto com o `odin doctor`.

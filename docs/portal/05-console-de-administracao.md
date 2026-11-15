@@ -92,7 +92,9 @@ Fila por coleção e projeto (o curador só vê a sua): proposta, origem (skill 
 Busca por pessoa, ação, alvo, resultado e período; detalhe com antes e depois; exportação. Cada papel vê o seu recorte (o auditor vê tudo).
 
 ## 12. Saúde (`/admin/saude`)
-Disponibilidade e latência por serviço, erros, versões do CLI e dos runtimes em uso (deriva), guard inativo por máquina, acerto do roteamento, lacunas de conhecimento.
+Disponibilidade e latência por serviço (com a partida a frio separada), erros, versões do CLI e dos runtimes em uso (deriva), guard inativo por máquina, acerto do roteamento, lacunas de conhecimento.
+
+**Cartão de custo** (ADR 0018): estágio atual (E0, E1 ou E2), gasto do mês contra a meta do estágio, estado do disjuntor (armado ou acionado) e os gatilhos medidos para o próximo estágio (partida a frio, picos de recusa por IP, recuperação do RAG). O valor vem da exportação de faturamento para o BigQuery; sem ela, o cartão mostra só a meta e o link para o console de faturamento.
 
 ## 13. Configurações (`/admin/configuracoes`)
 Validades (sessão, token, dispositivo), limites e cotas padrão, provedores de login, regras de MFA, mensagem de manutenção. Toda mudança é um pedido a quatro olhos.

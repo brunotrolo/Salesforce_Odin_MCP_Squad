@@ -30,7 +30,7 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 ## F4 · MCP (1,5 semana)
 - **Ler:** plano 10; arquitetura 03 seção 6; portal 04, 06, 09.
 - **Entregar:** `apps/mcp-server` com as 7 ferramentas, prompts `/odin:*`, recursos `skill://`, instruções do servidor, autorização por perfil e projeto, cotas, auditoria, `mcp_tools`, API `/v1`.
-- **Testes:** contrato de cada ferramenta (entrada, saída, tamanho ≤ 8.000 tokens, erros estáveis); CT-06, CT-07, CT-10, CT-21; roteamento ≥ 90% no conjunto de intenções; fumaça e sintético no Google Cloud.
+- **Testes:** contrato de cada ferramenta (entrada, saída, tamanho ≤ 8.000 tokens, erros estáveis); CT-06, CT-07, CT-10, CT-21; roteamento ≥ 90% no conjunto de intenções; fumaça e sintético no Google Cloud; `GET` no endpoint MCP responde 405 (sem fluxo SSE); definições carregadas de `schemas/mcp-tools.json`.
 
 ## F5 · Runtime local (2 semanas)
 - **Ler:** plano 7 e 22; segurança 06; decisões 14, 15, 22, 23, 24.
@@ -42,11 +42,11 @@ Regra geral de cada fase: (1) ler os documentos listados; (2) quebrar em tarefas
 
 ## F7 · Conhecimento (1 semana)
 - **Ler:** plano 11; arquitetura 03 seções 4.3 e 4.3.1; segurança 08; decisões 18 a 20.
-- **Entregar:** `KnowledgeStore` (Firestore na PoC), `odin-indexer`, avaliação de recuperação, curadoria no portal, ingestão da estrutura de *system patterns* do mantenedor.
+- **Entregar:** `KnowledgeStore` (implementação Firestore em uso; implementação pgvector com política de linha testada em contêiner, pronta para o gatilho), `odin-indexer`, avaliação de recuperação, curadoria no portal, ingestão da estrutura de *system patterns* do mantenedor.
 - **Testes:** ≥ 80% no top 5; isolamento entre projetos na aplicação; injeção e Unicode oculto rejeitados na ingestão.
 
 ## F8 · Operação (1 semana)
-- **Entregar:** painéis, alertas (Cloud Monitoring com e-mail ao mantenedor), coletor de auditoria, runbooks testados, teste sintético agendado, teste de carga com 50 usuários.
+- **Entregar:** painéis, alertas (Cloud Monitoring com e-mail ao mantenedor), coletor de auditoria, runbooks testados, teste sintético no `odin-tick`, teste de carga com 50 usuários dentro do teto de 3 instâncias, medição da partida a frio (p95 ≤ 3 s), **ensaio do disjuntor de custo** (CT-28, RB-13).
 - **Aceite:** simulações de RB-02, RB-04, RB-09 em < 10 min cada; carga dentro dos SLOs.
 
 ## F9 · Validação pessoal (2 semanas)

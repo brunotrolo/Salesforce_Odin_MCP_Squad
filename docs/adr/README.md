@@ -4,13 +4,15 @@ Toda mudança de decisão no Odin, depois da linha de base abaixo, vira um ADR n
 
 ## Linha de base (não repetir aqui)
 - **ADR-01 a ADR-15:** decisões de arquitetura em [arquitetura de solução, seção 5](../arquitetura/01-arquitetura-de-solucao.md).
-- **Decisões 1 a 41:** respostas do mantenedor em [DECISOES.md](../DECISOES.md).
+- **Decisões 1 a 41:** respostas do mantenedor em [DECISOES.md](../DECISOES.md) (as decisões 42 a 48 vieram com o ADR 0018).
 - **Rodadas de revisão 1 a 15** (a 16 já é o ADR 0017): histórico em [plano, seção 20](../PLANO.md).
 
 ## Quando abrir um ADR
 - Mudar qualquer documento protegido: `docs/DECISOES.md`, `docs/PLANO.md`, `docs/arquitetura/**`, `docs/seguranca/**`, `docs/portal/**`.
 - Resultado da F0 que confirma ou derruba uma premissa `[VERIFICAR]`.
 - Trocar uma tecnologia, um fluxo de autenticação, um limite (TTL, cota, tamanho) ou uma política do guard.
+- **Criar um recurso de nuvem com custo fixo** ou subir de estágio de custo: o ADR registra o gatilho e a medição ([arquitetura 05](../arquitetura/05-custos-e-finops.md)).
+- Mudar um contrato em `schemas/`.
 - Incidente que muda um controle.
 
 Correções de texto sem efeito em decisão (ortografia, link) também passam pelo ADR aberto, mas podem reaproveitar um ADR de "manutenção de documentação" já aceito: `node scripts/adr.mjs abrir <n>`.
@@ -32,3 +34,4 @@ O hook `.claude/hooks/guard-docs.mjs` bloqueia a edição dos documentos protegi
 |---|---|---|
 | [0016](0016-skill-de-desenvolvimento-e-sustentacao-do-odin.md) | Aceito | Skill de desenvolvimento e sustentação do Odin |
 | [0017](0017-evals-por-skill-unicode-oculto-integridade-no-uso-e-economia.md) | Aceito | Evals por skill, Unicode oculto, integridade no uso e economia de contexto |
+| [0018](0018-arquitetura-enxuta-por-estagios-de-custo-contratos-em-schema.md) | Aceito | Arquitetura enxuta por estágios de custo, contratos em schema e governança do repositório |

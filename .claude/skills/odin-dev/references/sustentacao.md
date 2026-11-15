@@ -23,9 +23,9 @@
 ## Rotina do mantenedor
 | Frequência | O quê |
 |---|---|
-| Semanal | Relatório do `odin-auditor`; issues do `odin-suporte`; alertas abertos; Dependabot |
-| Mensal | Rotação da credencial do teste sintético; revisão de custos; lacunas de conhecimento |
-| Trimestral | Revisão de acessos (RB-12); revisão das compensações do GitHub Free; reavaliar cotas |
+| Semanal | Relatório do `odin-auditor`; issues do `odin-suporte`; alertas abertos; Dependabot; **custo por serviço** e maior variação da semana (arquitetura 05, seção 8) |
+| Mensal | Rotação da credencial do teste sintético; custo contra a meta do estágio (E0 ≤ US$ 3, E1 ≤ US$ 25); limpeza do Artifact Registry conferida; lacunas de conhecimento |
+| Trimestral | Revisão de acessos (RB-12); revisão das compensações do GitHub Free; reavaliar cotas; reavaliar os gatilhos de estágio com as medições (partida a frio, DT-18, recuperação do RAG) |
 | Semestral | Rotação de chaves e segredos (RB-04, RB-06); simulação de incidente; revisão do modelo de ameaças |
 | Anual | Rotação de `bundle-signing` e `cli-signing` (RB-05); pentest |
 

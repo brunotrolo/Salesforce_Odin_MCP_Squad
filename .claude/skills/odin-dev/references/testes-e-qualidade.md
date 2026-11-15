@@ -5,14 +5,15 @@
 |---|---|---|---|
 | **Unitário** | Funções puras: validação de JWT, avaliação de política, roteamento, lint, assinatura | CI (Linux) e local | Todo PR |
 | **Contrato MCP** | Cada ferramenta: entrada válida e inválida, saída, tamanho ≤ 8.000 tokens, códigos de erro, autorização | CI com emuladores | Todo PR |
-| **Integração local** | Serviços contra os **emuladores** (Firestore, Pub/Sub, Identity Platform via Firebase Local Emulator Suite) | CI e local | Todo PR |
-| **Conformidade** | Regras invioláveis verificáveis (`scripts/conformidade.mjs`) | CI | Todo PR |
+| **Integração local** | Serviços contra os **emuladores** (Firestore e Identity Platform via Firebase Local Emulator Suite) e contêiner Postgres + pgvector para o isolamento do RAG | CI e local | Todo PR |
+| **Conformidade** | Regras invioláveis verificáveis, inclusive de custo (`scripts/conformidade.mjs`, CF-01 a CF-14) | CI | Todo PR |
+| **Contratos** | Schemas, exemplos e definição das ferramentas MCP (`scripts/verificar-schemas.mjs`) | CI | Todo PR |
 | **Unicode oculto** | Largura zero, controles de direção, *tags* (`scripts/lib/unicode.mjs`, CT-25) | CI (`verificar:docs`, `verificar:skills`); depois `odin lint` e ingestão do RAG | Todo PR |
 | **Integridade no uso** | Runtime alterado depois da instalação é detectado e reinstalado (CT-26, DT-19) | Matriz do CLI | Todo PR que toca `packages/cli` |
 | **Segurança** | SAST (CodeQL), segredos (gitleaks), dependências (OSV), IaC (Checkov/tfsec), testes de autorização e de tokens | CI | Todo PR; DAST semanal |
-| **Matriz do CLI e do guard** | Windows nativo (PowerShell e `cmd`), macOS e Linux | CI (`windows-latest`, `macos-latest`, `ubuntu-latest`) | Todo PR que toca `packages/cli` ou `packages/guard` |
+| **Matriz do CLI e do guard** | Windows nativo (PowerShell e `cmd`), macOS e Linux | CI: `windows-latest` e `ubuntu-latest` em todo PR que toca `packages/cli` ou `packages/guard`; `macos-latest` em release e semanal (custa dez vezes mais minutos) | PR, release e semanal |
 | **Fumaça pós-deploy (GCP)** | Saúde dos serviços, MCP `initialize` + `tools/list` + `odin_rotear` com conta de teste, JWKS, portal `/entrar` | GitHub Actions logo após o deploy | Todo deploy; falha → rollback automático |
-| **Sintético agendado (GCP)** | Fluxo de ponta a ponta com identidade de teste: token, roteamento, carregar skill, buscar conhecimento, auditoria registrada | Cloud Run Job + Cloud Scheduler (a cada 15 min) | Contínuo a partir da F4 |
+| **Sintético agendado (GCP)** | Fluxo de ponta a ponta com identidade de teste: token, roteamento, carregar skill, buscar conhecimento, auditoria registrada | Tarefa do job `odin-jobs`, pelo `odin-tick` (a cada 15 min) | Contínuo a partir da F4 |
 | **Carga (GCP)** | 50 usuários simultâneos (decisão 33), SLOs do MCP e do STS | k6 a partir do CI, sob demanda | F8 e antes de liberar versões grandes |
 | **Ponta a ponta do portal** | Playwright nos critérios AC-U e AC-A | CI contra emuladores; depois contra a PoC | Todo PR do portal |
 | **Ponta a ponta do produto** | Uma tarefa real de cada skill pelo Odin | Máquina do mantenedor (Windows + VS Code) | F6 e F9 |

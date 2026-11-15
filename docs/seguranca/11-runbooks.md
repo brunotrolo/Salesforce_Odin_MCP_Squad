@@ -46,11 +46,11 @@ Quando usar: suspeita de comprometimento amplo (por exemplo, chave de JWT, base 
 
 > A chave `cli-signing` (assinatura dos binários do CLI) segue o mesmo processo do RB-05.
 
-## RB-06 Rotacionar segredos (GitHub App, webhook, OAuth, sessão, pimenta)
-1. Gerar o novo valor na origem (GitHub App: nova chave privada; webhook: novo segredo; OAuth App: novo segredo do cliente).
+## RB-06 Rotacionar segredos (GitHub App, OAuth, sessão, pimenta; webhook em E2)
+1. Gerar o novo valor na origem (GitHub App: nova chave privada; OAuth App: novo segredo do cliente; webhook, só em E2: novo segredo).
 2. Nova versão no Secret Manager (ou no Identity Platform, para o OAuth).
 3. Implantar os serviços apontando para a versão nova.
-4. Conferir o funcionamento (evento de webhook de teste, login de teste).
+4. Conferir o funcionamento (login de teste; execução manual do `odin-jobs` para o GitHub App).
 5. Revogar o valor antigo na origem e desabilitar a versão antiga no Secret Manager.
 6. **Pimenta dos HMAC:** manter a versão anterior para validar os tokens existentes até eles vencerem (90 dias), depois desabilitar.
 
@@ -73,15 +73,15 @@ Quando usar: suspeita de comprometimento amplo (por exemplo, chave de JWT, base 
 3. Conferir na telemetria a queda de uso da versão.
 
 ## RB-10 Restaurar dados
-- **Firestore:** recuperação a um ponto no tempo (até 7 dias) ou importação da exportação diária, primeiro num banco de restauração para conferência e depois troca.
-- **Cloud SQL:** clonar no ponto no tempo e apontar o `odin-mcp` para o clone após conferência; ou reindexar do zero pelo `odin-indexer` a partir do GitHub.
+- **Firestore:** importação da exportação diária (ou recuperação a um ponto no tempo de até 7 dias, a partir do E1), primeiro num banco de restauração para conferência e depois troca.
+- **RAG (Firestore ou Cloud SQL):** reindexar do zero pelo `odin-indexer` a partir do GitHub (caminho principal, cerca de 1 h); no Cloud SQL, também é possível restaurar o backup diário.
 - **Pacotes:** restaurar a versão do objeto no bucket (versionamento) ou republicar pelo pipeline.
-- Registrar RPO e RTO obtidos e comparar com as metas (1 h e 4 h).
+- Registrar RPO e RTO obtidos e comparar com as metas (arquitetura técnica, seção 12).
 
 ## RB-11 Expurgo de um projeto (fim de contrato)
 1. Pedido do responsável pelo cliente, registrado.
 2. 👥 Aprovação de um segundo administrador.
-3. Comando de expurgo: trechos e documentos do projeto no Cloud SQL, snapshots no Cloud Storage, coleções e propostas no Firestore; arquivar o repositório de conhecimento do projeto.
+3. Comando de expurgo: trechos e documentos do projeto no RAG (Firestore ou Cloud SQL), snapshots no Cloud Storage, coleções e propostas no Firestore; arquivar o repositório de conhecimento do projeto.
 4. Registro do expurgo (sem o conteúdo) na auditoria.
 
 ## RB-12 Revisão trimestral de acessos
@@ -89,3 +89,14 @@ Quando usar: suspeita de comprometimento amplo (por exemplo, chave de JWT, base 
 2. Gestores e administradores confirmam no portal em até 15 dias.
 3. O que não for confirmado expira automaticamente.
 4. Relatório para o auditor.
+
+## RB-13 Disjuntor de custo acionado
+Sintoma: alerta DT-20; os três serviços respondem 403/404 para fora; o time segue pelo modo degradado (cópia local, até 7 dias).
+1. **Não reabrir antes de achar a causa.** Abrir o incidente (SEV2).
+2. Relatório de faturamento por serviço e SKU nas últimas 48 h: qual item subiu.
+3. Auditoria no BigQuery e logs do serviço: pico de requisições (de quem, de qual IP, em qual rota), laço de um cliente, job que não termina, consulta cara.
+4. Conter a causa: revogar o dispositivo ou a pessoa (RB-01, RB-02); corrigir o defeito; baixar um limite; se o abuso vem de IPs anônimos, avaliar o gatilho de Cloud Armor ([arquitetura 05](../arquitetura/05-custos-e-finops.md), seção 3).
+5. Reabrir com `terraform apply` (o ingress volta ao valor declarado) e conferir a fumaça (`/healthz`, `tools/list`, `odin_rotear`).
+6. Acompanhar o custo diário por 7 dias; registrar a causa e o valor no relatório do incidente.
+
+Se o disparo foi falso (orçamento baixo demais para o uso real): ajustar o orçamento por ADR, com a medição.

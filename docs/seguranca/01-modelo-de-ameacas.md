@@ -40,13 +40,13 @@ flowchart LR
   end
   subgraph TB2["F2 · Internet"]
   end
-  subgraph TB3["F3 · Borda GCP (LB + Cloud Armor)"]
+  subgraph TB3["F3 · Borda (run.app com TLS em E0 e E1;<br/>Load Balancer + Cloud Armor em E2)"]
   end
   subgraph TB4["F4 · Serviços Odin (Cloud Run)"]
     MCP[odin-mcp]
     STS[odin-sts]
     POR[odin-portal]
-    WH[odin-webhooks]
+    JB[jobs sem porta:<br/>publisher · indexer · jobs]
   end
   subgraph TB5["F5 · Dados e chaves (Firestore, SQL, GCS, KMS, SM)"]
   end
@@ -55,7 +55,7 @@ flowchart LR
   REPO -. "texto lido pelo modelo" .-> CC
   CC & CLI --> TB2 --> TB3 --> TB4 --> TB5
   TB6 -- "WIF / assinatura" --> TB5
-  TB6 -- "webhooks HMAC" --> TB3
+  TB6 -- "WIF: executa o publisher" --> TB4
 ```
 
 Regras de fronteira:
@@ -63,6 +63,7 @@ Regras de fronteira:
 - **F4 → F1:** o texto entregue ao modelo é instrução não verificável pelo modelo. A proteção na máquina é o guard, que é código assinado (ver 06).
 - **Conteúdo do projeto → modelo:** qualquer arquivo do repositório (README, issue, documento do cliente) pode conter instrução maliciosa. É tratado como evidência, nunca como ordem.
 - **F6 → F5:** só o pipeline do repositório Odin, em `main`, com identidade federada, pode assinar e publicar.
+- **F6 → F4:** o pipeline só **executa** o job `odin-publisher`; o job confere a assinatura do manifesto antes de registrar. Em E0 e E1 nenhuma porta recebe eventos do GitHub (ADR 0018).
 
 ## 4. Ameaças por componente (STRIDE)
 
@@ -77,22 +78,24 @@ S = falsificação de identidade · T = adulteração · R = repúdio · I = vaz
 | AM-05 | Token pessoal | S | Token colado num chat ou repositório | Exceção com prazo; prefixo detectável por varredura de segredos; criação com MFA; alerta de uso por IP novo (03) | Médio |
 | AM-06 | `odin-mcp` | E | Pessoa acessa skill ou conhecimento de outro projeto | Direitos no servidor, negado por padrão, segurança em nível de linha no banco, testes de autorização no CI (04, 08) | Baixo |
 | AM-07 | `odin-mcp` | I | Respostas com dados de outro cliente via RAG | Filtro por projeto no banco (não só na aplicação) (08) | Baixo |
-| AM-08 | `odin-mcp` | D | Excesso de chamadas | Cloud Armor por IP, limite por pessoa, escala automática com teto, orçamento (07) | Baixo |
+| AM-08 | `odin-mcp` | D | Excesso de chamadas | Limite por pessoa e por IP no serviço, **teto de 3 instâncias**, orçamento com **disjuntor** a 300% (07; arquitetura 05); Cloud Armor em E2 | Baixo (custo limitado; indisponibilidade coberta pelo modo degradado) |
 | AM-09 | Portal | E | Gestor de squad se dá mais acesso | Perfis permitidos por squad, ninguém aprova o próprio pedido, quatro olhos (04) | Baixo |
 | AM-10 | Portal | T/I | XSS ou CSRF no console | CSP estrita, cookies `__Host-` `HttpOnly`, CSRF, sem HTML vindo do usuário (07, 10) | Baixo |
 | AM-11 | Portal | R | Administrador nega ter feito uma mudança | Auditoria com antes e depois, MFA recente, identidade forte (09) | Baixo |
-| AM-12 | Pipeline | T | Mantenedor comprometido publica skill maliciosa | Revisão por outra pessoa, CODEOWNERS, SHA fixado, CI obrigatório, canal `beta` antes de `stable`, assinatura só pelo CI (05) | Médio |
-| AM-13 | KMS | T/S | Uso indevido da chave de assinatura | Só `sa-ci-signer` assina, só do workflow de `main`; logs de acesso a dados no KMS com alerta; HSM em produção (05, 07) | Baixo |
+| AM-12 | Pipeline | T | Mantenedor comprometido publica skill maliciosa | Só o mantenedor escreve (GitHub Free), 2FA, SHA fixado, CI obrigatório, avaliações e canal `beta` antes de `stable`, assinatura só pelo CI e conferida no registro (05) | Médio |
+| AM-13 | KMS | T/S | Uso indevido da chave de assinatura | Só `sa-ci-signer` assina, só do workflow de `main`; logs de acesso a dados no KMS com alerta; chave não exportável (HSM em E2) (05, 07) | Baixo |
 | AM-14 | Distribuição | T | Pacote trocado no bucket ou em trânsito | Assinatura verificada pelo CLI com chave embutida; o hash vem do manifesto assinado (05) | Muito baixo |
 | AM-15 | Runtime | T | Dependência npm maliciosa | Dependências empacotadas e assinadas, lockfile, Dependabot, varredura, política de idade mínima de versão (05) | Médio |
 | AM-16 | Máquina | E | Instrução maliciosa (do servidor, do RAG ou do projeto) leva o agente a ação destrutiva | Guard fail-closed com políticas globais (produção, segredos, destruição, exfiltração); conhecimento marcado como evidência; filtro de injeção na ingestão (06) | Médio (risco inerente a agentes) |
 | AM-17 | Máquina | E | Repositório traz agente `odin-*` que sombreia o oficial | Alerta do guard e do doctor; conferência de hash antes de delegar (06) | Baixo |
 | AM-18 | Máquina | T | Agente edita o guard ou o `settings.json` para se liberar | Guard nega edição das pastas e blocos do Odin; só o CLI mexe, com assinatura (06) | Baixo |
-| AM-19 | Webhooks | S | Evento falso do GitHub (por exemplo, "pessoa entrou no time") | HMAC, faixa de IP do GitHub, idempotência por id de entrega, eventos só acionam leitura confirmada pelo GitHub App (07) | Muito baixo |
+| AM-19 | Sincronização com o GitHub | S | Evento falso do GitHub (por exemplo, "pessoa entrou no time") | E0 e E1: **não há porta de webhook**; o Odin lê o estado pelo GitHub App a cada 15 min. E2: HMAC, faixa de IP, idempotência, e o evento só aciona leitura confirmada pelo GitHub App (07) | Muito baixo |
 | AM-20 | WIF | E | Workflow de outro repositório assume a conta de serviço | Condição por dono, repositório e ref; vínculos por conta de serviço (07) | Muito baixo |
 | AM-21 | Auditoria | T | Apagar rastros | BigQuery com acesso restrito, coletor de logs gerenciado, retenção; alerta de mudança no coletor (09) | Baixo |
-| AM-22 | Ex-integrante | S | Continua acessando | Saída do time do GitHub revoga tudo; dispositivos sem uso por 30 dias caem; revisão periódica de acessos (04, 11) | Baixo |
+| AM-22 | Ex-integrante | S | Continua acessando | Suspensão no portal vale em 30 s; saída do time do GitHub detectada em até 15 min; dispositivos sem uso por 30 dias caem; revisão periódica de acessos (04, 11) | Baixo |
 | AM-23 | Conta de emergência | E | Uso indevido do super-admin | Duas pessoas, passkey obrigatória, alerta imediato, revisão de cada uso (04) | Baixo |
+| AM-25 | Custo | D | Abuso ou laço gera fatura alta numa conta pessoal | Teto de instâncias, alertas de orçamento, disjuntor que fecha o ingress, runbook RB-13 (arquitetura 05) | Baixo |
+| AM-26 | Publicação | T | Quem consegue executar o job de publicação registra um pacote não aprovado | O job confere a assinatura do KMS no manifesto; sem assinatura válida não registra (05) | Muito baixo |
 | AM-24 | GitHub App | E | Chave do app vazada | Permissões mínimas, Secret Manager, rotação, instalação só nos repositórios necessários (07, 11) | Baixo |
 
 ## 5. Ameaças específicas de agentes de IA
@@ -111,7 +114,10 @@ S = falsificação de identidade · T = adulteração · R = repúdio · I = vaz
 - **Risco inerente a agentes com acesso total ao disco:** o guard reduz, mas não elimina, o dano de uma instrução maliciosa que use comandos não cobertos pelas políticas.
 - **Phishing de device code:** reduzido, não eliminado; depende também de orientação às pessoas.
 - **Modo degradado de 7 dias** (decisão 14): uma máquina sem rede continua com as skills que tinha, mesmo se o acesso for revogado nesse período.
-- **Na PoC:** isolamento do RAG só na aplicação (Firestore), sem Load Balancer nem Cloud Armor, e um único administrador. Por isso a PoC **não recebe conhecimento confidencial nem o time** até o Portão 2 do [plano, seção 23](../PLANO.md).
+- **Em E0:** isolamento do RAG só na aplicação (Firestore) e um único administrador. Por isso a PoC **não recebe conhecimento confidencial nem o time** até o Portão 2 do [plano, seção 23](../PLANO.md).
+- **Em E0 e E1, sem WAF** (ADR 0018, risco R20): aceito porque toda rota útil exige token e valida entrada por schema, a superfície anônima é pequena e listada (arquitetura técnica, seção 2), e o abuso tem teto de instâncias e disjuntor. Reavaliado no pentest e a cada ocorrência de DT-18.
+- **Saída pelo GitHub detectada em até 15 min** (R21): a revogação imediata é pelo portal.
+- **Conhecimento confidencial** só entra com o Cloud SQL e a segunda barreira no banco, em qualquer estágio.
 
 ## 7. Manutenção
 Refazer este modelo quando: entrar um componente ou integração nova; mudar o método de autenticação; houver um incidente; a cada 6 meses.

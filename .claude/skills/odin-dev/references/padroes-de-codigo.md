@@ -3,7 +3,7 @@
 ## Stack
 | Parte | Escolha | Fonte |
 |---|---|---|
-| Servidor MCP, STS, webhooks, publisher, jobs | Node 22 + TypeScript, SDK oficial do MCP, Streamable HTTP sem estado | Arquitetura 03, 6.1 |
+| Servidor MCP, STS, jobs (publisher, indexer, rotinas), disjuntor | Node 22 + TypeScript, SDK oficial do MCP, Streamable HTTP sem estado com resposta JSON | Arquitetura 03, 6.1 |
 | Portal | Next.js (App Router), TypeScript, Radix UI + Tailwind, renderização no servidor, BFF | Portal 01, 5 |
 | CLI e guard | Node 22 + TypeScript, executável único por plataforma (ferramenta decidida na F0) | Arquitetura 03, 9.1 |
 | Infraestrutura | Terraform (`infra/modules`, `infra/envs/poc`) | Arquitetura 03, 11 |
@@ -11,11 +11,13 @@
 
 ## Estrutura (plano, seção 19)
 ```
-apps/mcp-server/  apps/portal/  apps/sts/  apps/webhooks/  apps/publisher/  apps/indexer/  apps/jobs/
-packages/cli/  packages/guard/  packages/manifest/  packages/router/  packages/lint/  packages/shared/
+apps/mcp-server/  apps/sts/  apps/portal/  apps/jobs/ (uma imagem: publisher, indexer, rotinas)  apps/disjuntor/
+packages/cli/  packages/guard/  packages/router/  packages/lint/  packages/shared/
 catalog/  policies/  libs/  pipeline/  infra/  schemas/  tests/  docs/  .claude/
 ```
-- `packages/shared`: tipos, códigos de erro, logger, validação de JWT, cliente do Firestore. Nada de lógica duplicada entre serviços.
+- `packages/shared`: tipos **gerados de `schemas/`**, códigos de erro, logger, validação de JWT, cliente do Firestore. Nada de lógica duplicada entre serviços.
+- **Contratos primeiro:** `schemas/` é a fonte. O servidor MCP carrega `schemas/mcp-tools.json`; o `odin lint` valida `odin.yaml` com `schemas/odin.schema.json`; o CLI valida o manifesto com `schemas/manifesto.schema.json`.
+- **Serviços baratos:** escutar em `PORT`, iniciar rápido (sem trabalho pesado na inicialização), responder `/healthz` sem tocar em banco, não manter conexão ou fluxo aberto sem requisição, encerrar limpo no `SIGTERM`.
 - Ferramentas do MCP: um arquivo por ferramenta em `apps/mcp-server/src/tools/` (o teste CF-06 conta esses arquivos).
 
 ## Convenções
@@ -25,7 +27,7 @@ catalog/  policies/  libs/  pipeline/  infra/  schemas/  tests/  docs/  .claude/
 - **Logs:** JSON estruturado com `request_id`, `ator`, `acao`, `resultado`, `latencia_ms`. **Nunca** cabeçalho `Authorization`, token, segredo ou texto do pedido do usuário.
 - **Validação de entrada** com schema em toda ferramenta MCP e rota (CT-10).
 - **Datas** em UTC no armazenamento; horário de Brasília só na exibição.
-- **Idempotência** em escritas (`Idempotency-Key` no portal, id de entrega nos webhooks).
+- **Idempotência** em escritas (`Idempotency-Key` no portal; jobs reexecutáveis sem efeito duplicado).
 - **Windows:** `path.join`/`path.resolve` sempre; nada de `/` fixo; testes do CLI e do guard rodam em `windows-latest`; cofre via Windows Credential Manager.
 - **Dependências:** lockfile, versões fixas, sem `postinstall` de terceiros sem revisão; idade mínima de 7 dias para versões novas.
 - **Acessibilidade e idioma** no portal: WCAG 2.1 AA; textos em arquivos de tradução (pt-BR).

@@ -71,6 +71,19 @@
 |---|---|---|
 | 41 | **GitHub Free sempre** na organização | Repositórios privados sem proteção de branch, revisão obrigatória, tags protegidas, ambientes com aprovação e atestação de origem [VERIFICAR nos planos atuais]. **Só o mantenedor escreve**; o time lê o `odin-suporte` e abre issues. Compensações permanentes em [segurança 05](seguranca/05-cadeia-de-suprimentos.md) e na [arquitetura técnica, 7.1](arquitetura/03-arquitetura-tecnica.md); risco R18 |
 
+## H. Custo e arquitetura enxuta (delegadas ao Claude em 15/11/2026, ADR 0018)
+> O mantenedor delegou as decisões da revisão geral, com uma restrição: não gastar com nuvem o que não for necessário. Estas decisões **refinam as decisões 6 e 7** e podem ser revistas por ele a qualquer momento.
+
+| # | Decisão | Consequência |
+|---|---|---|
+| 42 | **Estágios de custo** E0 (PoC, ≤ US$ 3/mês), E1 (time, ≤ US$ 25/mês) e E2 (corporativo); recurso de custo fixo só entra por **gatilho medido**, com ADR | [Arquitetura 05](arquitetura/05-custos-e-finops.md); o time usa a mesma topologia da PoC |
+| 43 | **Cloud SQL só quando entrar conhecimento confidencial**, na menor instância e sem alta disponibilidade (refina a decisão 7) | O time pode começar com conhecimento `interna` no Firestore; nenhum documento confidencial antes do banco com segunda barreira |
+| 44 | **Load Balancer, Cloud Armor e domínio próprio só no E2**, por gatilho (refina a decisão 6) | O time usa `run.app`; saem do Portão 2; risco R20, coberto pelo pentest |
+| 45 | **Teto de 3 instâncias por serviço e disjuntor de custo** a 300% do orçamento | Gasto com limite por desenho; runbook RB-13 |
+| 46 | **Topologia de 3 serviços + 3 jobs (uma imagem), sem webhooks e sem Pub/Sub de aplicação**; o publisher confere a assinatura | Menos componentes para uma pessoa operar; saída pelo GitHub detectada em até 15 min (R21) |
+| 47 | **MCP com resposta JSON e sem fluxo SSE permanente** | Os serviços escalam a zero; confirmar na F0 |
+| 48 | **Contratos em `schemas/`** e governança do repositório (política de segurança, guia de contribuição, Dependabot, registro de mudanças) | Entregável 3 concluído; CI valida os contratos |
+
 ## G. Entregáveis
 | # | Decisão | Consequência |
 |---|---|---|
@@ -82,11 +95,12 @@
 | **Pessoa única** (administração, aprovação de skills, curadoria e suporte com o mantenedor) | Segundo super-admin antes do time; runbooks escritos; contas de emergência guardadas |
 | **Corte único** da migração | Ensaio do corte com 2 a 3 pessoas da validação pessoal, plano de volta, cópias arquivadas por 30 dias |
 | **Firestore na PoC** (isolamento só na aplicação, sem busca híbrida) | Nenhum conhecimento confidencial até a migração para Cloud SQL |
+| **Sem WAF e sem instância quente para o time** (decisões 42 e 44) | Token em toda rota, limites no serviço, teto de instâncias, disjuntor, pentest; gatilhos medidos para subir de estágio |
 | **Sem quatro olhos no catálogo** | CI obrigatório, assinatura, canal `beta` e rollback; volta a exigir segunda aprovação quando houver segundo mantenedor |
 | **Sem jurídico** | Bloqueio formal: o time não entra sem a validação |
 
 ## Entregáveis que estas decisões geram
 1. `docs/F0-ROTEIRO.md`: roteiro da F0 com prioridade para Windows nativo e extensão do VS Code.
 2. `docs/MIGRACAO-SKILLS.md`: especificação por skill (`odin.yaml`, caminhos, hooks → políticas, regras do `CLAUDE.md`, bibliotecas, 20 intenções de roteamento).
-3. `schemas/`: JSON Schema do `odin.yaml`, do manifesto assinado e das 7 ferramentas MCP.
+3. `schemas/`: JSON Schema do `odin.yaml`, do manifesto assinado e das 7 ferramentas MCP. **Entregue** (ADR 0018), com avaliações, auditoria e OpenAPI da API `/v1`.
 4. `prototipo/`: protótipo HTML do portal.

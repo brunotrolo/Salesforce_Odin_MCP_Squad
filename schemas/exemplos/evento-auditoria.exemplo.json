@@ -1,0 +1,14 @@
+{
+  "tipo": "auditoria",
+  "ts": "2026-11-15T12:00:00Z",
+  "servico": "odin-mcp",
+  "ator": "usr_8f2c1a",
+  "dispositivo": "dev_41a9",
+  "acao": "mcp.carregar_skill",
+  "alvo": "sf-test",
+  "resultado": "ok",
+  "latencia_ms": 42,
+  "skill": "sf-test",
+  "versao": "1.4.2",
+  "request_id": "req_0123456789"
+}
