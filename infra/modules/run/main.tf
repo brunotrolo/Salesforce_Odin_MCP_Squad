@@ -86,7 +86,7 @@ resource "google_cloud_run_v2_service" "sts" {
         value = var.chave_jwt
       }
       startup_probe {
-        http_get { path = "/healthz" }
+        http_get { path = "/saude" }
         period_seconds    = 3
         failure_threshold = 10
       }
@@ -133,7 +133,7 @@ resource "google_cloud_run_v2_service" "mcp" {
         value = var.bucket_pacotes
       }
       startup_probe {
-        http_get { path = "/healthz" }
+        http_get { path = "/saude" }
         period_seconds    = 3
         failure_threshold = 10
       }

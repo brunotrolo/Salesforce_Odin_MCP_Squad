@@ -46,6 +46,14 @@ provider "google" {
   billing_project       = var.project_id
 }
 
+# O CI de infraestrutura precisa gerar token de identidade para a si mesmo, só para chamar serviços protegidos (homologação).
+resource "google_service_account_iam_member" "ci_gera_token" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/sa-ci-infra@${var.project_id}.iam.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:sa-ci-infra@${var.project_id}.iam.gserviceaccount.com"
+  depends_on         = [module.apis]
+}
+
 module "apis" {
   source = "../../modules/apis"
 }

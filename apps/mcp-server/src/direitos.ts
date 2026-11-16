@@ -45,6 +45,8 @@ export class ResolvedorDeDireitos {
   async resolver(userId: string, dispositivo: string, iatSegundos: number): Promise<Direitos> {
     let e = this.cache.get(userId);
     if (!e || e.ate <= this.agora()) { e = await this.carregar(userId); this.cache.set(userId, e); if (this.cache.size > 5000) this.cache.clear(); }
+    // Dispositivo que o cache não conhece (ativado depois da última leitura): recarrega antes de negar, para o uso imediato funcionar.
+    if (!e.dispositivos.has(dispositivo)) { e = await this.carregar(userId); this.cache.set(userId, e); }
     if (e.d.status !== 'ativo') throw new OdinErro('revogado', 'Seu acesso ao Odin está suspenso. Fale com um administrador.');
     if (e.dispositivos.get(dispositivo) !== true) throw new OdinErro('revogado', 'Este dispositivo foi revogado. Rode "odin setup" para ativar de novo.');
     if (iatSegundos * 1000 < e.globalDesde) throw new OdinErro('revogado', 'Todas as sessões foram encerradas por segurança. Rode "odin login".');

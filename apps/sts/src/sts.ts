@@ -147,7 +147,7 @@ ${pedeSegredo ? '<p><label>Segredo de ativação<br><input name="segredo" type="
     const url = new URL(req.url ?? '/', 'http://local');
     try {
       const rota = `${req.method} ${url.pathname}`;
-      if (rota === 'GET /healthz') return responder(res, 200, { ok: true });
+      if (rota === 'GET /healthz' || rota === 'GET /saude') return responder(res, 200, { ok: true });
       if (rota === 'GET /.well-known/jwks.json') return responder(res, 200, { keys: [{ ...cfg.assinador.publica().jwk, kid: cfg.assinador.kid, use: 'sig', alg: 'ES256' }] }, { 'cache-control': 'public, max-age=600' });
       if (rota === 'GET /.well-known/oauth-authorization-server') return responder(res, 200, { issuer: cfg.emissor, token_endpoint: `${cfg.emissor}/oauth/token`, device_authorization_endpoint: `${cfg.emissor}/oauth/device_authorization`, jwks_uri: `${cfg.emissor}/.well-known/jwks.json`, grant_types_supported: [DEVICE_GRANT, 'refresh_token'], token_endpoint_auth_methods_supported: ['private_key_jwt'], token_endpoint_auth_signing_alg_values_supported: ['ES256'] });
       if (rota === 'GET /.well-known/odin-configuration' && cfg.descoberta) return responder(res, 200, cfg.descoberta);

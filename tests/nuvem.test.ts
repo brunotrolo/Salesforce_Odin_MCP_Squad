@@ -78,3 +78,18 @@ test('ativação provisória do mantenedor: exige o segredo, compara em tempo co
   assert.ok(eventos.some((e) => e.acao === 'sts.device.approve' && e.resultado === 'negado'));
   assert.equal((await aprovar('segredo-correto-123')).status, 200);
 });
+
+test('direitos: dispositivo ativado depois da última leitura funciona na hora; revogação segue o cache de 30 s', async () => {
+  const { ResolvedorDeDireitos } = await import('../apps/mcp-server/src/direitos.ts');
+  const s = new MemoryStore(); let agora = 1_000_000;
+  await s.set('users', 'u', { status: 'ativo', policyVersion: 1 }); await s.set('devices', 'dev_a', { userId: 'u', status: 'ativo' });
+  const r = new ResolvedorDeDireitos(s, () => agora);
+  await r.resolver('u', 'dev_a', Math.floor(agora / 1000)); // enche o cache
+  await s.set('devices', 'dev_b', { userId: 'u', status: 'ativo' }); // dispositivo novo
+  await r.resolver('u', 'dev_b', Math.floor(agora / 1000)); // não pode ser recusado
+  await assert.rejects(r.resolver('u', 'dev_desconhecido', Math.floor(agora / 1000)), /revogado/);
+  await s.set('devices', 'dev_a', { userId: 'u', status: 'revogado' });
+  await r.resolver('u', 'dev_a', Math.floor(agora / 1000)); // ainda dentro dos 30 s
+  agora += 31_000;
+  await assert.rejects(r.resolver('u', 'dev_a', Math.floor(agora / 1000)), /revogado/);
+});

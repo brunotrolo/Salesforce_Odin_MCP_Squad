@@ -43,6 +43,11 @@ async function t(id: string, nome: string, fn: () => Promise<string | void>): Pr
 const get = async (url: string, init: RequestInit = {}) => { const r = await fetch(url, init); return { status: r.status, headers: r.headers, texto: await r.text() }; };
 const json = (s: string) => JSON.parse(s) as Record<string, any>;
 
+async function tokenDeIdentidade(audiencia: string): Promise<string> {
+  const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();
+  const r = await c.request<{ token: string }>({ url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/sa-ci-infra@${PROJETO}.iam.gserviceaccount.com:generateIdToken`, method: 'POST', data: { audience: audiencia, includeEmail: true } });
+  return r.data.token;
+}
 const casa = mkdtempSync(join(tmpdir(), 'odin-homolog-casa-')); const projeto = mkdtempSync(join(tmpdir(), 'odin-homolog-proj-'));
 const keyJwt = await new AssinadorKms('jwt-kms-a', await versaoAtual(env('CHAVE_JWT'))).carregar();
 const keyPacotes = await new AssinadorKms('bundle-2026-a', await versaoAtual(env('CHAVE_PACOTES'))).carregar();
@@ -53,7 +58,7 @@ const USUARIO = 'usr_homolog';
 let deviceId = '';
 
 await t('H01', 'Serviços no ar (health) e primeira chamada com escala a zero', async () => {
-  const a = await get(`${STS}/healthz`); const b = await get(`${MCP}/healthz`); const c = await get(`${DISJ}/healthz`);
+  const a = await get(`${STS}/saude`); const b = await get(`${MCP}/saude`); const c = await get(`${DISJ}/saude`);
   ok(a.status === 200 && b.status === 200, `sts ${a.status}, mcp ${b.status}`); ok(c.status === 401 || c.status === 403, `o disjuntor não pode ser público (${c.status})`);
   return 'disjuntor protegido por identidade';
 });
@@ -174,10 +179,12 @@ await t('H15', 'Modo degradado: com o servidor fora, a cópia local assinada con
   executarGuard(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'odin ensure odin-ambiente' }, cwd: projeto })); const r = await ensure('odin-ambiente'); gravarConfig(cfg); ok(r.ok && r.modo === 'degradado', JSON.stringify(r));
 });
 await t('H16', 'Disjuntor de custo: protegido por identidade; abaixo de 300% não age; simulação a 316% não fecha nada', async () => {
-  const cliente = await new GoogleAuth().getIdTokenClient(DISJ); const aviso = (c: number) => ({ message: { data: Buffer.from(JSON.stringify({ costAmount: c, budgetAmount: 30 })).toString('base64') } });
-  const a = await cliente.request<any>({ url: DISJ, method: 'POST', data: aviso(10) }); ok(a.data.fechou === false, 'agiu a 33%');
-  const b = await cliente.request<any>({ url: `${DISJ}?simular=1`, method: 'POST', data: aviso(95) }); ok(b.data.simulado === true && b.data.fechou === false, 'simulação fechou');
-  ok((await get(`${STS}/healthz`)).status === 200 && (await get(`${MCP}/healthz`)).status === 200, 'os serviços deveriam continuar abertos');
+  const idToken = await tokenDeIdentidade(DISJ); const aviso = (c: number) => ({ message: { data: Buffer.from(JSON.stringify({ costAmount: c, budgetAmount: 30 })).toString('base64') } });
+  const chamarDisj = async (url: string, data: object, token?: string) => { const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(data) }); return { status: r.status, corpo: r.ok ? ((await r.json()) as Record<string, any>) : {} }; };
+  ok((await chamarDisj(DISJ, aviso(95))).status >= 401, 'o disjuntor aceitou chamada sem identidade');
+  const a = await chamarDisj(DISJ, aviso(10), idToken); ok(a.status === 200 && a.corpo.fechou === false, `agiu a 33% (${a.status})`);
+  const b = await chamarDisj(`${DISJ}?simular=1`, aviso(95), idToken); ok(b.status === 200 && b.corpo.simulado === true && b.corpo.fechou === false, `simulação (${b.status})`);
+  ok((await get(`${STS}/saude`)).status === 200 && (await get(`${MCP}/saude`)).status === 200, 'os serviços deveriam continuar abertos');
 });
 await t('H17', 'Job odin-jobs executa pelo Cloud Run e registra o tick no Firestore', async () => {
   const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }); const c = await auth.getClient(); const antes = Number((await store.get('settings', 'jobs'))?.ultimoTick ?? 0);

@@ -49,7 +49,7 @@ jobs:
         if: always()
         run: |
           echo "## Orçamento"; gcloud billing budgets list --billing-account=01A65F-62F735-7F6904 --format="table(displayName,amount.specifiedAmount.currencyCode,amount.specifiedAmount.units)" 2>&1 | head -5
-          echo "## Ingress dos serviços"; for s in odin-sts odin-mcp odin-disjuntor; do echo "$s: $(gcloud run services describe $s --region=$REGIAO --project=$PROJETO --format='value(spec.template.metadata.annotations.autoscaling\.knative\.dev/minScale,spec.template.metadata.annotations.autoscaling\.knative\.dev/maxScale,metadata.annotations.run\.googleapis\.com/ingress)')"; done
+          echo "## Ingress dos serviços"; for s in odin-sts odin-mcp odin-disjuntor; do gcloud run services describe $s --region=$REGIAO --project=$PROJETO --format=json | jq -r --arg s $s '"\($s): min=\(.spec.template.metadata.annotations["autoscaling.knative.dev/minScale"] // "0") max=\(.spec.template.metadata.annotations["autoscaling.knative.dev/maxScale"]) ingress=\(.metadata.annotations["run.googleapis.com/ingress"])"'; done
           echo "## Eventos de auditoria no Cloud Logging (última hora)"; gcloud logging read 'jsonPayload.tipo="auditoria"' --project="$PROJETO" --freshness=1h --limit=200 --format="value(jsonPayload.acao)" | sort | uniq -c | sort -rn | head -20
           echo "## Alguma auditoria com o texto do pedido?"; gcloud logging read 'jsonPayload.tipo="auditoria" AND jsonPayload.acao="mcp.rotear"' --project="$PROJETO" --freshness=1h --limit=20 --format=json | grep -ci "CaseRouter" || true
       - name: Relatório

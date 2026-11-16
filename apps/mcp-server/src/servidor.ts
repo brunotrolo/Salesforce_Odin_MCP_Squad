@@ -179,7 +179,7 @@ export function criarMcp(cfg: ConfigMcp) {
   async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const rid = novoRequestId(); const url = new URL(req.url ?? '/', 'http://local');
     try {
-      if (url.pathname === '/healthz') return responder(res, 200, { ok: true });
+      if (url.pathname === '/healthz' || url.pathname === '/saude') return responder(res, 200, { ok: true });
       if (url.pathname === '/.well-known/oauth-protected-resource') return responder(res, 200, { resource: cfg.audiencias[0], authorization_servers: [cfg.emissor], bearer_methods_supported: ['header'] });
       if (url.pathname === '/mcp') {
         if (req.method !== 'POST') return responder(res, 405, { codigo: 'invalido', mensagem: 'O Odin responde por requisição (POST); não há fluxo permanente.', request_id: rid }, { allow: 'POST' });

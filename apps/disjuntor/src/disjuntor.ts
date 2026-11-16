@@ -25,7 +25,7 @@ export function criarDisjuntor(cfg: ConfigDisjuntor) {
   const fechar = cfg.fecharIngress ?? ((s: string) => fecharIngressRun(cfg.projeto, cfg.regiao, s));
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const rid = novoRequestId(); const url = new URL(req.url ?? '/', 'http://local');
-    if (url.pathname === '/healthz') return responder(res, 200, { ok: true });
+    if (url.pathname === '/healthz' || url.pathname === '/saude') return responder(res, 200, { ok: true });
     if (req.method !== 'POST') return responder(res, 405, { codigo: 'invalido', mensagem: 'Use POST.', request_id: rid });
     try {
       const corpo = JSON.parse((await lerCorpo(req)).toString('utf8') || '{}') as { message?: { data?: string } };
