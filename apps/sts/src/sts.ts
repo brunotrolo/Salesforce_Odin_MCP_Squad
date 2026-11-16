@@ -1,7 +1,7 @@
 // odin-sts: emissor de tokens (arquitetura 03, seção 5; segurança 02 e 03).
 // Device Authorization Grant (RFC 8628) com chave do dispositivo; refresh rotativo com prova de posse
 // (private_key_jwt, RFC 7523) e detecção de reuso; token de acesso ES256 de 15 minutos, sem perfis dentro.
-import { createHmac, randomBytes, randomInt } from 'node:crypto';
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { auditar, novoRequestId, type Coletor } from '../../../packages/shared/src/auditoria.ts';
 import type { Assinador, Jwk } from '../../../packages/shared/src/chaves.ts';
@@ -21,6 +21,8 @@ export interface ConfigSts {
   agora?: () => number;
   /** Só desenvolvimento local: página /ativar com escolha de pessoa, no lugar do portal com GitHub + MFA. */
   loginDev?: boolean;
+  /** Ativação provisória do mantenedor até o portal existir (E0): exige este segredo (Secret Manager) e só mostra as pessoas ativas. */
+  ativacaoSegredo?: string;
   /** Documento de descoberta lido pelo CLI (/.well-known/odin-configuration); na nuvem quem publica é o portal. */
   descoberta?: Record<string, unknown>;
 }
@@ -133,11 +135,11 @@ export function criarSts(cfg: ConfigSts) {
     return { erroOAuth: 'unsupported_grant_type' };
   }
 
-  const paginaAtivar = (code: string, pessoas: Array<Pessoa & { id: string }>, msg = '') => `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ativar dispositivo · Odin (desenvolvimento)</title>
+  const paginaAtivar = (code: string, pessoas: Array<Pessoa & { id: string }>, msg = '', pedeSegredo = false) => `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ativar dispositivo · Odin (desenvolvimento)</title>
 <body style="font:16px system-ui;max-width:520px;margin:48px auto;padding:0 16px"><h1>Ativar dispositivo</h1>
-<p style="background:#fff3cd;padding:8px 12px;border-radius:8px">Ambiente de <b>desenvolvimento local</b>: aqui você escolhe a pessoa. No portal real, este passo é o login com GitHub mais o segundo fator.</p>
+<p style="background:#fff3cd;padding:8px 12px;border-radius:8px">${pedeSegredo ? 'Ativação <b>provisória do mantenedor</b>: informe o segredo de ativação. No portal, este passo será o login com GitHub mais o segundo fator.' : 'Ambiente de <b>desenvolvimento local</b>: aqui você escolhe a pessoa. No portal real, este passo é o login com GitHub mais o segundo fator.'}</p>
 ${msg ? `<p><b>${msg}</b></p>` : ''}<form method="post" action="/ativar"><p><label>Código<br><input name="code" value="${code.replace(/[^A-Za-z-]/g, '')}" required style="font:20px monospace;padding:6px"></label></p>
-<p><label>Entrar como<br><select name="user" style="font:16px system-ui;padding:6px">${pessoas.map((p) => `<option value="${p.id}">${p.nome} (@${p.githubLogin})</option>`).join('')}</select></label></p>
+${pedeSegredo ? '<p><label>Segredo de ativação<br><input name="segredo" type="password" required autocomplete="off" style="font:16px system-ui;padding:6px"></label></p>' : ''}<p><label>Entrar como<br><select name="user" style="font:16px system-ui;padding:6px">${pessoas.map((p) => `<option value="${p.id}">${p.nome} (@${p.githubLogin})</option>`).join('')}</select></label></p>
 <button style="font:16px system-ui;padding:8px 16px">Aprovar este dispositivo</button></form></body></html>`;
 
   async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -155,14 +157,19 @@ ${msg ? `<p><b>${msg}</b></p>` : ''}<form method="post" action="/ativar"><p><lab
         const r = await token(await lerFormulario(req), ip, rid);
         return 'erroOAuth' in r ? responder(res, 400, { error: r.erroOAuth }) : responder(res, 200, r);
       }
-      if (cfg.loginDev && url.pathname === '/ativar') {
+      if ((cfg.loginDev || cfg.ativacaoSegredo) && url.pathname === '/ativar') {
+        const pede = !!cfg.ativacaoSegredo;
         const pessoas = await cfg.store.list<Pessoa>('users', (p) => p.status === 'ativo');
-        if (req.method === 'GET') return responder(res, 200, paginaAtivar(url.searchParams.get('code') ?? '', pessoas));
+        if (req.method === 'GET') return responder(res, 200, paginaAtivar(url.searchParams.get('code') ?? '', pessoas, '', pede));
         if (req.method === 'POST') {
           limite.consumir(`at:${ip}`, ANON_RATE_PER_MIN);
           const f = await lerFormulario(req);
-          try { const d = await aprovarDispositivo(String(f.code ?? ''), String(f.user ?? '')); return responder(res, 200, paginaAtivar('', pessoas, `Dispositivo "${d.nome}" aprovado. Pode voltar ao terminal.`)); }
-          catch (e) { return responder(res, 400, paginaAtivar(String(f.code ?? ''), pessoas, paraOdinErro(e).message)); }
+          if (pede) { // comparação em tempo constante; erro genérico, com limite de tentativas por IP
+            const a = Buffer.from(String(f.segredo ?? '')), b = Buffer.from(cfg.ativacaoSegredo!);
+            if (a.length !== b.length || !timingSafeEqual(a, b)) { auditar(cfg.coletor, 'odin-sts', { ator: 'anonimo', acao: 'sts.device.approve', resultado: 'negado', motivo: 'sem_acesso', request_id: rid, ip }); return responder(res, 403, paginaAtivar(String(f.code ?? ''), pessoas, 'Segredo incorreto.', true)); }
+          }
+          try { const d = await aprovarDispositivo(String(f.code ?? ''), String(f.user ?? '')); return responder(res, 200, paginaAtivar('', pessoas, `Dispositivo "${d.nome}" aprovado. Pode voltar ao terminal.`, pede)); }
+          catch (e) { return responder(res, 400, paginaAtivar(String(f.code ?? ''), pessoas, paraOdinErro(e).message, pede)); }
         }
       }
       return responder(res, 404, { codigo: 'invalido', mensagem: 'Rota inexistente.', request_id: rid });

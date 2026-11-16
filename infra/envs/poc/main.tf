@@ -33,6 +33,11 @@ variable "orcamento" {
   type    = string
   default = "5"
 }
+# Tag da imagem no Artifact Registry; vazio = ainda não há imagem, e os serviços não são criados.
+variable "imagem_tag" {
+  type    = string
+  default = ""
+}
 
 provider "google" {
   project               = var.project_id
@@ -81,7 +86,28 @@ module "registry" {
   depends_on = [module.apis, module.finops]
 }
 
+data "google_project" "p" { project_id = var.project_id }
+
+module "run" {
+  count              = var.imagem_tag == "" ? 0 : 1
+  source             = "../../modules/run"
+  project_id         = var.project_id
+  project_number     = data.google_project.p.number
+  region             = var.region
+  imagem             = "${var.region}-docker.pkg.dev/${var.project_id}/odin-images/odin:${var.imagem_tag}"
+  min_instance_count = 0
+  max_instance_count = 3
+  sa                 = module.security.sa
+  chave_jwt          = module.security.chaves.jwt_signing
+  chave_pacotes      = module.security.chaves.bundle_signing
+  bucket_pacotes     = module.data.buckets.bundles
+  topico_orcamento   = module.finops.topico
+  depends_on         = [module.registry, module.data]
+}
+
 output "contas_de_servico" { value = module.security.sa }
 output "chaves_kms" { value = module.security.chaves }
 output "buckets" { value = module.data.buckets }
 output "topico_orcamento" { value = module.finops.topico }
+
+output "urls" { value = length(module.run) > 0 ? module.run[0].urls : null }

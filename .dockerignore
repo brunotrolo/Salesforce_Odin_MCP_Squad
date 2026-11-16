@@ -1,0 +1,12 @@
+node_modules
+.git
+.odin-dev
+infra
+tests
+docs
+apresentacao
+skills
+dev
+*.md
+.github
+.claude

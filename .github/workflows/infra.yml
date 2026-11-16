@@ -8,6 +8,10 @@ on:
         description: "Digite APLICAR para executar o apply (vazio = só plano)"
         required: false
         default: ""
+      construir:
+        description: "Digite SIM para construir e publicar a imagem dos serviços antes do plano"
+        required: false
+        default: ""
 permissions:
   contents: read
   id-token: write
@@ -52,6 +56,30 @@ jobs:
           echo "Moeda: $MOEDA, valor: $VALOR"
           echo "TF_VAR_moeda=$MOEDA" >> "$GITHUB_ENV"
           echo "TF_VAR_orcamento=$VALOR" >> "$GITHUB_ENV"
+      - name: Segredos do Odin (criados uma vez com valor aleatório; nunca passam pelo Terraform nem pelo repositório)
+        run: |
+          for s in odin-pimenta odin-segredo-url odin-ativacao-admin; do
+            gcloud secrets describe "$s" --project="$PROJETO" >/dev/null 2>&1 || \
+              openssl rand -base64 36 | tr -d '\n' | gcloud secrets create "$s" --project="$PROJETO" --data-file=- \
+                --replication-policy=user-managed --locations=southamerica-east1
+          done
+      - name: Construir e publicar a imagem
+        if: inputs.construir == 'SIM'
+        working-directory: .
+        run: |
+          REG="southamerica-east1-docker.pkg.dev/${PROJETO}/odin-images/odin"
+          TAG="$(git rev-parse --short=12 HEAD)"
+          gcloud auth configure-docker southamerica-east1-docker.pkg.dev --quiet
+          docker build -t "${REG}:${TAG}" .
+          docker push "${REG}:${TAG}"
+          echo "TF_VAR_imagem_tag=${TAG}" >> "$GITHUB_ENV"
+      - name: Imagem em uso (a que já está no ar, se não houve construção)
+        if: inputs.construir != 'SIM'
+        run: |
+          IMG=$(gcloud run services describe odin-mcp --region=southamerica-east1 --project="$PROJETO" --format="value(spec.template.spec.containers[0].image)" 2>/dev/null || true)
+          TAG="${IMG##*:}"
+          echo "Imagem atual: ${IMG:-nenhuma}"
+          echo "TF_VAR_imagem_tag=${TAG}" >> "$GITHUB_ENV"
       - run: terraform fmt -check -recursive ../..
       - run: terraform init -input=false
       - run: terraform validate
