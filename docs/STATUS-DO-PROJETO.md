@@ -13,7 +13,7 @@ Atualizado em 2026-11-16. Fonte do plano: [PLANO.md](PLANO.md) (seção 16, fase
 | F3 | ✅ | `odin.yaml`, catálogo, `odin lint`, pacote determinístico, manifesto assinado pelo KMS, publisher que confere a assinatura. **Publicação automática** a cada push (`pipeline-completo.yml`), só do que mudou, com portão de avaliação, promoção a `stable` e rollback de canal (`canal.yml`); H27 e H28. |
 | F4 | Servidor MCP: ferramentas, autorização por perfil e projeto, auditoria |
 | F5 | ✅ 👤 | `setup`, `login`, `token`, `ensure`, `doctor`, `status`, `uninstall`, guard PG-01 a PG-08 e agora `update` (CLI assinado pelo KMS, H29), `restore-copias`, `doctor --limpar-copias` e instalador multiplataforma. O CI roda o demo no Linux e no Windows. Falta só a sua prova no Windows e no VS Code reais. Não há binário empacotado: o CLI roda no Node, sem dependências de terceiros. |
-| F6 | 🟡 | As 10 skills têm contrato (`odin.yaml`, `odin ensure`), avaliações determinísticas (≥ 10 casos) e estão **em `stable`** na nuvem, com versão assinada e evento de promoção (H27). Falta: checklist do `odin-curador` (regras dos `CLAUDE.md`, hooks como políticas, bibliotecas compartilhadas, revisão das intenções) e avaliações **com modelo**, que dependem do seu acesso ao modelo. |
+| F6 | ✅ | As 10 skills em `stable`, com contrato, `odin ensure`, 20 intenções cada (roteamento 38/38), **políticas do guard por skill** (hooks migrados; ADR 0027), **bibliotecas de terceiros compartilhadas** em `libs/` (ADR 0028; H32 e H33) e **camada de avaliação com modelo** implementada (ADR 0029; 3 casos de modelo por skill). Falta só rodar a avaliação com modelo com o seu `ANTHROPIC_API_KEY` para registrar a nota de referência, e fundir as cópias divergentes de bibliotecas do LWC Developer e do Apex Cover Loop. |
 | F7 | ✅ | Busca híbrida (embeddings `text-embedding-005` da Vertex AI + léxica) com citação, isolamento por projeto, filtro de injeção, propostas com aprovação no portal, indexador no pipeline e **medição de recuperação na nuvem** (H30: recall@5 ≥ 80%, fora do assunto recusado; piso de similaridade calibrado com notas reais). A fonte está em `conhecimento/` deste repositório porque o `odin-knowledge` não pôde ser criado (403 da integração). |
 | F8 | ✅ | Carga de 50 usuários (p95 322 a 1259 ms, zero erros), partida a frio p95 394 ms, disjuntor testado de verdade, **auditoria em BigQuery** (`odin_auditoria`, 400 dias), painel operacional, 3 alertas (5xx, latência, negações) e runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Os alertas chegam por e-mail ao endereço do mantenedor (variável `ALERTA_EMAIL` do repositório; sem ela vale o endereço padrão do `infra.yml`). |
 | F9 | Validação pessoal pelo mantenedor com as 10 skills |
@@ -36,24 +36,25 @@ Legenda: ✅ pronto e homologado · 🟡 parcial · ⬜ não feito · 👤 depen
 | F9 | ⬜ 👤 | Uso real por você, como PO e como dev. |
 | F10 | ⬜ 👤 | Portão 2: organização GitHub com 2FA, projeto `prod` em E1, segundo super-admin, jurídico (LGPD), pentest, guia de onboarding, repositório de suporte, ensaio do corte com 2 ou 3 pessoas. |
 
-## 3. O que já foi homologado no Google Cloud (31 verificações, todas verdes)
-H01 serviços no ar · H02 descoberta e chaves (JWKS) · H03 rotas sem token recusadas · H04 semente de catálogo e perfis · H05 publicação assinada pelo KMS · H06 publicação adulterada recusada · H07 ativação de dispositivo · H08 MCP (7 ferramentas, atalhos, roteamento, negado fora do perfil) · H09 conhecimento com citação e filtro de injeção · H10 `odin ensure` por URL assinada · H11 integridade no uso · H12 guard · H13 renovação rotativa e reuso · H14 tokens inválidos recusados · H15 modo degradado · H16 disjuntor protegido por identidade · H17 job no Cloud Run · H18 revogação em ~18 s · H19 desinstalação · H21 as 10 skills reais publicadas e conferidas · H22 a H25 portal (admin, convite, pessoa + CLI, propostas) · H26 login com GitHub · H27 as 10 skills em stable com nota ≥ 90 · H28 canais e rollback de ponta a ponta · H29 CLI assinado e `odin update` · H30 conhecimento com embeddings da Vertex AI · H31 segundo fator (TOTP, recuperação, passkey, reset) · H20 limpeza.
+## 3. O que já foi homologado no Google Cloud (33 verificações, todas verdes)
+H01 serviços no ar · H02 descoberta e chaves (JWKS) · H03 rotas sem token recusadas · H04 semente de catálogo e perfis · H05 publicação assinada pelo KMS · H06 publicação adulterada recusada · H07 ativação de dispositivo · H08 MCP (7 ferramentas, atalhos, roteamento, negado fora do perfil) · H09 conhecimento com citação e filtro de injeção · H10 `odin ensure` por URL assinada · H11 integridade no uso · H12 guard · H13 renovação rotativa e reuso · H14 tokens inválidos recusados · H15 modo degradado · H16 disjuntor protegido por identidade · H17 job no Cloud Run · H18 revogação em ~18 s · H19 desinstalação · H21 as 10 skills reais publicadas e conferidas · H22 a H25 portal (admin, convite, pessoa + CLI, propostas) · H26 login com GitHub · H27 as 10 skills em stable com nota ≥ 90 · H28 canais e rollback de ponta a ponta · H29 CLI assinado e `odin update` · H30 conhecimento com embeddings da Vertex AI · H31 segundo fator (TOTP, recuperação, passkey, reset) · H32 política de guard por skill no runtime assinado · H33 bibliotecas compartilhadas no runtime assinado · H20 limpeza.
 
 Também medidos: desempenho (acima) e o **teste real do disjuntor** (execução #2 do `disjuntor-real.yml`).
 
 ## 4. Em andamento agora
-Nada em andamento. Último pipeline completo (commit `910dff6`): qualidade, infraestrutura (Terraform aplicado), publicação, **homologação 31/31** e desempenho, todos verdes.
+Nada em andamento. Último pipeline completo (commit `b0f1be5`): qualidade, Terraform, publicação das 10 skills, homologação **33/33** e desempenho, todos verdes.
 
 ## 5. O que falta, por quem faz
 **Você (ninguém mais consegue):**
-1. Trocar o `SKILLS_READ_TOKEN` e o segredo do OAuth App (ambos foram vistos no chat), rodar o `infra.yml` de novo e ativar a verificação em duas etapas na conta do GitHub.
-2. Testar o login no portal, o cadastro do 2º fator e o `odin setup` no Windows e no VS Code.
-3. F0 com o Claude Code real e o LiteLLM; F9 (uso real).
-4. F10: organização GitHub, projeto `prod`, segundo super-admin, jurídico, pentest, ensaio do corte.
+1. Criar o segredo `ANTHROPIC_API_KEY` no repositório e rodar o workflow `avaliar-modelo.yml` (nota de referência da camada com modelo).
+2. Trocar o `SKILLS_READ_TOKEN` e o segredo do OAuth App (ambos foram vistos no chat), rodar o `infra.yml` de novo e ligar o 2FA na conta do GitHub.
+3. Testar o login no portal, o cadastro do 2º fator, a passkey do seu navegador e o `odin setup` no Windows e no VS Code.
+4. F0 com o Claude Code real e o LiteLLM; F9 (uso real).
+5. F10: organização GitHub, projeto `prod`, segundo super-admin, jurídico, pentest, ensaio do corte.
 
-**Eu (Claude):**
-1. F6: checklist do `odin-curador` nas 10 skills e avaliações com modelo (dependem do seu acesso ao modelo).
-2. Pendência menor: repositório `odin-knowledge` (precisa de permissão para criar repositórios).
+**Eu (Claude), quando houver decisão ou acesso:**
+1. Fundir as cópias divergentes de bibliotecas do LWC Developer e do Apex Cover Loop com as canônicas (precisa comparar o comportamento).
+2. Repositório `odin-knowledge` (a integração não tem permissão para criar repositórios).
 
 ## 6. Segurança e custo hoje
 - Custo: estágio E0, orçamento de R$ 30 com alertas de 50% a 300%, disjuntor ensaiado.

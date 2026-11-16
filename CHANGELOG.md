@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Curador: políticas, bibliotecas e avaliação com modelo (ADR 0027, 0028, 0029)
+- Políticas do guard por skill (hooks viram módulos assinados), bibliotecas de terceiros em `libs/`, camada de avaliação com modelo, 20 intenções por skill, novo visual do portal com a página do servidor MCP e canal de e-mail dos alertas. Homologação 33/33.
+
 ### 2026-11-16 · Segundo fator, conhecimento com embeddings e observabilidade (ADR 0026)
 - F2: TOTP, códigos de recuperação e passkey no portal, com reconfirmação a cada 15 minutos (H31). F5: `odin update`, `restore-copias`, instalador (H29). F7: busca híbrida com Vertex AI, indexador e medição de recuperação (H30). F8: auditoria em BigQuery, painel, alertas e runbooks. Homologação 31/31.
 

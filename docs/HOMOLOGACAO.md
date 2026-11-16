@@ -66,5 +66,13 @@ Pipeline completo do commit `910dff6` (16/11/2026): qualidade, Terraform, public
 | H31 | segundo fator no portal real: sessão nova exige o fator, TOTP sem repetição, código de recuperação de uso único, passkey (WebAuthn com autenticador de software), reset pelo admin |
 Achados e correções desta rodada: H28 reativa um dispositivo depois da revogação do H24; trecho sem embedding passou a valer pela nota lexical (H09); piso de similaridade 0,6 calibrado com as notas reais (respostas certas 0,67 a 0,86; fora do assunto ≤ 0,56); `terraform fmt` do módulo de observabilidade.
 
+## Rodada de políticas, bibliotecas e portal novo (33/33)
+Pipeline completo do commit `b0f1be5` (16/11/2026): todos os jobs verdes. Novas verificações:
+| Verificação | O que provou |
+|---|---|
+| H32 | a política do Deep Debugger vai no runtime assinado (hash no manifesto) e o guard real a aplica só depois do `odin ensure` |
+| H33 | Journey Designer e Journey Developer entregam as bibliotecas compartilhadas no runtime assinado, com hash e sem caminhos antigos |
+Também validados nesta rodada: o novo visual do portal (administração e pessoa, com o estado do MCP) nas verificações H22 a H25 e o Terraform com o canal de e-mail dos alertas.
+
 ## Fora do escopo desta homologação (pendente)
-Windows e VS Code reais, cadastro do 2º fator com a passkey do seu navegador e F0, F9 e F10 (você); avaliações com modelo e checklist do `odin-curador` na F6; canal de e-mail dos alertas; repositório `odin-knowledge`.
+Windows e VS Code reais, passkey do navegador real e F0, F9 e F10 (você); nota de referência da avaliação com modelo (precisa de `ANTHROPIC_API_KEY`); fusão das bibliotecas do LWC Developer e do Apex Cover Loop; repositório `odin-knowledge`.
