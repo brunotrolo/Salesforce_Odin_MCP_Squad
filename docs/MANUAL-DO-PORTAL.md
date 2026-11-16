@@ -24,3 +24,10 @@ Na página inicial ou em `/admin`, clique em **Entrar com GitHub** e autorize o 
 - Há um único segredo de administração (sem MFA nem passkey). Rotação: gerar uma nova versão do segredo `odin-ativacao-admin` e reiniciar o serviço.
 - Quem perde o convite precisa que um administrador gere outro.
 - O segundo fator é o da conta do GitHub (o Odin não verifica); o segredo de administração é só acesso de emergência.
+
+## Segundo fator (F2)
+No primeiro acesso o portal leva você a **Verificação em duas etapas** (`/mfa`):
+1. **Aplicativo autenticador**: escolha "inserir chave manualmente", digite a chave mostrada e confirme com o código de 6 dígitos. Guarde os **10 códigos de recuperação** (cada um vale uma vez).
+2. **Passkey** (opcional): botão "Cadastrar passkey" (Windows Hello, Touch ID, chave de segurança).
+3. A cada 15 minutos o portal pede o fator de novo. Perdeu o aparelho? Use um código de recuperação ou peça a um administrador **Zerar 2º fator**.
+O segredo de administração continua sendo o acesso de emergência e não pede segundo fator.

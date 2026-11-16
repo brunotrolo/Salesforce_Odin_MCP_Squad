@@ -1,12 +1,13 @@
 // odin-portal (interino, E0): páginas de administração e de pessoa, servidas pelo mesmo serviço do emissor de tokens.
 // Entrada do administrador: segredo do Secret Manager. Entrada da pessoa: convite de uso único criado por um administrador.
 // Quando houver o OAuth App do GitHub, o login passa a ser GitHub + segundo fator sem mudar as páginas (decisão: ADR 0023).
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { auditar, novoRequestId, type Coletor } from '../../../packages/shared/src/auditoria.ts';
 import { OdinErro, paraOdinErro } from '../../../packages/shared/src/erros.ts';
 import { ipDe, lerFormulario, LimiteDeTaxa, responder } from '../../../packages/shared/src/http.ts';
 import type { Store } from '../../../packages/shared/src/store.ts';
+import { base32, cifrar, decifrar, hashRecuperacao, novoSegredoTotp, novosCodigosRecuperacao, uriTotp, verificarAssercao, verificarRegistro, verificarTotp, type Passkey } from './mfa.ts';
 import { Conhecimento } from '../../mcp-server/src/conhecimento.ts';
 import { revogacaoGlobal, revogarDispositivo, suspenderPessoa } from '../../sts/src/sts.ts';
 
@@ -15,8 +16,14 @@ export interface ConfigPortal {
   aprovarDispositivo: (code: string, userId: string) => Promise<{ nome: string }>; agora?: () => number;
   /** Login com GitHub (OAuth App). Sem isto o portal só tem o segredo de administração e os convites. */
   github?: { clientId: string; clientSecret: string; http?: typeof fetch };
+  /** Obriga quem entra por GitHub ou convite a cadastrar o segundo fator. Quem já cadastrou sempre precisa confirmá-lo (a cada 15 min). */
+  exigirMfa?: boolean;
 }
-interface Sessao { p: 'admin' | 'usuario'; s: string; e: number; c: string }
+interface Sessao { p: 'admin' | 'usuario'; s: string; e: number; c: string; m?: number }
+interface DocMfa { totp?: { seg: string; confirmado: boolean; ultimoPasso: number }; recuperacao?: Array<{ h: string; usado: boolean }>; passkeys?: Passkey[] }
+const MFA_VALIDADE_S = 15 * 60;
+const SCRIPT_PASSKEY = `const b64=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};const u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');const csrf=document.getElementById('pk').dataset.csrf;const post=async(url,d)=>(await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({csrf,dados:JSON.stringify(d||{})})})).json();const msg=t=>{document.getElementById('pk-msg').textContent=t};document.getElementById('pk-reg')?.addEventListener('click',async()=>{try{const o=await post('/mfa/passkey/opcoes');const c=await navigator.credentials.create({publicKey:{challenge:b64(o.challenge),rp:o.rp,user:{id:b64(o.user.id),name:o.user.name,displayName:o.user.name},pubKeyCredParams:[{type:'public-key',alg:-7}],authenticatorSelection:{userVerification:'required',residentKey:'preferred'},attestation:'none'}});const r=await post('/mfa/passkey/registrar',{clientDataJSON:u(c.response.clientDataJSON),attestationObject:u(c.response.attestationObject)});if(r.ok)location.href='/mfa';else msg(r.erro||'Falhou')}catch(e){msg('Não foi possível cadastrar a passkey.')}});document.getElementById('pk-ent')?.addEventListener('click',async()=>{try{const o=await post('/mfa/passkey/desafio');const a=await navigator.credentials.get({publicKey:{challenge:b64(o.challenge),rpId:o.rpId,allowCredentials:o.ids.map(id=>({type:'public-key',id:b64(id)})),userVerification:'required'}});const r=await post('/mfa/passkey/verificar',{id:u(a.rawId),clientDataJSON:u(a.response.clientDataJSON),authenticatorData:u(a.response.authenticatorData),assinatura:u(a.response.signature)});if(r.ok)location.href=r.destino;else msg(r.erro||'Falhou')}catch(e){msg('Não foi possível usar a passkey.')}});`;
+const CSP_PASSKEY = (h: string) => `default-src 'none'; script-src 'sha256-${h}'; connect-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`;
 
 const COOKIE = 'odin_sessao';
 const CSP = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
@@ -61,15 +68,99 @@ input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px s
     return [...saida].map(([id, canal]) => { const s = catalogo.find((x) => x.id === id); const c = (s?.canais ?? {}) as Record<string, string>; return { id, nome: String(s?.nome ?? id), canal, versao: (canal === 'beta' && c.beta) || c.stable || '' }; }).sort((a, b) => a.id.localeCompare(b.id));
   }
 
+  const rpId = new URL(cfg.emissor).hostname; const origem = new URL(cfg.emissor).origin;   const shaScript = createHash('sha256').update(SCRIPT_PASSKEY).digest('base64');
+  const reemitir = (s: Sessao, patch: Partial<Sessao>): string => { const corpo = Buffer.from(JSON.stringify({ ...s, ...patch })).toString('base64url'); return `${corpo}.${assinar(corpo)}`; };
+  const docMfa = async (userId: string): Promise<DocMfa> => ((await cfg.store.get('mfa', userId)) as DocMfa | null) ?? {};
+  const cadastrado = (d: DocMfa): boolean => !!d.totp?.confirmado || (d.passkeys?.length ?? 0) > 0;
+  const restantes = (d: DocMfa): number => (d.recuperacao ?? []).filter((x) => !x.usado).length;
+  const meuNome = async (id: string): Promise<string> => String((await cfg.store.get('users', id))?.githubLogin || (await cfg.store.get('users', id))?.nome || id);
+  const jsonOk = (res: ServerResponse, status: number, corpo: unknown, extra: Record<string, string> = {}) => responder(res, status, corpo, { 'content-security-policy': CSP, ...extra });
+  const novoDesafio = async (userId: string, tipo: string): Promise<string> => { const c = randomBytes(32).toString('base64url'); await cfg.store.set('mfa_desafios', userId, { c, tipo, exp: agora() + 5 * 60_000 }); return c; };
+  const consumirDesafio = async (userId: string, tipo: string): Promise<string> => { let achado = ''; await cfg.store.update('mfa_desafios', userId, (d) => { if (d && d.tipo === tipo && Number(d.exp) > agora()) achado = String(d.c); return null; }); if (!achado) throw new OdinErro('invalido', 'O desafio expirou. Tente de novo.'); return achado; };
+
   /** Devolve true quando a rota é do portal. */
   async function handler(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     const url = new URL(req.url ?? '/', 'http://local'); const p = url.pathname;
-    if (!(p === '/' || p === '/sair' || p.startsWith('/auth/github/') || p === '/convite' || p === '/conta' || p.startsWith('/conta/') || p === '/admin' || p.startsWith('/admin/'))) return false;
+    if (!(p === '/' || p === '/sair' || p.startsWith('/auth/github/') || p === '/convite' || p === '/mfa' || p.startsWith('/mfa/') || p === '/conta' || p.startsWith('/conta/') || p === '/admin' || p.startsWith('/admin/'))) return false;
     const rid = novoRequestId(); const ip = ipDe(req);
     try {
       const sess = sessaoDe(req); const post = req.method === 'POST';
       const form = post ? await lerFormulario(req) : {};
       if (post && p !== '/convite' && p !== '/admin/entrar' && !(sess && igual(String(form.csrf ?? ''), sess.c))) { aud(rid, ip, sess?.s ?? 'anonimo', 'portal.csrf', 'negado'); return html(res, 403, pagina('Sessão inválida', '<p>Sua sessão expirou ou o formulário não é válido. <a href="/">Voltar ao início</a>.</p>')), true; }
+
+      // ---- segundo fator: sessão de pessoa real só passa com o fator cadastrado e confirmado há ≤ 15 min (o segredo de emergência é exceção) ----
+      const protegida = p === '/admin' || p.startsWith('/admin/') || p === '/conta' || p.startsWith('/conta/');
+      if (sess && sess.s !== 'admin' && protegida) {
+        const dm = await docMfa(sess.s); const preciso = cadastrado(dm) || cfg.exigirMfa === true; const ativo = (await cfg.store.get('users', sess.s))?.status === 'ativo'; // pessoa suspensa cai no bloqueio da conta (403), não no desafio
+        if (preciso && ativo && !(sess.m && seg() - sess.m <= MFA_VALIDADE_S)) { if (post) aud(rid, ip, sess.s, 'portal.mfa.exigido', 'negado'); return ir(res, '/mfa'), true; }
+      }
+      if (p === '/mfa' || p.startsWith('/mfa/')) {
+        if (!sess || sess.s === 'admin') return ir(res, '/'), true;
+        const U = sess.s; const dm = await docMfa(U); const ativa = !!sess.m && seg() - sess.m <= MFA_VALIDADE_S; const destino = sess.p === 'admin' ? '/admin' : '/conta'; const nav = sess.p === 'admin' ? navAdmin(sess.c) : navConta(sess.c);
+        const concluir = (extraMsg = ''): true => { const c = reemitir(sess, { m: seg() }); return ir(res, extraMsg ? '/mfa?ok=1' : destino, { 'set-cookie': cookie(c, Math.max(60, sess.e - seg())) }), true; };
+        if (p === '/mfa' && !post) {
+          const cad = cadastrado(dm); const pk = `<div id="pk" data-csrf="${sess.c}"></div><p id="pk-msg" class="no"></p><script>${SCRIPT_PASSKEY}</script>`;
+          const corpo = cad && !ativa
+            ? `<div class="card"><h2>Confirme que é você</h2><form method="post" action="/mfa/verificar">${csrf(sess)}${dm.totp?.confirmado ? '<p><label>Código do aplicativo autenticador<br><input name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></label></p><button name="tipo" value="totp">Confirmar</button>' : ''}</form>${(dm.passkeys?.length ?? 0) ? `<p><button id="pk-ent" type="button">Usar minha passkey</button></p>` : ''}<form method="post" action="/mfa/verificar" style="margin-top:12px">${csrf(sess)}<p><label>Ou um código de recuperação<br><input name="codigo" maxlength="12" autocomplete="off"></label></p><button name="tipo" value="recuperacao">Usar código de recuperação</button></form>${pk}</div>`
+            : `<div class="card"><h2>Segundo fator</h2><p>Situação: ${cad ? '<b class="ok">cadastrado</b>' : '<b class="no">não cadastrado</b>'}${cad ? ` · códigos de recuperação restantes: <b>${restantes(dm)}</b>` : ''}</p>${url.searchParams.get('ok') ? '<p class="ok">Pronto.</p>' : ''}${dm.totp?.confirmado ? '<p>Aplicativo autenticador: ativo.</p>' : `<form method="post" action="/mfa/totp/iniciar">${csrf(sess)}<button>Cadastrar aplicativo autenticador (TOTP)</button></form>`}<p>Passkeys: <b>${dm.passkeys?.length ?? 0}</b></p><p><button id="pk-reg" type="button">Cadastrar passkey</button></p>${cad ? `<form method="post" action="/mfa/recuperacao">${csrf(sess)}<button>Gerar novos códigos de recuperação</button></form><p><a href="${destino}">Continuar</a></p>` : '<p>Cadastre ao menos um fator para continuar.</p>'}${pk}</div>`;
+          return html(res, 200, pagina('Verificação em duas etapas', corpo, nav), { 'content-security-policy': CSP_PASSKEY(shaScript) }), true;
+        }
+        if (p === '/mfa/totp/iniciar' && post) {
+          if (cadastrado(dm) && !ativa) return ir(res, '/mfa'), true; const seg0 = novoSegredoTotp();
+          await cfg.store.update('mfa', U, (d) => ({ ...((d as DocMfa | null) ?? {}), totp: { seg: cifrar(cfg.pimenta, seg0), confirmado: false, ultimoPasso: 0 } }));
+          return html(res, 200, pagina('Cadastrar aplicativo autenticador', `<div class="card"><p>No aplicativo (Google Authenticator, Microsoft Authenticator, 1Password…) escolha <b>inserir chave manualmente</b>:</p><p><code>${base32(seg0)}</code></p><p><small>Conta: ${esc(await meuNome(U))} · tipo: baseado em tempo · 6 dígitos</small></p><details><summary>Endereço otpauth</summary><p><code>${esc(uriTotp(await meuNome(U), seg0))}</code></p></details><form method="post" action="/mfa/totp/confirmar">${csrf(sess)}<p><label>Digite o código de 6 dígitos que o aplicativo mostra<br><input name="codigo" inputmode="numeric" required maxlength="8" autocomplete="off"></label></p><button>Confirmar</button></form></div>`, nav)), true;
+        }
+        if (p === '/mfa/totp/confirmar' && post) {
+          limite.consumir(`mf:${U}`, 10); const t0 = dm.totp; if (!t0 || t0.confirmado) return ir(res, '/mfa'), true;
+          const passo = verificarTotp(decifrar(cfg.pimenta, t0.seg), String(form.codigo ?? ''), seg(), 0);
+          if (passo === null) { aud(rid, ip, U, 'portal.mfa.totp_cadastro', 'negado'); return html(res, 400, pagina('Código incorreto', '<p class="no">O código não confere. Volte e tente de novo (o relógio do celular precisa estar certo).</p><p><a href="/mfa">Voltar</a></p>', nav)), true; }
+          const codigos = novosCodigosRecuperacao(); await cfg.store.update('mfa', U, (d) => { const x = ((d as DocMfa | null) ?? {}); return { ...x, totp: { ...x.totp!, confirmado: true, ultimoPasso: passo }, recuperacao: codigos.map((c) => ({ h: hashRecuperacao(cfg.pimenta, c), usado: false })) } as never; });
+          aud(rid, ip, U, 'portal.mfa.totp_cadastro'); const c = reemitir(sess, { m: seg() });
+          return html(res, 200, pagina('Segundo fator ativo', `<div class="card"><p class="ok">Aplicativo autenticador cadastrado.</p><p>Guarde estes <b>códigos de recuperação</b> em um lugar seguro. Cada um vale uma vez e eles não serão mostrados de novo:</p><p>${codigos.map((x) => `<code>${x}</code>`).join(' ')}</p><p><a href="${destino}">Continuar</a></p></div>`, nav), { 'set-cookie': cookie(c, Math.max(60, sess.e - seg())) }), true;
+        }
+        if (p === '/mfa/recuperacao' && post) {
+          if (!ativa) return ir(res, '/mfa'), true; const codigos = novosCodigosRecuperacao();
+          await cfg.store.update('mfa', U, (d) => ({ ...((d as DocMfa | null) ?? {}), recuperacao: codigos.map((c) => ({ h: hashRecuperacao(cfg.pimenta, c), usado: false })) }) as never); aud(rid, ip, U, 'portal.mfa.recuperacao_gerar');
+          return html(res, 200, pagina('Novos códigos de recuperação', `<div class="card"><p>Os códigos antigos deixaram de valer. Guarde estes (não serão mostrados de novo):</p><p>${codigos.map((x) => `<code>${x}</code>`).join(' ')}</p><p><a href="/mfa">Voltar</a></p></div>`, nav)), true;
+        }
+        if (p === '/mfa/verificar' && post) {
+          limite.consumir(`mf:${U}`, 10); const codigo = String(form.codigo ?? '');
+          if (form.tipo === 'totp' && dm.totp?.confirmado) {
+            const passo = verificarTotp(decifrar(cfg.pimenta, dm.totp.seg), codigo, seg(), dm.totp.ultimoPasso);
+            if (passo !== null) { let aceito = false; await cfg.store.update('mfa', U, (d) => { const x = d as DocMfa | null; if (!x?.totp || x.totp.ultimoPasso >= passo) return x as never; aceito = true; return { ...x, totp: { ...x.totp, ultimoPasso: passo } } as never; }); if (aceito) { aud(rid, ip, U, 'portal.mfa.totp'); return concluir(); } }
+          } else if (form.tipo === 'recuperacao') {
+            const h = hashRecuperacao(cfg.pimenta, codigo); let usou = false;
+            await cfg.store.update('mfa', U, (d) => { const x = d as DocMfa | null; const i = x?.recuperacao?.findIndex((r) => !r.usado && igual(r.h, h)) ?? -1; if (!x || i < 0) return x as never; usou = true; return { ...x, recuperacao: x.recuperacao!.map((r, k) => (k === i ? { ...r, usado: true } : r)) } as never; });
+            if (usou) { aud(rid, ip, U, 'portal.mfa.recuperacao_usar'); return concluir(); }
+          }
+          aud(rid, ip, U, 'portal.mfa.verificar', 'negado'); return html(res, 400, pagina('Código incorreto', '<p class="no">O código não confere ou já foi usado.</p><p><a href="/mfa">Tentar de novo</a></p>', nav)), true;
+        }
+        // passkeys (JSON)
+        if (p === '/mfa/passkey/opcoes' && post) {
+          if (cadastrado(dm) && !ativa) return jsonOk(res, 403, { ok: false, erro: 'Confirme o segundo fator antes.' }), true;
+          const c = await novoDesafio(U, 'registro'); return jsonOk(res, 200, { challenge: c, rp: { id: rpId, name: 'Odin' }, user: { id: Buffer.from(U).toString('base64url'), name: await meuNome(U) } }), true;
+        }
+        if (p === '/mfa/passkey/registrar' && post) {
+          limite.consumir(`mf:${U}`, 10);
+          try {
+            const dados = JSON.parse(String(form.dados ?? '{}')) as Record<string, string>; const desafio = await consumirDesafio(U, 'registro');
+            const r = verificarRegistro({ clientDataJSON: dados.clientDataJSON ?? '', attestationObject: dados.attestationObject ?? '', desafio, origem, rpId });
+            await cfg.store.update('mfa', U, (d) => { const x = ((d as DocMfa | null) ?? {}); return { ...x, passkeys: [...(x.passkeys ?? []).filter((k) => k.id !== r.id), { id: r.id, spki: r.spki, contador: r.contador, nome: 'Passkey', criadoEm: agora() }] } as never; });
+            aud(rid, ip, U, 'portal.mfa.passkey_cadastro'); return jsonOk(res, 200, { ok: true }, { 'set-cookie': cookie(reemitir(sess, { m: seg() }), Math.max(60, sess.e - seg())) }), true;
+          } catch (e) { aud(rid, ip, U, 'portal.mfa.passkey_cadastro', 'negado', e instanceof Error ? e.message : 'erro'); return jsonOk(res, 400, { ok: false, erro: 'A passkey não foi aceita.' }), true; }
+        }
+        if (p === '/mfa/passkey/desafio' && post) { const c = await novoDesafio(U, 'assercao'); return jsonOk(res, 200, { challenge: c, rpId, ids: (dm.passkeys ?? []).map((k) => k.id) }), true; }
+        if (p === '/mfa/passkey/verificar' && post) {
+          limite.consumir(`mf:${U}`, 10);
+          try {
+            const dados = JSON.parse(String(form.dados ?? '{}')) as Record<string, string>; const desafio = await consumirDesafio(U, 'assercao'); const k = (dm.passkeys ?? []).find((x) => x.id === dados.id); if (!k) throw new Error('passkey desconhecida');
+            const novo = verificarAssercao({ clientDataJSON: dados.clientDataJSON ?? '', authenticatorData: dados.authenticatorData ?? '', assinatura: dados.assinatura ?? '', desafio, origem, rpId, spki: k.spki, contadorAnterior: k.contador });
+            await cfg.store.update('mfa', U, (d) => { const x = d as DocMfa | null; return x ? ({ ...x, passkeys: (x.passkeys ?? []).map((y) => (y.id === k.id ? { ...y, contador: novo } : y)) } as never) : x as never; });
+            aud(rid, ip, U, 'portal.mfa.passkey'); return jsonOk(res, 200, { ok: true, destino }, { 'set-cookie': cookie(reemitir(sess, { m: seg() }), Math.max(60, sess.e - seg())) }), true;
+          } catch (e) { aud(rid, ip, U, 'portal.mfa.passkey', 'negado', e instanceof Error ? e.message : 'erro'); return jsonOk(res, 400, { ok: false, erro: 'A passkey não foi aceita.' }), true; }
+        }
+        return html(res, 404, pagina('Não encontrado', '<p>Página inexistente.</p>', nav)), true;
+      }
 
       if (p === '/' && req.method === 'GET') return html(res, 200, pagina('Odin', `<div class="card"><p><b>Administração</b>: quem cuida do acesso, das skills e do conhecimento.</p><p><a href="/admin">Entrar como administrador</a></p></div><div class="card"><p><b>Entrar com a sua conta</b></p>${botaoGithub || '<p>Em breve.</p>'}</div><div class="card"><p><b>Pessoas</b>: use o link de convite que um administrador enviou para você. No terminal, rode <code>odin setup</code> e informe o código aqui, em <b>Minha conta</b>.</p></div>`)), true;
       if (p === '/sair' && post) { aud(rid, ip, sess?.s ?? 'anonimo', 'portal.saida'); return ir(res, '/', { 'set-cookie': cookie('', 0) }), true; }
@@ -133,7 +224,7 @@ input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px s
         if (p === '/admin/global' && post) { await revogacaoGlobal(cfg.store, agora()); aud(rid, ip, A, 'admin.revogacao_global'); return ir(res, '/admin'), true; }
         if (p === '/admin/pessoas' && !post) {
           const [us, ms, ds, perfis, squads] = await Promise.all([cfg.store.list('users'), cfg.store.list('memberships'), cfg.store.list('devices'), cfg.store.list('profiles'), cfg.store.list('squads')]);
-          const linhas = us.map((u) => `<tr><td>${esc(u.nome)}<br><small>${esc(u.githubLogin)}</small></td><td>${esc(ms.filter((m) => m.userId === u.id).flatMap((m) => (m.perfis as string[]) ?? []).join(', ') || '—')}</td><td class="${u.status === 'ativo' ? 'ok' : 'no'}">${esc(u.status)}</td><td>${ds.filter((x) => x.userId === u.id && x.status === 'ativo').length}</td><td><form method="post" action="/admin/pessoas/acao" style="display:flex;gap:4px;flex-wrap:wrap">${csrf(sess)}<input type="hidden" name="id" value="${esc(u.id)}"><button name="acao" value="convite">Convite</button><button name="acao" value="${u.status === 'ativo' ? 'suspender' : 'reativar'}" class="${u.status === 'ativo' ? 'p' : ''}">${u.status === 'ativo' ? 'Suspender' : 'Reativar'}</button></form></td></tr>`).join('');
+          const linhas = us.map((u) => `<tr><td>${esc(u.nome)}<br><small>${esc(u.githubLogin)}</small></td><td>${esc(ms.filter((m) => m.userId === u.id).flatMap((m) => (m.perfis as string[]) ?? []).join(', ') || '—')}</td><td class="${u.status === 'ativo' ? 'ok' : 'no'}">${esc(u.status)}</td><td>${ds.filter((x) => x.userId === u.id && x.status === 'ativo').length}</td><td><form method="post" action="/admin/pessoas/acao" style="display:flex;gap:4px;flex-wrap:wrap">${csrf(sess)}<input type="hidden" name="id" value="${esc(u.id)}"><button name="acao" value="convite">Convite</button><button name="acao" value="resetar_mfa" class="p">Zerar 2º fator</button><button name="acao" value="${u.status === 'ativo' ? 'suspender' : 'reativar'}" class="${u.status === 'ativo' ? 'p' : ''}">${u.status === 'ativo' ? 'Suspender' : 'Reativar'}</button></form></td></tr>`).join('');
           return html(res, 200, pagina('Pessoas', `<table><tr><th>Pessoa</th><th>Perfis</th><th>Situação</th><th>Dispositivos</th><th>Ações</th></tr>${linhas}</table>
 <div class="card"><h2>Nova pessoa</h2><form method="post" action="/admin/pessoas/criar">${csrf(sess)}<p><label>Nome<br><input name="nome" required maxlength="80"></label></p><p><label>Login do GitHub (opcional)<br><input name="login" maxlength="40" pattern="[A-Za-z0-9-]*"></label></p><p><label>Squad<br><select name="squad">${squads.map((s) => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('')}</select></label></p><p><label>Perfil<br><select name="perfil">${perfis.map((s) => `<option>${esc(s.id)}</option>`).join('')}</select></label></p><button>Criar e gerar convite</button></form></div>`, nav)), true;
         }
@@ -151,6 +242,7 @@ input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px s
           const id = String(form.id ?? ''); const u = await cfg.store.get('users', id); if (!u) throw new OdinErro('invalido', 'Pessoa inexistente.');
           if (form.acao === 'suspender') { await suspenderPessoa(cfg.store, id); aud(rid, ip, A, 'admin.pessoa.suspender', 'ok', id); }
           else if (form.acao === 'reativar') { await cfg.store.update('users', id, (x) => (x ? { ...x, status: 'ativo', policyVersion: Number(x.policyVersion) + 1 } : null)); aud(rid, ip, A, 'admin.pessoa.reativar', 'ok', id); }
+          else if (form.acao === 'resetar_mfa') { await cfg.store.delete('mfa', id); aud(rid, ip, A, 'admin.pessoa.resetar_mfa', 'ok', id); }
           else if (form.acao === 'convite') { if (u.status !== 'ativo') throw new OdinErro('invalido', 'Reative a pessoa antes de convidar.'); aud(rid, ip, A, 'admin.convite.criar', 'ok', id); return mostrarConvite(await conviteNovo(id), String(u.nome)), true; }
           return ir(res, '/admin/pessoas'), true;
         }

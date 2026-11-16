@@ -42,3 +42,6 @@
 
 ## Riscos ativos mais relevantes
 R11 (busca de ferramentas via LiteLLM), R15 (pessoa única), R16 (corte único), R17 (sem jurídico), R18 (GitHub Free), R19 (avaliação com modelo não determinística), R20 (sem WAF em E0 e E1), R23 (partida a frio), R24 (nuvem por último), R25 (cofre em arquivo). Detalhe no [plano, seção 18](PLANO.md).
+
+## F2, F7 e F8 (código pronto, aguardando homologação no pipeline)
+Segundo fator do portal (TOTP, códigos de recuperação, passkey; H31), conhecimento híbrido com embeddings da Vertex AI (H30), auditoria BigQuery, painel e alertas (Terraform `observabilidade`), runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Decisão: ADR 0026.

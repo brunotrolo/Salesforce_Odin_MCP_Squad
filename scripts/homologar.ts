@@ -27,6 +27,8 @@ import { AssinadorKms, versaoAtual } from '../packages/shared/src/nuvem/kms.ts';
 import { lerSegredo } from '../packages/shared/src/nuvem/segredos.ts';
 import { EmbedderVertex } from '../packages/shared/src/nuvem/vertex.ts';
 import { lerPerguntas, medirRecuperacao } from '../pipeline/avaliar-conhecimento.ts';
+import { base32Decodificar, codigoTotp } from '../apps/portal/src/mfa.ts';
+import { AutenticadorSoft } from '../tests/apoio/autenticador.ts';
 import { semearNuvem } from '../packages/shared/src/nuvem/semente.ts';
 import { Conhecimento } from '../apps/mcp-server/src/conhecimento.ts';
 import { publicar } from '../pipeline/publicar.ts';
@@ -229,6 +231,15 @@ await t('H21', 'Skills reais publicadas: manifesto com assinatura do KMS, hashes
 const sessaoWeb = () => { let c = ''; return { async req(path: string, init: RequestInit = {}) { const r = await fetch(`${STS}${path}`, { ...init, redirect: 'manual', headers: { ...(init.headers as object), ...(c ? { cookie: c } : {}) } }); const sc = r.headers.get('set-cookie'); if (sc) { const v = sc.split(';')[0]!; c = v.endsWith('=') ? '' : v; } return r; } }; };
 const formWeb = (o: Record<string, string>) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(o).toString() });
 const csrfWeb = (h: string) => /name="csrf" value="([^"]+)"/.exec(h)?.[1] ?? '';
+const jsonWeb = (o: unknown) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
+const totpAgora = (seg: Buffer) => codigoTotp(seg, Math.floor(Date.now() / 1000 / 30));
+async function cadastrarTotpWeb(s: ReturnType<typeof sessaoWeb>): Promise<{ seg: Buffer; codigos: string[] }> {
+  ok((await s.req('/conta')).headers.get('location') === '/mfa', 'sem segundo fator a conta deveria redirecionar a /mfa'); const c = csrfWeb(await (await s.req('/mfa')).text());
+  const ini = await (await s.req('/mfa/totp/iniciar', formWeb({ csrf: c }))).text(); const seg = base32Decodificar(/<code>([A-Z2-7]{32})<\/code>/.exec(ini)?.[1] ?? '');
+  const r = await s.req('/mfa/totp/confirmar', formWeb({ csrf: c, codigo: totpAgora(seg) })); const h = await r.text(); ok(r.status === 200, `confirmação do TOTP ${r.status}`);
+  return { seg, codigos: [...h.matchAll(/<code>([a-f0-9]{5}-[a-f0-9]{5})<\/code>/g)].map((m) => m[1]!) };
+}
+let fatorPessoa: { seg: Buffer; codigos: string[] } | undefined;
 const admin = sessaoWeb(); const pessoaWeb = sessaoWeb(); let pessoaPortal = ''; let conviteToken = ''; let csrfAdmin = '';
 await t('H22', 'Portal admin: login só com o segredo, sessão com CSRF, cookie seguro e cabeçalhos de proteção', async () => {
   const r0 = await admin.req('/admin'); ok(r0.status === 200 && /Segredo de administração/.test(await r0.text()), 'sem login deveria pedir o segredo');
@@ -248,6 +259,7 @@ await t('H23', 'Portal admin: cria pessoa e convite de uso único; a pessoa entr
   ok((await pessoaWeb.req('/convite', formWeb({ t: conviteToken }))).status === 303, 'não entrou com o convite');
   ok((await sessaoWeb().req('/convite', formWeb({ t: conviteToken }))).status === 400, 'convite reutilizado');
   ok((await sessaoWeb().req('/convite?t=inventado')).status === 400, 'convite inventado aceito');
+  fatorPessoa = await cadastrarTotpWeb(pessoaWeb);
   const c = await (await pessoaWeb.req('/conta')).text(); ok(/Olá, Pessoa Portal Homolog/.test(c) && /sf-test/.test(c), 'conta sem o nome ou as skills');
   ok(!/Nova pessoa/.test(await (await pessoaWeb.req('/admin/pessoas')).text()), 'pessoa viu a administração');
 });
@@ -262,6 +274,28 @@ await t('H24', 'Portal pessoa + CLI: ativa o dispositivo no portal, usa o token 
   const alheio = (await store.list('devices', (d) => d.userId === USUARIO))[0]; if (alheio) ok((await pessoaWeb.req('/conta/dispositivos/revogar', formWeb({ csrf: csrfWeb(lista), id: alheio.id }))).status === 403, 'revogou dispositivo de outra pessoa');
   const t0 = Date.now(); let negou = false; while (Date.now() - t0 < 50_000) { if ((await fetch(`${MCP}/v1/me`, { headers: h })).status === 401) { negou = true; break; } await new Promise((r) => setTimeout(r, 2000)); }
   ok(negou, 'o token continuou valendo depois da revogação pela pessoa'); return `revogação efetiva em ${Math.round((Date.now() - t0) / 1000)} s`;
+});
+await t('H31', 'Segundo fator no portal: sessão nova exige o fator, TOTP sem repetição, código de recuperação de uso único, passkey (WebAuthn) e reset pelo admin', async () => {
+  ok(!!fatorPessoa && fatorPessoa.codigos.length === 10, 'sem os 10 códigos de recuperação');
+  const novaSessao = async () => { const r = await admin.req('/admin/pessoas/acao', formWeb({ csrf: csrfAdmin, id: pessoaPortal, acao: 'convite' })); const tk = /\/convite\?t=([A-Za-z0-9_-]+)/.exec(await r.text())?.[1]; ok(!!tk, 'sem convite'); const s = sessaoWeb(); ok((await s.req('/convite', formWeb({ t: tk! }))).status === 303, 'convite não entrou'); return s; };
+  const s1 = await novaSessao(); const g = await s1.req('/conta'); ok(g.status === 303 && g.headers.get('location') === '/mfa', `sessão sem fator confirmado abriu a conta (${g.status})`);
+  let c = csrfWeb(await (await s1.req('/mfa')).text());
+  ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'totp', codigo: '000000' }))).status === 400, 'TOTP errado aceito');
+  ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'totp', codigo: totpAgora(fatorPessoa!.seg) }))).status === 400, 'TOTP já usado no cadastro foi aceito de novo');
+  ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[0]! }))).status === 303, 'código de recuperação válido recusado'); ok((await s1.req('/conta')).status === 200, 'conta não abriu depois do fator');
+  const s2 = await novaSessao(); await s2.req('/conta'); c = csrfWeb(await (await s2.req('/mfa')).text()); ok((await s2.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[0]! }))).status === 400, 'código de recuperação reutilizado');
+  ok((await s2.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[1]! }))).status === 303, 'segundo código de recuperação recusado');
+  // passkey com autenticador de software (a verificação do servidor é a de produção)
+  const aut = new AutenticadorSoft(new URL(STS).hostname, new URL(STS).origin); c = csrfWeb(await (await s2.req('/mfa')).text());
+  const o1 = await (await s2.req('/mfa/passkey/opcoes', jsonWeb({ csrf: c }))).json() as { challenge: string }; ok((await s2.req('/mfa/passkey/registrar', jsonWeb({ csrf: c, dados: JSON.stringify(aut.registrar(o1.challenge, { origem: 'https://falso.exemplo' })) }))).status === 400, 'registro com origem falsa aceito');
+  const o2 = await (await s2.req('/mfa/passkey/opcoes', jsonWeb({ csrf: c }))).json() as { challenge: string }; ok((await s2.req('/mfa/passkey/registrar', jsonWeb({ csrf: c, dados: JSON.stringify(aut.registrar(o2.challenge)) }))).status === 200, 'registro da passkey recusado');
+  const s3 = await novaSessao(); await s3.req('/conta'); const c3 = csrfWeb(await (await s3.req('/mfa')).text());
+  const d1 = await (await s3.req('/mfa/passkey/desafio', jsonWeb({ csrf: c3 }))).json() as { challenge: string; ids: string[] }; ok(d1.ids.length === 1, 'passkey não listada');
+  ok((await s3.req('/mfa/passkey/verificar', jsonWeb({ csrf: c3, dados: JSON.stringify(aut.assinar(d1.challenge, { origem: 'https://falso.exemplo' })) }))).status === 400, 'assinatura com origem falsa aceita');
+  const d2 = await (await s3.req('/mfa/passkey/desafio', jsonWeb({ csrf: c3 }))).json() as { challenge: string }; ok((await s3.req('/mfa/passkey/verificar', jsonWeb({ csrf: c3, dados: JSON.stringify(aut.assinar(d2.challenge)) }))).status === 200, 'login com passkey recusado'); ok((await s3.req('/conta')).status === 200, 'conta não abriu depois da passkey');
+  const mfaDoc = JSON.stringify(await store.get('mfa', pessoaPortal)); ok(!mfaDoc.includes(fatorPessoa!.seg.toString('hex')) && !fatorPessoa!.codigos.some((x) => mfaDoc.includes(x)), 'segredo ou código de recuperação em claro no Firestore');
+  await admin.req('/admin/pessoas/acao', formWeb({ csrf: csrfAdmin, id: pessoaPortal, acao: 'resetar_mfa' })); ok((await store.get('mfa', pessoaPortal)) === null, 'o admin não conseguiu zerar o segundo fator');
+  return 'TOTP, recuperação, passkey e reset validados no portal real';
 });
 await t('H25', 'Portal admin: skills do catálogo com versões, propostas aprovadas viram conhecimento, suspensão derruba a conta, revogação global', async () => {
   const sk = await (await admin.req('/admin/skills')).text(); ok(/0\.1\.0-rascunho/.test(sk) && /sf-test/.test(sk), 'catálogo sem as versões publicadas');
