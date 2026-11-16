@@ -9,11 +9,11 @@
 |---|---|---|---|---|---|---|
 | 1 | Archaeologist | Publicável em rascunho | 0 | 3 | ~2161 tokens | 8 |
 | 2 | Discovery-to-Backlog | Publicável em rascunho | 0 | 2 | ~2248 tokens | 42 |
-| 3 | Data Architect | **Bloqueada** | 2 | 4 | ~2427 tokens | 38 |
+| 3 | Data Architect | Publicável em rascunho | 0 | 6 | ~2427 tokens | 40 |
 | 3 | Journey Designer | Publicável em rascunho | 0 | 3 | ~419 tokens | 11 |
 | 4 | Journey Developer | Publicável em rascunho | 0 | 3 | ~1595 tokens | 22 |
 | 4 | LWC Developer | Publicável em rascunho | 0 | 2 | ~4399 tokens | 15 |
-| 4 | Apex Callouts Developer | **Bloqueada** | 1 | 3 | ~4785 tokens | 37 |
+| 4 | Apex Callouts Developer | Publicável em rascunho | 0 | 4 | ~4819 tokens | 38 |
 | 5 | Apex Cover Loop | Publicável em rascunho | 0 | 2 | ~3642 tokens | 14 |
 | 5 | Test Automator | Publicável em rascunho | 0 | 2 | ~2064 tokens | 45 |
 | 6 | Deep Debugger | Publicável em rascunho | 0 | 2 | ~3222 tokens | 14 |
@@ -41,15 +41,13 @@ Avisos:
 
 ### Data Architect (`sf-data-architect`)
 
-Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 23 referências, 9 arquivos de runtime.
-
-Bloqueios:
-- .claude/skills/sf-data-architect/references/data-mapping/Case_Mapeamento_Campos_por_Dominio.md: 16219 tokens (teto de 8000); divida em referências
-- .claude/skills/sf-data-architect/scripts/dashboard/dashboard-template.html:135: caractere Unicode oculto U+FEFF
+Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 25 referências, 9 arquivos de runtime.
 
 Avisos:
 - .claude/skills/sf-data-architect/references/data-mapping/Case_DataMapping_Completo.md: 7911 tokens (alvo de 5000)
 - .claude/skills/sf-data-architect/references/data-mapping/Case_Dominios_de_Negocio.md: 6004 tokens (alvo de 5000)
+- .claude/skills/sf-data-architect/references/data-mapping/Case_Mapeamento_Campos_por_Dominio.md: 6566 tokens (alvo de 5000)
+- .claude/skills/sf-data-architect/references/data-mapping/Case_Mapeamento_Campos_por_Dominio_2.md: 6611 tokens (alvo de 5000)
 - .claude/skills/sf-data-architect/SKILL.md: o primeiro passo precisa ser `odin ensure sf-data-architect`
 - sem avaliações de comportamento (evals/): obrigatório antes de promover para stable
 
@@ -81,12 +79,10 @@ Avisos:
 
 ### Apex Callouts Developer (`sf-callouts-developer`)
 
-Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 30 referências, 1 arquivos de runtime.
-
-Bloqueios:
-- .claude/skills/apex-callouts-developer/references/docs/tobe-arquitetura-integracoes.md: 8097 tokens (teto de 8000); divida em referências
+Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 31 referências, 1 arquivos de runtime.
 
 Avisos:
+- .claude/skills/apex-callouts-developer/references/docs/tobe-arquitetura-integracoes.md: 6764 tokens (alvo de 5000)
 - .claude/skills/apex-callouts-developer/references/docs/tobe-explicacao-simples.md: 6577 tokens (alvo de 5000)
 - .claude/skills/apex-callouts-developer/SKILL.md: o primeiro passo precisa ser `odin ensure sf-callouts-developer`
 - sem avaliações de comportamento (evals/): obrigatório antes de promover para stable

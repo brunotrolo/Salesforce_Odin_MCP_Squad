@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Skills reais na nuvem (ADR 0022)
+- Workflow `publicar-skills.yml`; 9 skills em rascunho no canal beta; H21 na homologação; referências do Callouts e do Data Architect divididas para passar no lint.
+
 ### 2026-11-16 · Nuvem homologada 20/20 (ADR 0021)
 - STS, MCP, disjuntor e jobs no Cloud Run; correções de `/saude`, dispositivo recém-ativado e token de identidade do disjuntor; relatório em `docs/HOMOLOGACAO.md`.
 

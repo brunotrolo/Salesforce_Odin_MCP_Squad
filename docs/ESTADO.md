@@ -11,6 +11,7 @@
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-16 · **Skills reais na nuvem** (ADR 0022): 9 das 10 publicadas em rascunho (canal beta, assinadas pelo KMS) pelo workflow `publicar-skills.yml`; Callouts e Data Architect destravados no lint (referências divididas, Unicode oculto removido); H21 na homologação. O Data Architect (repositório privado) espera o segredo `SKILLS_READ_TOKEN`.
 - 2026-11-16 · **Nuvem homologada 20/20** ([HOMOLOGACAO.md](HOMOLOGACAO.md), ADR 0021): STS, MCP, disjuntor e jobs no Cloud Run com Firestore, Cloud Storage, KMS e Secret Manager; correções de `/saude`, dispositivo recém-ativado e token de identidade do disjuntor.
 - 2026-11-16 · **F1 aplicada no Google Cloud** (projeto `salesforcemcpodin`, número 177809673592, região `southamerica-east1`, estágio E0): ponte por identidade federada (sem chave; só o mantenedor, só na `main`), orçamento de R$ 30 (cerca de US$ 5) com alertas de 50% a 300% e tópico `budget-alerts`, 10 contas de serviço, 4 chaves do KMS em software, Firestore, 3 buckets privados, repositório de imagens com limpeza, 20 APIs. 53 recursos criados pelo workflow `infra.yml`.
 - 2026-11-15 · ADR 0020: primeiro código. Caminho completo local de ponta a ponta, com demonstração (`npm run demo`) e servidor local (`npm run dev`).
@@ -22,7 +23,8 @@
 - 2026-11-14 · Rodadas 13 a 15: decisões do mantenedor integradas; GitHub Free (decisão 41).
 
 ## Próximo passo
-1. **Claude:** publicar as skills reais na nuvem (precisa de GitHub App para os repositórios privados), medir partida a frio e carga, portal com login GitHub, reduzir o papel de `sa-ci-infra`.
+1. **Mantenedor (única pendência que só você resolve):** criar o segredo `SKILLS_READ_TOKEN` no repositório do Odin (token fine-grained, somente leitura de conteúdo do repositório do Data Architect) para publicar a 10ª skill.
+2. **Claude:** medir partida a frio e carga, portal com login GitHub, GitHub App, avaliações por skill (`evals/`) para chegar ao `stable`, reduzir o papel de `sa-ci-infra`.
 2. **Mantenedor:** rodar `npm run demo`, depois `npm run dev` e conectar o próprio Claude Code (Windows e extensão do VS Code), para a primeira prova real.
 2. **Claude (`/odin-dev`):** migrar as 10 skills reais com o `odin-curador` (F6), começando por uma de cada etapa; portal (ativação com GitHub e segundo fator, console); cofre do sistema; `odin doctor --orgs`.
 3. Depois: implementações de nuvem atrás das interfaces, Terraform no estágio E0 e a F0 com o Claude Code real e o LiteLLM.
