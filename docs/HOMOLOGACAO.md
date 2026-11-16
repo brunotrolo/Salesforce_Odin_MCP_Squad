@@ -1,6 +1,6 @@
 # Homologação na nuvem
 
-**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 25/25** · Execução `homologar.yml` #4 (commit `1531c99`, com o portal); 21/21 na #3 e 20/20 na #2 · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
+**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 26/26** · Execução `homologar.yml` #6 (commit `e54d8ea`, com o login GitHub e as 10 skills); 25/25 na #4 (portal), 21/21 na #3 e 20/20 na #2 · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
 
 | # | Verificação | Resultado |
 |---|---|---|
@@ -28,6 +28,7 @@
 | H23 | Portal admin: cria pessoa (nome escapado) e convite de uso único; a pessoa entra pelo convite; reuso e convite inventado recusados; pessoa não vê a administração | ✓ |
 | H24 | Portal pessoa + CLI: ativa o dispositivo digitando o código do `odin setup` na página, o token funciona no MCP, a pessoa revoga o próprio dispositivo (não o de outra pessoa) e o token cai | ✓ |
 | H25 | Portal admin: catálogo com as versões publicadas, proposta aprovada vira conhecimento, suspensão derruba a conta, revogação global gravada | ✓ |
+| H26 | Login com GitHub: o portal redireciona ao OAuth App certo (client id, `redirect_uri` e escopo `read:user`), estado e cookie protegidos, callback sem estado válido recusado, o GitHub reconhece o app e aceita o segredo guardado no Secret Manager ([ADR 0024](adr/0024-login-do-portal-com-github-oauth-app.md)) | ✓ |
 | H20 | Limpeza dos dados de teste | ✓ |
 
 ## Controles de custo e privacidade observados

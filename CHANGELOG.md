@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Login do portal com GitHub (ADR 0024)
+- Botão "Entrar com GitHub" (OAuth App), estado assinado, ligação por id, segredo no Secret Manager; homologação H26; 10 skills reais na nuvem; homologação 26/26.
+
 ### 2026-11-16 · Portal interino (ADR 0023)
 - Páginas de administração e de pessoa no Cloud Run (apps/portal), convites de uso único, CSRF, CSP, auditoria; homologação H22 a H25.
 

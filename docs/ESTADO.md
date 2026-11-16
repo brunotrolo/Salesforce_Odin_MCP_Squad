@@ -4,7 +4,7 @@
 > **Última atualização:** 2026-11-16
 
 ## Agora
-- **Fase:** **nuvem homologada** (25/25, [HOMOLOGACAO.md](HOMOLOGACAO.md)): serviços no Cloud Run, as 10 skills reais em beta e o portal com login GitHub. Localmente, `npm run demo` e `npm run dev` continuam funcionando.
+- **Fase:** **nuvem homologada** (26/26, [HOMOLOGACAO.md](HOMOLOGACAO.md)): serviços no Cloud Run, as 10 skills reais em beta e o portal com login GitHub. Localmente, `npm run demo` e `npm run dev` continuam funcionando.
 - **Pronto e testado (44 testes, CI em Linux e Windows):** emissor de tokens (`apps/sts`), servidor MCP com as 7 ferramentas e a API `/v1` (`apps/mcp-server`), roteador e catálogo das 10 skills (`packages/router`, `catalog/`), `odin lint` e pipeline de publicação assinada (`packages/lint`, `pipeline/`), publisher que confere a assinatura (`apps/jobs`), guard com PG-01 a PG-08 (`packages/guard`), CLI (`packages/cli`), skill de apoio `odin-ambiente`.
 - **Skills reais:** as 10 passam no `odin lint` e estão publicadas na nuvem em rascunho (canal beta); para chegar ao `stable` falta o checklist do `odin-curador` e as avaliações de comportamento ([MIGRACAO-SKILLS.md](MIGRACAO-SKILLS.md)).
 - **Ainda não existe:** login do portal com GitHub e segundo fator (o portal interino por segredo e convite existe), avaliações de comportamento por skill (a infraestrutura existe; faltam os casos), Vertex AI e binário do CLI.
