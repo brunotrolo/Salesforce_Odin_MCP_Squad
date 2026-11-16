@@ -14,9 +14,21 @@ intencoes:
   - ajustar o html e o javascript do componente
   - criar um datatable em LWC com SLDS
   - escrever o teste Jest do componente
+  - cria um componente de busca de cliente
+  - faz um card de caso em lightning web component
+  - adapta esse LWC para o outro objeto
+  - o componente precisa de um formulário com validação
+  - aprende os padrões de LWC dessa org
+  - alinha o componente ao design system
+  - corrige o layout do componente no mobile
+  - adiciona o evento customizado ao componente
   - texto: prototipar a jornada em HTML
     negativa: true
   - texto: testar a tela na sandbox
+    negativa: true
+  - texto: criar a classe Apex do serviço
+    negativa: true
+  - texto: modelar os objetos da solução
     negativa: true
 perfis_sugeridos:
   - dev

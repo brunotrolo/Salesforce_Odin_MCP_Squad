@@ -45,3 +45,6 @@ R11 (busca de ferramentas via LiteLLM), R15 (pessoa única), R16 (corte único),
 
 ## F2, F7 e F8 (código pronto, aguardando homologação no pipeline)
 Segundo fator do portal (TOTP, códigos de recuperação, passkey; H31), conhecimento híbrido com embeddings da Vertex AI (H30), auditoria BigQuery, painel e alertas (Terraform `observabilidade`), runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Decisão: ADR 0026.
+
+## Políticas de guard por skill (ADR 0027)
+Implementado: carregamento de `politicas/<id>.mjs` por sessão, lint e testes. Migrado: Deep Debugger. Faltam os hooks das outras 9 skills.

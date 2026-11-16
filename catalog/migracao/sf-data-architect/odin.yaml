@@ -13,9 +13,22 @@ intencoes:
   - revisar o modelo de dados e os relacionamentos master-detail
   - avaliar a volumetria e a estratégia de dados
   - diagrama entidade-relacionamento dos objetos
+  - qual objeto padrão serve antes de criar um customizado
+  - preciso do glossário de dados do projeto
+  - definir as regras de qualidade dos campos
+  - como ficam os relacionamentos entre caso, conta e contato
+  - planejar a carga e a volumetria de dados
+  - documentar o mapeamento de campos por domínio
+  - revisar o modelo contra os limites da plataforma
+  - gerar o dicionário de dados da capacidade
+  - validar o modelo com o time antes do build
   - texto: criar registros de teste na sandbox
     negativa: true
   - texto: construir a jornada da spec
+    negativa: true
+  - texto: investigar por que o campo não atualiza
+    negativa: true
+  - texto: criar o componente LWC da tela
     negativa: true
 perfis_sugeridos:
   - arquiteto

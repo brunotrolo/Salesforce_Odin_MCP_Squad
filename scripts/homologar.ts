@@ -355,6 +355,26 @@ await t('H29', 'CLI assinado: o servidor entrega a versão vigente, `odin update
   ok((await atualizarCli(res.versao)).atualizou === false, 'não deveria atualizar de novo');
   return `CLI ${res.versao} assinado pelo KMS, instalado e executado`;
 });
+await t('H32', 'Política de guard por skill: o Deep Debugger entrega a política no runtime assinado e o guard a aplica só depois do `odin ensure`', async () => {
+  const { sha256hex } = await import('../packages/shared/src/chaves.ts'); const { desempacotar } = await import('../packages/shared/src/pacote.ts');
+  const { executarGuardCompleto } = await import('../packages/guard/src/guard.ts'); const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs'); const { tmpdir } = await import('node:os');
+  const s = (await store.get('catalog_skills', 'sf-deep-debugger')) as { canais?: { beta?: string; stable?: string } } | null; const v = s?.canais?.stable ?? s?.canais?.beta; ok(!!v, 'Deep Debugger sem versão publicada');
+  const base = `pacotes/sf-deep-debugger/${v}`; const m = json((await armazenamento.ler(`${base}/manifesto.json`))!.toString('utf8'));
+  ok((m.entrega.politicas ?? []).includes('sf-deep-debugger'), 'manifesto sem a política declarada');
+  const rt = desempacotar((await armazenamento.ler(`${base}/runtime.odinpkg`))!); const arq = rt['scripts/politicas/sf-deep-debugger.mjs']; ok(!!arq, 'runtime sem scripts/politicas/sf-deep-debugger.mjs');
+  ok(m.arquivos['runtime/scripts/politicas/sf-deep-debugger.mjs'] === `sha256:${sha256hex(arq!)}`, 'hash da política não confere com o manifesto assinado');
+  const home = mkdtempSync(join(tmpdir(), 'odin-h32-')); const odin = join(home, '.odin'); const dir = join(odin, 'runtime', 'sf-deep-debugger', 'current');
+  for (const [k, b] of Object.entries(rt)) { if (!k.startsWith('scripts/')) continue; const f = join(dir, k); mkdirSync(join(f, '..'), { recursive: true }); writeFileSync(f, b); }
+  const antes = { h: process.env.ODIN_TESTE_HOME, o: process.env.ODIN_HOME }; process.env.ODIN_TESTE_HOME = home; process.env.ODIN_HOME = odin;
+  try {
+    const ev = (tool: string, input: object) => JSON.stringify({ tool_name: tool, tool_input: input, cwd: join(home, 'projeto'), session_id: 'h32' });
+    const sem = await executarGuardCompleto(ev('Write', { file_path: 'force-app/main/default/classes/Foo.cls' })); ok(sem.codigo === 0 && !sem.saida, 'sem o ensure a política da skill não deveria valer');
+    ok((await executarGuardCompleto(ev('Bash', { command: 'odin ensure sf-deep-debugger' }))).codigo === 0, 'ensure negado');
+    const ask = await executarGuardCompleto(ev('Write', { file_path: 'force-app/main/default/classes/Foo.cls' })); ok(ask.codigo === 0 && JSON.parse(ask.saida ?? '{}').hookSpecificOutput?.permissionDecision === 'ask', `a política não pediu confirmação: ${ask.saida}`);
+    const livre = await executarGuardCompleto(ev('Write', { file_path: 'docs/incidents/INC-1.md' })); ok(livre.codigo === 0 && !livre.saida, 'docs/incidents deveria ser livre');
+  } finally { if (antes.h === undefined) delete process.env.ODIN_TESTE_HOME; else process.env.ODIN_TESTE_HOME = antes.h; if (antes.o === undefined) delete process.env.ODIN_HOME; else process.env.ODIN_HOME = antes.o; }
+  return `política entregue no runtime assinado (${String(arq!.length)} bytes), aplicada pelo guard real depois do ensure`;
+});
 await t('H30', 'Conhecimento com embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto, substituído e vigência respeitados', async () => {
   const denso = new EmbedderVertex(PROJETO, process.env.VERTEX_REGIAO ?? 'us-central1'); const kb = new Conhecimento(store, denso);
   const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 20, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');

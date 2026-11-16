@@ -16,7 +16,7 @@
 | 4 | Apex Callouts Developer | Publicável em rascunho | 0 | 2 | ~4854 tokens | 38 |
 | 5 | Apex Cover Loop | Publicável em rascunho | 0 | 0 | ~3676 tokens | 14 |
 | 5 | Test Automator | Publicável em rascunho | 0 | 0 | ~2094 tokens | 45 |
-| 6 | Deep Debugger | Publicável em rascunho | 0 | 0 | ~3255 tokens | 14 |
+| 6 | Deep Debugger | Publicável em rascunho | 0 | 0 | ~3255 tokens | 15 |
 
 **Publicável em rascunho** = passa no `odin lint` com o contrato gerado; o pipeline insere o passo `odin ensure`. Para sair do rascunho falta o checklist do `odin-curador`: contrato no repositório da skill, regras do `CLAUDE.md` movidas, hooks como políticas do guard, bibliotecas de terceiros num pacote compartilhado, 20 intenções revisadas e avaliações de comportamento.
 
@@ -79,5 +79,5 @@ Entrega: 2 `SKILL.md`, 4 agentes, 2 regras, 7 referências, 30 arquivos de runti
 
 ### Deep Debugger (`sf-deep-debugger`)
 
-Entrega: 1 `SKILL.md`, 1 agentes, 1 regras, 7 referências, 4 arquivos de runtime.
+Entrega: 1 `SKILL.md`, 1 agentes, 1 regras, 7 referências, 5 arquivos de runtime.
 

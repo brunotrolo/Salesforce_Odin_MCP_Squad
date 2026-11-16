@@ -50,6 +50,11 @@ export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: strin
   r.arquivos.referencias = todos.filter((f) => f.startsWith(`${dirPrincipal}/references/`));
   if (odin.runtime) { r.arquivos.runtime = todos.filter((f) => f.startsWith(`${odin.runtime!.dir.replace(/\/$/, '')}/`)); if (!r.arquivos.runtime.length) r.erros.push(`runtime.dir vazio ou inexistente: ${odin.runtime.dir}`); }
 
+  for (const id of odin.politicas ?? []) {
+    const arq = `${odin.runtime?.dir.replace(/\/$/, '') ?? ''}/politicas/${id}.mjs`;
+    if (!odin.runtime) r.erros.push(`politicas: "${id}" exige runtime.dir (a política vai dentro do runtime assinado)`);
+    else if (!r.arquivos.runtime.includes(arq)) r.erros.push(`politicas: arquivo ausente: ${arq}`);
+  }
   const entregues = [...r.arquivos.skills, ...r.arquivos.agentes, ...r.arquivos.regras, ...r.arquivos.referencias, ...r.arquivos.runtime];
   for (const f of entregues) {
     // README dentro de references/ é conteúdo da skill; na raiz ou em .claude/ é documentação de quem mantém
