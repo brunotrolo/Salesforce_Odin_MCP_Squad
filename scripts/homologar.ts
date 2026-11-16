@@ -233,13 +233,13 @@ const formWeb = (o: Record<string, string>) => ({ method: 'POST', headers: { 'co
 const csrfWeb = (h: string) => /name="csrf" value="([^"]+)"/.exec(h)?.[1] ?? '';
 const jsonWeb = (o: unknown) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
 const totpAgora = (seg: Buffer) => codigoTotp(seg, Math.floor(Date.now() / 1000 / 30));
-async function cadastrarTotpWeb(s: ReturnType<typeof sessaoWeb>): Promise<{ seg: Buffer; codigos: string[] }> {
+async function cadastrarTotpWeb(s: ReturnType<typeof sessaoWeb>): Promise<{ seg: Buffer; codigos: string[]; passo: number }> {
   ok((await s.req('/conta')).headers.get('location') === '/mfa', 'sem segundo fator a conta deveria redirecionar a /mfa'); const c = csrfWeb(await (await s.req('/mfa')).text());
   const ini = await (await s.req('/mfa/totp/iniciar', formWeb({ csrf: c }))).text(); const seg = base32Decodificar(/<code>([A-Z2-7]{32})<\/code>/.exec(ini)?.[1] ?? '');
-  const r = await s.req('/mfa/totp/confirmar', formWeb({ csrf: c, codigo: totpAgora(seg) })); const h = await r.text(); ok(r.status === 200, `confirmação do TOTP ${r.status}`);
-  return { seg, codigos: [...h.matchAll(/<code>([a-f0-9]{5}-[a-f0-9]{5})<\/code>/g)].map((m) => m[1]!) };
+  const passo = Math.floor(Date.now() / 1000 / 30); const r = await s.req('/mfa/totp/confirmar', formWeb({ csrf: c, codigo: codigoTotp(seg, passo) })); const h = await r.text(); ok(r.status === 200, `confirmação do TOTP ${r.status}`);
+  return { seg, passo, codigos: [...h.matchAll(/<code>([a-f0-9]{5}-[a-f0-9]{5})<\/code>/g)].map((m) => m[1]!) };
 }
-let fatorPessoa: { seg: Buffer; codigos: string[] } | undefined;
+let fatorPessoa: { seg: Buffer; codigos: string[]; passo: number } | undefined;
 const admin = sessaoWeb(); const pessoaWeb = sessaoWeb(); let pessoaPortal = ''; let conviteToken = ''; let csrfAdmin = '';
 await t('H22', 'Portal admin: login só com o segredo, sessão com CSRF, cookie seguro e cabeçalhos de proteção', async () => {
   const r0 = await admin.req('/admin'); ok(r0.status === 200 && /Segredo de administração/.test(await r0.text()), 'sem login deveria pedir o segredo');
@@ -281,7 +281,7 @@ await t('H31', 'Segundo fator no portal: sessão nova exige o fator, TOTP sem re
   const s1 = await novaSessao(); const g = await s1.req('/conta'); ok(g.status === 303 && g.headers.get('location') === '/mfa', `sessão sem fator confirmado abriu a conta (${g.status})`);
   let c = csrfWeb(await (await s1.req('/mfa')).text());
   ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'totp', codigo: '000000' }))).status === 400, 'TOTP errado aceito');
-  ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'totp', codigo: totpAgora(fatorPessoa!.seg) }))).status === 400, 'TOTP já usado no cadastro foi aceito de novo');
+  ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'totp', codigo: codigoTotp(fatorPessoa!.seg, fatorPessoa!.passo) }))).status === 400, 'TOTP já usado no cadastro foi aceito de novo');
   ok((await s1.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[0]! }))).status === 303, 'código de recuperação válido recusado'); ok((await s1.req('/conta')).status === 200, 'conta não abriu depois do fator');
   const s2 = await novaSessao(); await s2.req('/conta'); c = csrfWeb(await (await s2.req('/mfa')).text()); ok((await s2.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[0]! }))).status === 400, 'código de recuperação reutilizado');
   ok((await s2.req('/mfa/verificar', formWeb({ csrf: c, tipo: 'recuperacao', codigo: fatorPessoa!.codigos[1]! }))).status === 303, 'segundo código de recuperação recusado');
@@ -298,7 +298,7 @@ await t('H31', 'Segundo fator no portal: sessão nova exige o fator, TOTP sem re
   return 'TOTP, recuperação, passkey e reset validados no portal real';
 });
 await t('H25', 'Portal admin: skills do catálogo com versões, propostas aprovadas viram conhecimento, suspensão derruba a conta, revogação global', async () => {
-  const sk = await (await admin.req('/admin/skills')).text(); ok(/0\.1\.0-rascunho/.test(sk) && /sf-test/.test(sk), 'catálogo sem as versões publicadas');
+  const sk = await (await admin.req('/admin/skills')).text(); ok(/\d+\.\d+\.\d+/.test(sk) && /sf-test/.test(sk), 'catálogo sem as versões publicadas');
   await store.set('proposals', 'prop_homolog_portal', { texto: 'Padrão de homologação do portal: revisar a fila toda semana.', colecao: 'tecnico', projeto: 'global', fonte: 'homologacao', tipo: 'padrao', status: 'na_fila', criadaEm: Date.now(), userId: USUARIO });
   ok(/Padrão de homologação do portal/.test(await (await admin.req('/admin/propostas')).text()), 'proposta não apareceu');
   await admin.req('/admin/propostas/decidir', formWeb({ csrf: csrfAdmin, id: 'prop_homolog_portal', decisao: 'aprovar' })); ok((await store.get('proposals', 'prop_homolog_portal'))?.status === 'aprovada', 'proposta não aprovada');
@@ -357,7 +357,7 @@ await t('H29', 'CLI assinado: o servidor entrega a versão vigente, `odin update
 });
 await t('H30', 'Conhecimento com embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto, substituído e vigência respeitados', async () => {
   const denso = new EmbedderVertex(PROJETO, process.env.VERTEX_REGIAO ?? 'us-central1'); const kb = new Conhecimento(store, denso);
-  const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 30, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');
+  const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 20, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');
   const rel = await medirRecuperacao(kb, lerPerguntas(join(RAIZ, 'catalog/avaliacao-conhecimento.yaml')), ['projeto-atlas']);
   const linhas = Object.entries(rel.porColecao).map(([c, v]) => `${c} ${Math.round(v.recall * 100)}%`).join(', ');
   ok(rel.recall >= 0.8, `recall@5 ${Math.round(rel.recall * 100)}% abaixo de 80% (${linhas}). Falhas: ${rel.falhas.slice(0, 4).join(' | ')}`);

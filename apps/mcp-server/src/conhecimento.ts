@@ -37,8 +37,9 @@ export class Conhecimento {
     if (this.denso && comVetor.length) {
       try {
         const [qv] = await this.denso.incorporar([consulta], 'consulta'); const maxLex = Math.max(...lex.map((x) => x.n), 1e-9);
-        pontuado = lex.map(({ t, n }) => ({ t, n: Array.isArray(t.vetor) ? 0.65 * cosseno(qv!, t.vetor as number[]) + 0.35 * (n / maxLex) : 0.35 * (n / maxLex) }))
-          .filter((x) => x.n >= this.corte).sort((a, b) => b.n - a.n);
+        // Trecho com embedding: nota híbrida acima do corte. Trecho sem embedding (ex.: proposta aprovada no portal): vale a nota lexical, para nunca sumir da busca.
+        pontuado = lex.map(({ t, n }) => ({ t, n: Array.isArray(t.vetor) ? 0.65 * cosseno(qv!, t.vetor as number[]) + 0.35 * (n / maxLex) : n, ok: Array.isArray(t.vetor) ? undefined : n > 0.05 }))
+          .filter((x) => (x.ok === undefined ? x.n >= this.corte : x.ok)).sort((a, b) => b.n - a.n);
       } catch { /* sem a Vertex AI, vale a busca lexical */ }
     }
     return pontuado.slice(0, o.limite).map(({ t }) => ({ texto: t.texto, evidencia: true as const, citacao: { documento: t.documento, secao: t.secao, ...(t.versao ? { versao: t.versao } : {}), ...(t.vigencia ? { vigencia: t.vigencia } : {}) } }));
