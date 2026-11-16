@@ -7,6 +7,7 @@ Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as s
 | Documento | Conteúdo |
 |---|---|
 | 📊 [Relatório de progresso](docs/RELATORIO-DE-PROGRESSO.md) | O que foi feito, o que falta e a ordem recomendada |
+| 🧭 [Status do projeto](docs/STATUS-DO-PROJETO.md) | O plano, o que foi feito, o que foi homologado e o que falta |
 | ✅ [Homologação na nuvem](docs/HOMOLOGACAO.md) | Resultado das verificações no Google Cloud, desempenho e pendências |
 | 🖥️ [Manual do portal](docs/MANUAL-DO-PORTAL.md) | Como usar as páginas de administração e de pessoa |
 | 📐 [Plano](docs/PLANO.md) | Visão geral, fases de construção, riscos, revisões |
