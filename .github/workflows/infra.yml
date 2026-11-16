@@ -92,3 +92,11 @@ jobs:
       - name: Saídas
         if: inputs.aplicar == 'APLICAR'
         run: terraform output
+      - name: Diagnóstico dos serviços (só se algo falhou)
+        if: failure()
+        run: |
+          for s in odin-sts odin-mcp; do
+            echo "=== logs de $s"
+            gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$s AND severity>=WARNING" --project="$PROJETO" --freshness=30m --limit=15 --format="value(timestamp,textPayload,jsonPayload.message)" 2>&1 | head -40
+            gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$s" --project="$PROJETO" --freshness=30m --limit=12 --format="value(textPayload)" 2>&1 | grep -v '^$' | head -30
+          done
