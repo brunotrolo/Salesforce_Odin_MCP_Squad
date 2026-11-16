@@ -45,4 +45,4 @@
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
 ## Fora do escopo desta homologação (pendente)
-Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, medição de partida a frio (p95 ≤ 3 s) e carga de 50 usuários, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, carga autenticada do MCP, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
