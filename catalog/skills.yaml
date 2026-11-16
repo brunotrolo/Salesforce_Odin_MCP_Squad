@@ -21,8 +21,18 @@ skills:
       - "gerar diagramas C4 do que existe hoje na org"
       - "levantar todas as automações e triggers existentes"
       - "inventário de metadados e dependências da org"
+      - "quais flows e process builders ainda estão ativos"
+      - "tem muita trigger antiga, me mostra o que cada uma faz"
+      - "preciso entender essa org que herdei"
+      - "lista os objetos customizados e como se relacionam"
+      - "levanta o código Apex que ninguém mais mantém"
+      - "documenta as regras escondidas nos flows antigos"
+      - "qual o tamanho da dívida técnica dessa org"
+      - "prepara o diagnóstico da org para a migração"
       - { texto: "por que este erro acontece na trigger de caso", negativa: true }
       - { texto: "quais regras o negócio quer na nova jornada", negativa: true }
+      - { texto: "criar a classe de teste do serviço", negativa: true }
+      - { texto: "desenhar o modelo de dados da nova solução", negativa: true }
   - id: sf-discovery
     nome: Discovery-to-Backlog
     repo: Salesforce_Discovery-to-Backlog
@@ -43,8 +53,18 @@ skills:
       - "priorizar as capacidades do produto"
       - "preparar o material de discovery para a PO"
       - "gerar épicos e histórias a partir da entrevista"
+      - "tenho a gravação da reunião com o cliente, vira backlog"
+      - "monta o roteiro de entrevista para a próxima conversa"
+      - "quais perguntas em aberto ficaram do discovery"
+      - "cria as histórias no Jira a partir do backlog aprovado"
+      - "escreve os critérios de aceite em Dado Quando Então"
+      - "organiza os requisitos por capacidade"
+      - "gera o protótipo para validar com a PO"
+      - "revisa o backlog antes de publicar"
       - { texto: "escrever a spec técnica da jornada", negativa: true }
       - { texto: "mapear as regras que existem no código legado", negativa: true }
+      - { texto: "construir a capacidade na sandbox", negativa: true }
+      - { texto: "testar a tela no navegador", negativa: true }
   - id: sf-data-architect
     nome: Data Architect
     repo: Salesforce_Data_Architect
@@ -64,8 +84,19 @@ skills:
       - "revisar o modelo de dados e os relacionamentos master-detail"
       - "avaliar a volumetria e a estratégia de dados"
       - "diagrama entidade-relacionamento dos objetos"
+      - "qual objeto padrão serve antes de criar um customizado"
+      - "preciso do glossário de dados do projeto"
+      - "definir as regras de qualidade dos campos"
+      - "como ficam os relacionamentos entre caso, conta e contato"
+      - "planejar a carga e a volumetria de dados"
+      - "documentar o mapeamento de campos por domínio"
+      - "revisar o modelo contra os limites da plataforma"
+      - "gerar o dicionário de dados da capacidade"
+      - "validar o modelo com o time antes do build"
       - { texto: "criar registros de teste na sandbox", negativa: true }
       - { texto: "construir a jornada da spec", negativa: true }
+      - { texto: "investigar por que o campo não atualiza", negativa: true }
+      - { texto: "criar o componente LWC da tela", negativa: true }
   - id: sf-journey-designer
     nome: Journey Designer
     repo: Salesforce_Journey_Designer
@@ -85,8 +116,19 @@ skills:
       - "especificar a jornada a partir do backlog"
       - "decidir entre padrão e customizado para a jornada"
       - "detalhar a experiência do usuário da jornada"
+      - "preciso da spec da capacidade 002"
+      - "monta o plano técnico dessa história"
+      - "quebra a capacidade em tarefas"
+      - "faz o protótipo clicável da tela de atendimento"
+      - "define o design system da jornada"
+      - "escreve a arquitetura da capacidade no Service Cloud"
+      - "quais pontos ainda precisam de esclarecimento na spec"
+      - "atualiza o backlog de capacidades da jornada"
+      - "revisa a spec antes do build"
       - { texto: "implementar a jornada na sandbox", negativa: true }
       - { texto: "criar o componente LWC da tela", negativa: true }
+      - { texto: "transformar a reunião em backlog", negativa: true }
+      - { texto: "testar a tela na sandbox", negativa: true }
   - id: sf-journey-developer
     nome: Journey Developer
     repo: Salesforce_Journey_Developer
@@ -106,9 +148,19 @@ skills:
       - "fazer o build da jornada e gerar o build report"
       - "implementar a história ponta a ponta"
       - "criar a trigger e a classe de serviço da capacidade"
+      - "implementa a capacidade 003 da spec"
+      - "cria os objetos, campos e permission sets da capacidade"
+      - "monta o flow de atendimento conforme a spec"
+      - "faz o deploy da capacidade na sandbox"
+      - "gera o relatório de construção"
+      - "constrói o que está no plano técnico"
+      - "cria as regras de validação da spec"
+      - "implementa as tarefas pendentes da capacidade"
+      - "deixa a capacidade pronta para o QA"
       - { texto: "criar só o componente LWC", negativa: true }
       - { texto: "refatorar o callout para a API", negativa: true }
       - { texto: "aumentar a cobertura de teste da classe", negativa: true }
+      - { texto: "investigar o erro de deploy em produção", negativa: true }
   - id: sf-lwc-developer
     nome: LWC Developer
     repo: Salesforce_LWC-Developer
@@ -129,8 +181,18 @@ skills:
       - "ajustar o html e o javascript do componente"
       - "criar um datatable em LWC com SLDS"
       - "escrever o teste Jest do componente"
+      - "cria um componente de busca de cliente"
+      - "faz um card de caso em lightning web component"
+      - "adapta esse LWC para o outro objeto"
+      - "o componente precisa de um formulário com validação"
+      - "aprende os padrões de LWC dessa org"
+      - "alinha o componente ao design system"
+      - "corrige o layout do componente no mobile"
+      - "adiciona o evento customizado ao componente"
       - { texto: "prototipar a jornada em HTML", negativa: true }
       - { texto: "testar a tela na sandbox", negativa: true }
+      - { texto: "criar a classe Apex do serviço", negativa: true }
+      - { texto: "modelar os objetos da solução", negativa: true }
   - id: sf-callouts-developer
     nome: Apex Callouts Developer
     repo: Salesforce_Apex_Callouts_Developer
@@ -149,8 +211,19 @@ skills:
       - "criar um connector HTTP para o serviço do parceiro"
       - "configurar External Credential e cache de token"
       - "integrar o Salesforce com o endpoint REST"
+      - "tenho um curl da API do parceiro, vira Apex"
+      - "cria a tabela de rotas da integração"
+      - "autentica o callout com OAuth sem guardar senha"
+      - "troca o endpoint fixo por Named Credential"
+      - "faz o mock do callout para os testes"
+      - "padroniza as classes de integração da org"
+      - "documenta a integração com o serviço de CEP"
+      - "refatora a classe que chama o sistema legado"
+      - "adiciona retry e tratamento de erro no callout"
       - { texto: "construir a jornada completa da spec", negativa: true }
       - { texto: "investigar por que o callout falhou em produção", negativa: true }
+      - { texto: "aumentar a cobertura de teste", negativa: true }
+      - { texto: "criar o componente LWC", negativa: true }
   - id: sf-apex-cover-loop
     nome: Apex Cover Loop
     repo: Salesforce_Apex-Cover-Loop
@@ -170,8 +243,19 @@ skills:
       - "a cobertura está baixa e o deploy foi barrado"
       - "gerar test class com mock de callout"
       - "cobrir a trigger com testes"
+      - "qual a cobertura atual dessa classe"
+      - "faz os testes passarem e sobe a cobertura"
+      - "cria o test data factory da capacidade"
+      - "cobre os ramos que faltam no teste"
+      - "gera o mock de HttpCallout para o teste"
+      - "o deploy exige 75% de cobertura e estamos abaixo"
+      - "roda os testes e corrige os que falham"
+      - "escreve testes para a classe de serviço"
+      - "deixa a cobertura da capacidade acima de 90%"
       - { texto: "testar a tela da jornada na sandbox", negativa: true }
-      - { texto: "por que este teste está falhando", negativa: true }
+      - { texto: "por que este teste está falhando em produção", negativa: true }
+      - { texto: "criar a spec da jornada", negativa: true }
+      - { texto: "implementar a capacidade completa", negativa: true }
   - id: sf-test
     nome: Test Automator
     repo: Salesforce_Test_Automator
@@ -191,8 +275,19 @@ skills:
       - "testar a tela de ponta a ponta com Playwright"
       - "verificar se a entrega atende os critérios de aceite"
       - "fazer o teste funcional da jornada de proposta"
+      - "gera o caderno de teste da capacidade 001"
+      - "testa a tela de busca de cliente na sandbox"
+      - "quais bugs a entrega tem antes de ir para a PO"
+      - "roda o smoke da tela depois do deploy"
+      - "compara o que foi construído com a spec"
+      - "separa o que é bug do que é comportamento previsto"
+      - "prepara a massa de teste para o QA"
+      - "testa o fluxo de atendimento no navegador"
+      - "me dá o relatório de teste da capacidade"
       - { texto: "criar a classe de teste Apex", negativa: true }
       - { texto: "aumentar a cobertura de código", negativa: true }
+      - { texto: "investigar o stack trace do erro", negativa: true }
+      - { texto: "escrever a spec da jornada", negativa: true }
   - id: sf-deep-debugger
     nome: Deep Debugger
     repo: Salesforce_Deep_Debugger
