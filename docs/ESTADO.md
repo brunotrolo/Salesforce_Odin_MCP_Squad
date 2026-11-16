@@ -11,6 +11,7 @@
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-16 · **Portal interino** (ADR 0023): `/admin` (segredo de administração) e `/conta` (convite de uso único) no serviço do emissor; testes locais e homologação H22 a H25.
 - 2026-11-16 · **Carga autenticada do MCP medida**: 50 usuários, p95 1259 ms, zero erros (meta 2 s).
 - 2026-11-16 · **Avaliações por skill: infraestrutura pronta** (ADR 0017): `pipeline/avaliar.ts` roda a camada determinística, confere a composição mínima (10 casos: 4 positivos, 3 negativos, 2 de injeção, 1 de limite) e aplica o portão de promoção beta → stable; `npm run avaliar-skill` grava `evals/resultado.json`. **Laço contínuo**: o CI reverifica o projeto a cada 6 horas e uma rotina horária do Claude continua o desenvolvimento sem comando do mantenedor.
 - 2026-11-16 · **Desempenho medido na nuvem** (`desempenho.yml`): partida a frio p95 394 ms (meta 3 s); 50 usuários simultâneos com p95 322 ms e zero erros (meta 2 s).

@@ -2,6 +2,8 @@
 
 > [Índice do portal](README.md) · Para quem **consome** o MCP. Todas as páginas exigem sessão com segundo fator.
 
+> **Situação (2026-11-16, ADR 0023):** versão interina no ar em `/conta`. Entrada por convite de uso único (72 h) criado por um administrador; a pessoa ativa o próprio dispositivo digitando o código do `odin setup`, vê seus perfis e skills (com canal e versão) e revoga os próprios dispositivos. Segundo fator e login com GitHub entram quando houver o OAuth App; até lá esta página **não** cumpre a exigência de MFA acima.
+
 ## 1. Navegação
 Barra lateral: **Início · Conectar · Guia do MCP · Minhas skills · Meu consumo · Novidades · Solicitar acesso · Conhecimento · Conta**. Quem tem papel administrativo vê também **Administração**.
 

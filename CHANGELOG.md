@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Portal interino (ADR 0023)
+- Páginas de administração e de pessoa no Cloud Run (apps/portal), convites de uso único, CSRF, CSP, auditoria; homologação H22 a H25.
+
 ### 2026-11-16 · Skills reais na nuvem (ADR 0022)
 - Workflow `publicar-skills.yml`; 9 skills em rascunho no canal beta; H21 na homologação; referências do Callouts e do Data Architect divididas para passar no lint.
 

@@ -2,6 +2,8 @@
 
 > [Índice do portal](README.md) · Todas as telas exigem MFA com menos de 15 min; papéis administrativos exigem passkey ([segurança 02](../seguranca/02-autenticacao-e-mfa.md)).
 
+> **Situação (2026-11-16, ADR 0023):** versão interina no ar em `/admin`, com entrada pelo segredo de administração (sessão de 2 h, CSRF em todo formulário). Telas disponíveis: painel, pessoas (criar, suspender, reativar, convite), dispositivos (revogar), skills e versões, propostas de conhecimento (aprovar/rejeitar) e revogação global. Passkey, MFA e papéis administrativos separados ficam para o login com GitHub.
+
 ## 1. Quem vê o quê no menu
 
 | Menu | super-admin | admin-identidade | admin-catalogo | gestor-squad | curador | auditor |
