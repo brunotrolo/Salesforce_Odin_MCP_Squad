@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · F1 aplicada no Google Cloud
+- Projeto `salesforcemcpodin` (E0): identidade federada do GitHub sem chave, orçamento com alertas, contas de serviço, KMS, Firestore, buckets e repositório de imagens (53 recursos, Terraform em `infra/`, workflow `infra.yml`).
+
 ### 2026-11-15 · Primeiro código, local primeiro (ADR 0020)
 - Emissor de tokens, servidor MCP com 7 ferramentas e API `/v1`, roteador e catálogo das 10 skills, `odin lint`, publicação assinada, publisher, guard (PG-01 a PG-08) e CLI.
 - `npm run demo` (ponta a ponta em segundos) e `npm run dev` (Odin local para o Claude Code).
