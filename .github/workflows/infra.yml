@@ -1,0 +1,66 @@
+name: infra
+# Terraform do ambiente poc (estágio E0). Só o mantenedor, só na main: a identidade federada exige as duas coisas.
+# Sem chave de conta de serviço. `aplicar` vazio = só plano (sem alterar nada).
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: "Digite APLICAR para executar o apply (vazio = só plano)"
+        required: false
+        default: ""
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: infra
+  cancel-in-progress: false
+jobs:
+  terraform:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: infra/envs/poc
+    env:
+      PROJETO: salesforcemcpodin
+      BILLING: 01A65F-62F735-7F6904
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/177809673592/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-infra@salesforcemcpodin.iam.gserviceaccount.com
+      - name: Quem sou eu no Google Cloud (diagnóstico)
+        run: |
+          gcloud auth list --format="value(account)"
+          gcloud projects describe "$PROJETO" --format="value(projectId,projectNumber)"
+      - name: Bucket do estado do Terraform (criado uma vez; versionado e privado)
+        run: |
+          gcloud storage buckets describe "gs://${PROJETO}-tfstate" >/dev/null 2>&1 || \
+            gcloud storage buckets create "gs://${PROJETO}-tfstate" --project="$PROJETO" --location=southamerica-east1 \
+              --uniform-bucket-level-access --public-access-prevention
+          gcloud storage buckets update "gs://${PROJETO}-tfstate" --versioning
+      - name: Moeda da conta de faturamento e valor do orçamento (equivalente a cerca de US$ 5)
+        run: |
+          MOEDA=$(gcloud billing accounts describe "$BILLING" --format="value(currencyCode)" 2>/dev/null || true)
+          MOEDA=${MOEDA:-USD}
+          case "$MOEDA" in BRL) VALOR=30;; EUR) VALOR=5;; GBP) VALOR=4;; *) VALOR=5;; esac
+          echo "Moeda: $MOEDA, valor: $VALOR"
+          echo "TF_VAR_moeda=$MOEDA" >> "$GITHUB_ENV"
+          echo "TF_VAR_orcamento=$VALOR" >> "$GITHUB_ENV"
+      - run: terraform fmt -check -recursive ../..
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform plan -input=false -out=plano.tfplan -no-color
+      - name: Resumo do plano
+        run: terraform show -no-color plano.tfplan | grep -E "^(Plan:|No changes)|will be (created|destroyed|updated)|must be replaced" | head -60
+      - name: Aplicar
+        if: inputs.aplicar == 'APLICAR'
+        run: terraform apply -input=false -no-color plano.tfplan
+      - name: Saídas
+        if: inputs.aplicar == 'APLICAR'
+        run: terraform output

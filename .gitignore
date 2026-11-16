@@ -8,3 +8,9 @@ dist/
 .terraform/
 *.tfstate
 *.tfstate.*
+
+# Terraform
+.terraform/
+*.tfplan
+*.tfstate*
+.terraform.lock.hcl.bak
