@@ -2,6 +2,7 @@ name: publicar-skills
 # Publica as skills reais (repositórios públicos clonados aqui) na nuvem, em rascunho, assinadas pelo KMS.
 # Só o mantenedor, só na main (identidade federada). O Data Architect é privado e fica de fora até haver acesso.
 on:
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

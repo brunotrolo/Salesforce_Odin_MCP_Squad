@@ -1,0 +1,47 @@
+name: pipeline-completo
+# Pipeline único e automático: testes → infraestrutura (build + apply) → publicação das skills → homologação → desempenho.
+# Roda a cada mudança de código na main e por demanda; nenhuma etapa pede confirmação humana. Só o mantenedor, só na main (identidade federada).
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**/*.md', '.github/workflows/ci.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: pipeline-completo
+  cancel-in-progress: false
+jobs:
+  qualidade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsc -p .
+      - run: npm test
+      - run: npm run verificar
+  infra:
+    needs: qualidade
+    uses: ./.github/workflows/infra.yml
+    with:
+      aplicar: APLICAR
+      construir: SIM
+    secrets: inherit
+  publicar:
+    needs: infra
+    uses: ./.github/workflows/publicar-skills.yml
+    secrets: inherit
+  homologar:
+    needs: publicar
+    uses: ./.github/workflows/homologar.yml
+    secrets: inherit
+  desempenho:
+    needs: homologar
+    uses: ./.github/workflows/desempenho.yml
+    secrets: inherit

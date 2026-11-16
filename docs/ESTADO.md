@@ -11,6 +11,7 @@
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-16 · **Endurecimento** (ADR 0025): `sa-ci-infra` sem Owner (validado), disjuntor testado de verdade, avaliações determinísticas nas 10 skills; contrato `odin.yaml` e `odin ensure` dentro dos repositórios das skills.
 - 2026-11-16 · **Login com GitHub no portal** (ADR 0024) e **10 skills reais na nuvem** (Data Architect incluído, via `SKILLS_READ_TOKEN`).
 - 2026-11-16 · **Portal interino** (ADR 0023): `/admin` (segredo de administração) e `/conta` (convite de uso único) no serviço do emissor; testes locais (4) e homologação H22 a H25 na nuvem: **25/25**. Manual: [MANUAL-DO-PORTAL.md](MANUAL-DO-PORTAL.md).
 - 2026-11-16 · **Carga autenticada do MCP medida**: 50 usuários, p95 1259 ms, zero erros (meta 2 s).

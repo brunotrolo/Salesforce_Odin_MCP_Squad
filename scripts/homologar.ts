@@ -9,6 +9,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { GoogleAuth } from 'google-auth-library';
 import { registrarVersao, promover, PublicacaoRecusada } from '../apps/jobs/src/publisher.ts';
+import { reverter } from '../apps/jobs/src/canais.ts';
 import { revogarDispositivo } from '../apps/sts/src/sts.ts';
 import { lerConfig } from '../packages/cli/src/ambiente.ts';
 import { CofreArquivo } from '../packages/cli/src/cofre.ts';
@@ -281,6 +282,29 @@ await t('H26', 'Login com GitHub: redireciona ao OAuth App certo, estado protegi
   const tr = await fetch('https://github.com/login/oauth/access_token', { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ client_id: idOauth, client_secret: segredoOauth, code: 'codigo-invalido-de-homologacao' }) });
   const tk = (await tr.json()) as { error?: string }; ok(tk.error === 'bad_verification_code', `o GitHub respondeu "${tk.error}" (esperado bad_verification_code: credenciais válidas, código inválido)`);
   return 'OAuth App reconhecido e segredo do Secret Manager aceito pelo GitHub';
+});
+await t('H27', 'Catálogo: as 10 skills reais estão em stable, com versão assinada, avaliação registrada e evento de promoção', async () => {
+  const reais = (await store.list('catalog_skills', () => true)).filter((s: any) => s.id !== 'odin-ambiente') as Array<{ id: string; canais?: Record<string, string> }>; ok(reais.length === 10, `esperadas 10 skills reais, há ${reais.length}`);
+  const sem: string[] = [];
+  for (const s of reais) { const v = s.canais?.stable; const doc = v ? await store.get('catalog_versions', `${s.id}@${v}`) : null; const av = (doc?.avaliacao ?? {}) as { nota?: number; casos?: number }; if (!v || !doc?.assinatura || !((av.casos ?? 0) >= 10) || !((av.nota ?? 0) >= 90)) sem.push(`${s.id}(${v ?? 'sem stable'})`); }
+  ok(sem.length === 0, `sem stable assinado e avaliado: ${sem.join(', ')}`);
+  const eventos = (await store.list('catalog_events', (e: any) => e.tipo === 'versao_promovida')).map((e: any) => e.skill); ok(reais.every((s) => eventos.includes(s.id)), 'faltam eventos de promoção');
+  return `${reais.length} skills em stable, todas com nota ≥ 90 em ≥ 10 casos`;
+});
+await t('H28', 'Canais de ponta a ponta: nova versão em stable chega ao MCP, rollback volta para a anterior e skill real em stable é entregue', async () => {
+  const deps = { store, armazenamento, chavesDePacote: [keyPacotes.publica()], coletor: coletorMemoria().coletor };
+  const ant = String(((await store.get('catalog_skills', 'odin-ambiente'))?.canais as Record<string, string> | undefined)?.stable ?? ''); ok(!!ant, 'odin-ambiente sem stable');
+  const nova = `${ant.split('.').slice(0, 2).join('.')}.${Number(ant.split('.')[2]) + 1}`;
+  await publicar({ repo: join(RAIZ, 'skills/odin-ambiente'), versao: nova, canal: 'beta', fonte: { repo: 'brunotrolo/Salesforce_Odin_MCP_Squad', sha: process.env.GITHUB_SHA ?? '0'.repeat(40) }, assinador: keyPacotes, armazenamento, bucket: env('BUCKET_PACOTES') });
+  await registrarVersao(deps, 'odin-ambiente', nova); await promover(deps, 'odin-ambiente', nova);
+  const versaoNoMcp = async () => { const c = await conectar(); try { const r = await chamar(c, 'odin_carregar_skill', { skill: 'odin-ambiente' }); return String(r.structuredContent?.manifesto?.versao ?? ''); } finally { await c.close(); } };
+  const espera = async (alvo: string) => { const t0 = Date.now(); while (Date.now() - t0 < 90_000) { if ((await versaoNoMcp()) === alvo) return Math.round((Date.now() - t0) / 1000); await new Promise((r) => setTimeout(r, 4000)); } return -1; };
+  const sobe = await espera(nova); ok(sobe >= 0, `a versão ${nova} não chegou ao MCP`);
+  const voltou = await reverter(deps, 'odin-ambiente'); ok(voltou === ant, `rollback foi para ${voltou}, esperado ${ant}`);
+  const desce = await espera(ant); ok(desce >= 0, `o MCP continuou entregando a versão revertida`);
+  const real = await conectar(); try { const r = await chamar(real, 'odin_carregar_skill', { skill: 'sf-test' }); ok(!r.isError && /odin ensure sf-test/.test(r.content[0]!.text), `skill real em stable não foi entregue: ${r.content?.[0]?.text?.slice(0, 120)}`); } finally { await real.close(); }
+  await store.delete('catalog_versions', `odin-ambiente@${nova}`); // limpeza da versão de teste
+  return `nova versão no MCP em ${sobe} s, rollback efetivo em ${desce} s`;
 });
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);

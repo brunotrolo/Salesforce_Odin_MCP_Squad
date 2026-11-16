@@ -2,6 +2,16 @@ name: infra
 # Terraform do ambiente poc (estágio E0). Só o mantenedor, só na main: a identidade federada exige as duas coisas.
 # Sem chave de conta de serviço. `aplicar` vazio = só plano (sem alterar nada).
 on:
+  workflow_call:
+    inputs:
+      aplicar:
+        type: string
+        required: false
+        default: ""
+      construir:
+        type: string
+        required: false
+        default: ""
   workflow_dispatch:
     inputs:
       aplicar:

@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Endurecimento e avaliações (ADR 0025)
+- `sa-ci-infra` sem Owner; disjuntor real; avaliações determinísticas nas 10 skills; pipeline completo encadeado (`pipeline-completo.yml`); publicação por mudança com portão de avaliação e rollback de canal.
+
 ### 2026-11-16 · Login do portal com GitHub (ADR 0024)
 - Botão "Entrar com GitHub" (OAuth App), estado assinado, ligação por id, segredo no Secret Manager; homologação H26; 10 skills reais na nuvem; homologação 26/26.
 

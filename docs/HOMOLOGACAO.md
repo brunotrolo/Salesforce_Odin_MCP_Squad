@@ -36,6 +36,11 @@
 - Serviços: mínimo 0, máximo 3 instâncias (disjuntor máximo 1). O ingress dos serviços é `all`: STS e MCP são públicos por desenho (autenticam por token); o disjuntor exige identidade.
 - Auditoria no Cloud Logging com 20 tipos de evento, incluindo `portal.admin_login`, `portal.convite`, `portal.dispositivo.ativar`, `portal.dispositivo.revogar` e `portal.csrf`; **0** registros com o texto do pedido.
 
+## Endurecimento (ADR 0025)
+- **Sem Owner:** `sa-ci-infra` só tem os papéis mínimos do ADR 0025; `infra.yml` (apply) e `homologar.yml` (26/26) passaram sem o Owner.
+- **Disjuntor real** (`disjuntor-real.yml`, execução #2): aviso de 316% fechou STS e MCP para a internet (`ingress=internal`), o disjuntor recusou chamada sem identidade, e os dois serviços foram reabertos (`ingress=all`).
+- **Avaliações das skills:** as 10 skills têm 10 a 13 casos determinísticos com 100% de acerto.
+
 ## Desempenho (workflow `desempenho.yml`, execução #1)
 - **Partida a frio** (primeira chamada após uma revisão nova, sem instância ativa; 3 medições em cada serviço): STS 394, 317 e 168 ms; MCP 330, 309 e 165 ms. **p95 = 394 ms** (meta ≤ 3000 ms).
 - **Carga de 50 usuários simultâneos** (300 chamadas): 226 chamadas/s, p50 141 ms, **p95 322 ms**, máximo 588 ms, **0 erros** (meta p95 ≤ 2000 ms).

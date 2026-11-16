@@ -2,6 +2,7 @@ name: homologar
 # Homologação no Google Cloud: exercita os serviços implantados de ponta a ponta e guarda o relatório.
 # Só o mantenedor, só na main (identidade federada). Cria e remove dados de teste; não altera a infraestrutura.
 on:
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
