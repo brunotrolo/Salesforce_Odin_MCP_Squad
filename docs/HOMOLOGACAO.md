@@ -1,6 +1,6 @@
 # Homologação na nuvem
 
-**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 20/20** · Execução `homologar.yml` #2 (commit `2a7dcd0`) · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
+**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 21/21** · Execução `homologar.yml` #3 (commit `ed2ac31`); 20/20 na execução #2 (`2a7dcd0`) · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
 
 | # | Verificação | Resultado |
 |---|---|---|
@@ -23,6 +23,7 @@
 | H17 | Job `odin-jobs` no Cloud Run registra o tick | ✓ |
 | H18 | Revogação efetiva em 18 s (cache de 30 s) e sem renovar | ✓ |
 | H19 | Desinstalação devolve o Claude Code ao que era | ✓ |
+| H21 | Skills reais publicadas (9): assinatura do KMS, hashes dos pacotes e passo `odin ensure` conferidos ([ADR 0022](adr/0022-publicacao-das-skills-reais-na-nuvem-sem-github-app.md)) | ✓ |
 | H20 | Limpeza dos dados de teste | ✓ |
 
 ## Controles de custo e privacidade observados
@@ -39,4 +40,4 @@
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
 ## Fora do escopo desta homologação (pendente)
-Skills reais publicadas na nuvem (repositórios privados), portal e login GitHub, medição de partida a frio (p95 ≤ 3 s) e carga de 50 usuários, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, medição de partida a frio (p95 ≤ 3 s) e carga de 50 usuários, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
