@@ -82,3 +82,10 @@ test('portal: cookie adulterado é recusado; revogação global e propostas func
   await adm.req(`${base}/admin/global`, form({ csrf })); assert.ok(Number((await store.get('revocations', 'global'))!.desde) > 0);
   const hdr = (await fetch(`${base}/`)).headers; assert.match(hdr.get('content-security-policy')!, /default-src 'none'/); srv.close();
 });
+
+test('portal: tentativas erradas de segredo são limitadas por IP e o segredo certo também é bloqueado depois do limite', async () => {
+  const { base, srv } = await subir(); let limitado = false;
+  for (let i = 0; i < 12; i++) { const r = await fetch(`${base}/admin/entrar`, { ...form({ segredo: `errado-${i}` }), redirect: 'manual' }); if (r.status === 429) { limitado = true; break; } }
+  assert.equal(limitado, true, 'deveria limitar as tentativas');
+  assert.equal((await fetch(`${base}/admin/entrar`, { ...form({ segredo: SEGREDO }), redirect: 'manual' })).status, 429); srv.close();
+});
