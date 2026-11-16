@@ -72,7 +72,7 @@ export function criarMcp(cfg: ConfigMcp) {
     cacheConteudo.set(k, arquivos);
     return arquivos;
   };
-  const servicos: Servicos = { cfg, catalogo, conhecimento: new Conhecimento(cfg.store), conteudo };
+  const servicos: Servicos = { cfg, catalogo, conhecimento: new Conhecimento(cfg.store, cfg.denso), conteudo };
 
   async function autenticar(req: IncomingMessage, rid: string): Promise<Chamada> {
     const m = /^Bearer (.+)$/.exec(String(req.headers.authorization ?? ''));

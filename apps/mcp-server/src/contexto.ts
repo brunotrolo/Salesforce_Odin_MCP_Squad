@@ -13,6 +13,8 @@ export interface ConfigMcp {
   chavesDoEmissor: () => Promise<ChavePublica[]>;
   emissor: string; audiencias: string[]; urlPublica: string; segredoUrl: string;
   agora?: () => number; limitePorMinuto?: number; versaoServidor?: string;
+  /** Embeddings densos (Vertex AI) para a busca híbrida do conhecimento; sem isto a busca é lexical. */
+  denso?: import('../../../packages/shared/src/nuvem/vertex.ts').EmbedderDenso;
 }
 export interface SkillPublicada extends SkillDoCatalogo { canais: { beta?: string; stable?: string }; [k: string]: unknown }
 export interface Direitos {

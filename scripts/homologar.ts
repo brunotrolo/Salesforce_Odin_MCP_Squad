@@ -25,6 +25,8 @@ import { FirestoreStore } from '../packages/shared/src/nuvem/firestore.ts';
 import { ArmazenamentoGcs } from '../packages/shared/src/nuvem/gcs.ts';
 import { AssinadorKms, versaoAtual } from '../packages/shared/src/nuvem/kms.ts';
 import { lerSegredo } from '../packages/shared/src/nuvem/segredos.ts';
+import { EmbedderVertex } from '../packages/shared/src/nuvem/vertex.ts';
+import { lerPerguntas, medirRecuperacao } from '../pipeline/avaliar-conhecimento.ts';
 import { semearNuvem } from '../packages/shared/src/nuvem/semente.ts';
 import { Conhecimento } from '../apps/mcp-server/src/conhecimento.ts';
 import { publicar } from '../pipeline/publicar.ts';
@@ -316,6 +318,17 @@ await t('H29', 'CLI assinado: o servidor entrega a versão vigente, `odin update
   const { spawnSync } = await import('node:child_process'); const v = spawnSync(process.execPath, [entrada, '--version'], { encoding: 'utf8' }); ok(v.status === 0 && v.stdout.includes(res.versao), `o CLI instalado não rodou: ${v.stderr}`);
   ok((await atualizarCli(res.versao)).atualizou === false, 'não deveria atualizar de novo');
   return `CLI ${res.versao} assinado pelo KMS, instalado e executado`;
+});
+await t('H30', 'Conhecimento com embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto, substituído e vigência respeitados', async () => {
+  const denso = new EmbedderVertex(PROJETO, process.env.VERTEX_REGIAO ?? 'us-central1'); const kb = new Conhecimento(store, denso);
+  const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 30, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');
+  const rel = await medirRecuperacao(kb, lerPerguntas(join(RAIZ, 'catalog/avaliacao-conhecimento.yaml')), ['projeto-atlas']);
+  const linhas = Object.entries(rel.porColecao).map(([c, v]) => `${c} ${Math.round(v.recall * 100)}%`).join(', ');
+  ok(rel.recall >= 0.8, `recall@5 ${Math.round(rel.recall * 100)}% abaixo de 80% (${linhas}). Falhas: ${rel.falhas.slice(0, 4).join(' | ')}`);
+  for (const [c, v] of Object.entries(rel.porColecao)) ok(v.recall >= 0.6, `coleção ${c} com recall ${Math.round(v.recall * 100)}%`);
+  ok(rel.semRespostaOk === rel.semRespostaTotal, `pergunta fora do assunto trouxe resposta: ${rel.falhas.filter((f) => f.startsWith('X')).join(' | ')}`);
+  const outro = await kb.buscar('prazo de resposta para casos de prioridade alta', { colecoes: ['negocio'], projetos: ['projeto-que-nao-existe'], limite: 5 }); ok(outro.length === 0, 'o conhecimento de outro projeto vazou');
+  return `recall@5 ${Math.round(rel.recall * 100)}% (${rel.acertos}/${rel.total}): ${linhas}; fora do assunto ${rel.semRespostaOk}/${rel.semRespostaTotal}`;
 });
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);

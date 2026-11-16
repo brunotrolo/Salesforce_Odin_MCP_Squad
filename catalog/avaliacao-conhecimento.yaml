@@ -1,0 +1,129 @@
+# Avaliação da recuperação do conhecimento (plano 11.3). Meta: recall@5 >= 80% no total e por coleção; perguntas fora do assunto não devem trazer nada.
+- id: Q01
+  colecao: tecnico
+  pergunta: "Como evitar estourar o limite de consultas SOQL dentro de um trigger?"
+  esperado: TEC-APEX-001
+- id: Q02
+  colecao: tecnico
+  pergunta: "Posso ter mais de um trigger no mesmo objeto?"
+  esperado: TEC-APEX-002
+- id: Q03
+  colecao: tecnico
+  pergunta: "Como faço uma chamada HTTP externa sem erro de DML pendente?"
+  esperado: TEC-CALL-001
+- id: Q04
+  colecao: tecnico
+  pergunta: "Onde guardo a URL e a credencial de uma integração?"
+  esperado: TEC-CALL-001
+- id: Q05
+  colecao: tecnico
+  pergunta: "O que fazer quando um elemento de um Flow falha?"
+  esperado: TEC-FLOW-001
+- id: Q06
+  colecao: tecnico
+  pergunta: "Quando usar Apex em vez de Flow?"
+  esperado: TEC-FLOW-001
+- id: Q07
+  colecao: tecnico
+  pergunta: "Qual o limite de tempo de CPU em transação síncrona?"
+  esperado: TEC-LIM-001
+- id: Q08
+  colecao: tecnico
+  pergunta: "Como processar muitos milhares de registros sem estourar limite?"
+  esperado: TEC-LIM-001
+- id: Q09
+  colecao: tecnico
+  pergunta: "bulkificação de trigger com lista, Set e Map"
+  esperado: TEC-APEX-001
+- id: Q10
+  colecao: tecnico
+  pergunta: "Named Credentials em vez de segredo no código"
+  esperado: TEC-CALL-001
+- id: Q11
+  colecao: negocio
+  pergunta: "Em quanto tempo devo responder um caso de prioridade alta?"
+  esperado: NEG-ATLAS-001
+- id: Q12
+  colecao: negocio
+  pergunta: "O relógio do prazo conta fora do horário comercial?"
+  esperado: NEG-ATLAS-001
+- id: Q13
+  colecao: negocio
+  pergunta: "Quem aprova desconto de 10%?"
+  esperado: NEG-ATLAS-002
+- id: Q14
+  colecao: negocio
+  pergunta: "Desconto acima de 15% precisa de quem?"
+  esperado: NEG-ATLAS-002
+- id: Q15
+  colecao: negocio
+  pergunta: "Que prioridade nasce um caso de cliente Premium?"
+  esperado: NEG-ATLAS-003
+- id: Q16
+  colecao: negocio
+  pergunta: "Quem pode reduzir a prioridade de um caso Premium?"
+  esperado: NEG-ATLAS-003
+- id: Q17
+  colecao: negocio
+  pergunta: "Quando um caso sem resposta do cliente é encerrado automaticamente?"
+  esperado: NEG-ATLAS-004
+- id: Q18
+  colecao: dados
+  pergunta: "Quando o campo ClosedDate do Case é preenchido?"
+  esperado: DAD-CASE-001
+- id: Q19
+  colecao: dados
+  pergunta: "Onde fica o histórico de status do caso?"
+  esperado: DAD-CASE-001
+- id: Q20
+  colecao: dados
+  pergunta: "Em que campo da Conta fica o segmento do cliente?"
+  esperado: DAD-ACCT-001
+- id: Q21
+  colecao: dados
+  pergunta: "Como tratar contas antigas sem segmento?"
+  esperado: DAD-ACCT-001
+- id: Q22
+  colecao: funcional
+  pergunta: "Quais são os passos da atendente para registrar um caso?"
+  esperado: FUN-JORN-001
+- id: Q23
+  colecao: funcional
+  pergunta: "Quem é a persona principal do atendimento?"
+  esperado: FUN-JORN-001
+- id: Q24
+  colecao: funcional
+  pergunta: "O que significa primeira resposta?"
+  esperado: FUN-GLOS-001
+- id: Q25
+  colecao: funcional
+  pergunta: "O que é escalonamento no atendimento?"
+  esperado: FUN-GLOS-001
+- id: Q26
+  colecao: licoes
+  pergunta: "Salvar caso de prioridade alta sem descrição é bug?"
+  esperado: LIC-TEST-001
+- id: Q27
+  colecao: licoes
+  pergunta: "Posso reabrir o caso de teste da descrição obrigatória?"
+  esperado: LIC-TEST-001
+- id: Q28
+  colecao: licoes
+  pergunta: "O que o teste deve conferir primeiro na tela de caso Premium?"
+  esperado: LIC-TEST-002
+- id: Q29
+  colecao: licoes
+  pergunta: "Qual gap o build costuma esquecer sobre clientes Premium?"
+  esperado: LIC-TEST-002
+- id: X01
+  colecao: nenhuma
+  pergunta: "Qual a receita de bolo de chocolate?"
+  sem_resposta: true
+- id: X02
+  colecao: nenhuma
+  pergunta: "Quem ganhou o campeonato de futebol ontem?"
+  sem_resposta: true
+- id: X03
+  colecao: nenhuma
+  pergunta: "Como configurar uma impressora no escritório?"
+  sem_resposta: true

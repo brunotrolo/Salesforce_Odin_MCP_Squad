@@ -34,7 +34,7 @@ jobs:
             roles/serviceusage.serviceUsageAdmin roles/iam.serviceAccountAdmin roles/iam.serviceAccountUser roles/iam.roleAdmin \
             roles/resourcemanager.projectIamAdmin roles/cloudkms.admin roles/cloudkms.signerVerifier roles/cloudkms.publicKeyViewer \
             roles/storage.admin roles/secretmanager.admin roles/run.admin roles/pubsub.admin roles/cloudscheduler.admin \
-            roles/datastore.owner roles/artifactregistry.admin roles/logging.viewer; do
+            roles/datastore.owner roles/artifactregistry.admin roles/logging.viewer roles/aiplatform.user roles/bigquery.admin roles/monitoring.admin roles/logging.configWriter; do
             gcloud projects add-iam-policy-binding "$PROJETO" --member="serviceAccount:$CONTA" --role="$R" --condition=None --quiet >/dev/null
             echo "ok $R"
           done

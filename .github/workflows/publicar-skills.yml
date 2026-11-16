@@ -100,4 +100,6 @@ jobs:
           echo "ODIN_REPOS=$PWD/repos" >> "$GITHUB_ENV"
           echo "URL_EXECUCAO=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$GITHUB_ENV"
       - run: node scripts/publicar-cli.ts
+      - name: Indexar o conhecimento (embeddings da Vertex AI)
+        run: node scripts/indexar-conhecimento.ts
       - run: node scripts/publicar-skills.ts

@@ -43,6 +43,11 @@ resource "google_secret_manager_secret_iam_member" "sts_oauth" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.sa["sa-sts"]}"
 }
+resource "google_project_iam_member" "mcp_vertex" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${var.sa["sa-mcp"]}"
+}
 resource "google_secret_manager_secret_iam_member" "mcp_url" {
   secret_id = data.google_secret_manager_secret.s["odin-segredo-url"].id
   role      = "roles/secretmanager.secretAccessor"
@@ -128,6 +133,10 @@ resource "google_cloud_run_v2_service" "mcp" {
         limits            = { cpu = "1", memory = "512Mi" }
         cpu_idle          = true
         startup_cpu_boost = true
+      }
+      env {
+        name  = "VERTEX_REGIAO"
+        value = "us-central1"
       }
       env {
         name  = "PROJECT_ID"
