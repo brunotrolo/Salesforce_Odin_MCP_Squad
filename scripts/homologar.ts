@@ -330,6 +330,8 @@ await t('H27', 'Catálogo: as 10 skills reais estão em stable, com versão assi
   return `${reais.length} skills em stable, todas com nota ≥ 90 em ≥ 10 casos`;
 });
 await t('H28', 'Canais de ponta a ponta: nova versão em stable chega ao MCP, rollback volta para a anterior e skill real em stable é entregue', async () => {
+  // O H24 revogou o dispositivo do CLI: ativa um novo (aprovado com o segredo de administração) antes de falar com o MCP.
+  ok((await principal(['setup', '--servidor', STS], (l) => { const m = /código:\s+([A-Z]{4}-[A-Z]{4})/.exec(l); if (m) void fetch(`${STS}/ativar`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code: m[1]!, user: USUARIO, segredo: SEGREDO }) }); })) === 0, 'não foi possível ativar um novo dispositivo para o H28');
   const deps = { store, armazenamento, chavesDePacote: [keyPacotes.publica()], coletor: coletorMemoria().coletor };
   const ant = String(((await store.get('catalog_skills', 'odin-ambiente'))?.canais as Record<string, string> | undefined)?.stable ?? ''); ok(!!ant, 'odin-ambiente sem stable');
   const nova = `${ant.split('.').slice(0, 2).join('.')}.${Number(ant.split('.')[2]) + 1}`;
