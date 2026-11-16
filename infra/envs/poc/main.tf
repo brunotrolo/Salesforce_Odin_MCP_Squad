@@ -73,6 +73,13 @@ module "finops" {
   depends_on      = [module.apis]
 }
 
+module "observabilidade" {
+  source     = "../../modules/observabilidade"
+  project_id = var.project_id
+  region     = var.region
+  depends_on = [module.apis]
+}
+
 module "security" {
   source     = "../../modules/security"
   project_id = var.project_id
