@@ -1,0 +1,102 @@
+name: avaliar-modelo
+# Camada de avaliação com modelo (ADR 0029): roda os casos `camada: modelo` das 10 skills com a API do Claude.
+# Precisa do segredo ANTHROPIC_API_KEY (Settings > Secrets). Sem ele, o job termina sem executar nada.
+# Manual: custo de dezenas de chamadas por skill (3 casos x 3 repetições x executor e juiz).
+on:
+  workflow_dispatch:
+    inputs:
+      modelo:
+        description: Modelo do executor e do juiz (vazio = padrão do Odin)
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: avaliar-modelo
+  cancel-in-progress: false
+jobs:
+  avaliar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ODIN_EVAL_MODELO: ${{ inputs.modelo }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Data_Architect
+          path: repos/Salesforce_Data_Architect
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+        continue-on-error: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Test_Automator
+          path: repos/Salesforce_Test_Automator
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Discovery-to-Backlog
+          path: repos/Salesforce_Discovery-to-Backlog
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Journey_Designer
+          path: repos/Salesforce_Journey_Designer
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Journey_Developer
+          path: repos/Salesforce_Journey_Developer
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Apex_Callouts_Developer
+          path: repos/Salesforce_Apex_Callouts_Developer
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Apex-Cover-Loop
+          path: repos/Salesforce_Apex-Cover-Loop
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Deep_Debugger
+          path: repos/Salesforce_Deep_Debugger
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_Archaeologist
+          path: repos/Salesforce_Archaeologist
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: brunotrolo/Salesforce_LWC-Developer
+          path: repos/Salesforce_LWC-Developer
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+      - run: npm ci --ignore-scripts
+      - name: Avaliar com modelo
+        run: |
+          echo "## Avaliação com modelo" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$ANTHROPIC_API_KEY" ]; then echo "Sem o segredo ANTHROPIC_API_KEY: nada foi executado." | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          falhou=0
+          for par in Salesforce_Archaeologist:sf-archaeologist Salesforce_Discovery-to-Backlog:sf-discovery Salesforce_Data_Architect:sf-data-architect Salesforce_Journey_Designer:sf-journey-designer Salesforce_Journey_Developer:sf-journey-developer Salesforce_LWC-Developer:sf-lwc-developer Salesforce_Apex_Callouts_Developer:sf-callouts-developer Salesforce_Apex-Cover-Loop:sf-apex-cover-loop Salesforce_Test_Automator:sf-test Salesforce_Deep_Debugger:sf-deep-debugger; do
+            repo="repos/${par%%:*}"; id="${par##*:}"
+            [ -d "$repo" ] || { echo "- $id: repositório ausente" | tee -a "$GITHUB_STEP_SUMMARY"; continue; }
+            node scripts/avaliar-modelo.ts "$repo" "$id" "0.0.0-eval" || falhou=1
+          done
+          exit $falhou

@@ -51,3 +51,9 @@ Implementado: carregamento de `politicas/<id>.mjs` por sessão, lint e testes. M
 
 ## Bibliotecas compartilhadas (ADR 0028)
 `libs/` com 3 pacotes; Journey Designer e Journey Developer usam. Pendente: fundir as cópias divergentes do LWC Developer e do Apex Cover Loop.
+
+## Avaliação com modelo (ADR 0029)
+Implementada e testada com API simulada; 30 casos de modelo nas 10 skills. Falta rodar `avaliar-modelo.yml` com o segredo `ANTHROPIC_API_KEY` para registrar a nota de referência.
+
+## Intenções das 10 skills
+20 por skill, aprovadas por delegação do mantenedor ("tome as decisões compatíveis com o projeto") em 16/11/2026; roteamento 38/38.

@@ -45,6 +45,9 @@ As skills atuais já têm material: os bugs plantados do Test Automator, os caso
 - **Camada modelo:** 3 repetições por caso; vale a mediana. Caso que oscila entre repetições é marcado `instavel` no relatório e deve ser corrigido (fixture ou rubrica ambígua).
 - **Juiz:** agente independente e somente leitura (`tools: Read, Grep, Glob`), em contexto novo, recebe só o esperado e a evidência, nunca a narrativa da execução.
 
+## Camada com modelo (ADR 0029)
+`node scripts/avaliar-modelo.ts <repo> <skill> <versao>` (ou o workflow `avaliar-modelo.yml`) roda os casos `camada: modelo`: executor com a skill, juiz independente com a rubrica, 3 repetições. Caso de modelo usa `pedido`, `juiz.rubrica` e, se for de injeção, `documento`; `esperado` pode ficar vazio. Precisa de `ANTHROPIC_API_KEY`.
+
 ## Portão de promoção (`beta` → `stable`)
 O CI do catálogo recusa o PR quando:
 1. `evals/resultado.json` não existe ou o `sha` dele não é o SHA promovido;

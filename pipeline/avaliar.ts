@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import YAML from 'yaml';
 
 export interface Esperado { grader?: string; args?: Record<string, unknown>; arquivo_existe?: string; arquivo_ausente?: string; max_linhas?: { arquivo: string; linhas: number } }
-export interface CasoEval { id: string; titulo: string; tipo: 'positivo' | 'negativo' | 'injecao' | 'limite'; critico?: boolean; camada: 'deterministica' | 'modelo'; fixture: string; pedido?: string; esperado: Esperado[] }
+export interface CasoEval { id: string; titulo: string; tipo: 'positivo' | 'negativo' | 'injecao' | 'limite'; critico?: boolean; camada: 'deterministica' | 'modelo'; fixture: string; pedido?: string; documento?: string; juiz?: { rubrica: string }; esperado: Esperado[] }
 export interface ResultadoCaso { id: string; critico: boolean; resultado: 'passou' | 'falhou' | 'instavel'; repeticoes: Array<0 | 1>; motivo?: string }
 export interface ResultadoEval { schema: 'odin.eval/1'; skill: string; sha: string; versao: string; gerado_em: string; repeticoes: number; nota: number; nota_stable_anterior?: number | null; casos: ResultadoCaso[] }
 export const COMPOSICAO_MINIMA = { positivo: 4, negativo: 3, injecao: 2, limite: 1 } as const;

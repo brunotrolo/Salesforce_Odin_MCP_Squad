@@ -6,35 +6,147 @@
   "type": "array",
   "minItems": 10,
   "items": {
-    "type": "object", "additionalProperties": false,
-    "required": ["id", "titulo", "tipo", "camada", "fixture", "esperado"],
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "titulo",
+      "tipo",
+      "camada",
+      "fixture",
+      "esperado"
+    ],
     "properties": {
-      "id": { "type": "string", "pattern": "^EV-\\d{3}$" },
-      "titulo": { "type": "string", "minLength": 10, "maxLength": 160 },
-      "tipo": { "enum": ["positivo", "negativo", "injecao", "limite"] },
-      "critico": { "type": "boolean", "default": false },
-      "camada": { "enum": ["deterministica", "modelo"] },
-      "fixture": { "type": "string", "pattern": "^fixtures/[a-z0-9-]+$" },
-      "pedido": { "type": "string", "minLength": 8 },
+      "id": {
+        "type": "string",
+        "pattern": "^EV-\\d{3}$"
+      },
+      "titulo": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 160
+      },
+      "tipo": {
+        "enum": [
+          "positivo",
+          "negativo",
+          "injecao",
+          "limite"
+        ]
+      },
+      "critico": {
+        "type": "boolean",
+        "default": false
+      },
+      "camada": {
+        "enum": [
+          "deterministica",
+          "modelo"
+        ]
+      },
+      "fixture": {
+        "type": "string",
+        "pattern": "^fixtures/[a-z0-9-]+$"
+      },
+      "pedido": {
+        "type": "string",
+        "minLength": 8
+      },
       "esperado": {
-        "type": "array", "minItems": 1,
+        "type": "array",
+        "minItems": 0,
         "items": {
-          "type": "object", "minProperties": 1, "maxProperties": 2, "additionalProperties": false,
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 2,
+          "additionalProperties": false,
           "properties": {
-            "grader": { "type": "string", "pattern": "^graders/[a-z0-9-]+\\.mjs$" },
-            "args": { "type": "object" },
-            "arquivo_existe": { "type": "string" },
-            "arquivo_ausente": { "type": "string" },
-            "max_linhas": { "type": "object", "additionalProperties": false, "required": ["arquivo", "linhas"],
-              "properties": { "arquivo": { "type": "string" }, "linhas": { "type": "integer", "minimum": 1 } } }
+            "grader": {
+              "type": "string",
+              "pattern": "^graders/[a-z0-9-]+\\.mjs$"
+            },
+            "args": {
+              "type": "object"
+            },
+            "arquivo_existe": {
+              "type": "string"
+            },
+            "arquivo_ausente": {
+              "type": "string"
+            },
+            "max_linhas": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "arquivo",
+                "linhas"
+              ],
+              "properties": {
+                "arquivo": {
+                  "type": "string"
+                },
+                "linhas": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
           },
-          "dependentRequired": { "args": ["grader"] }
+          "dependentRequired": {
+            "args": [
+              "grader"
+            ]
+          }
         }
       },
-      "juiz": { "type": "object", "additionalProperties": false, "required": ["rubrica"], "properties": { "rubrica": { "type": "string", "minLength": 20 } } }
+      "juiz": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rubrica"
+        ],
+        "properties": {
+          "rubrica": {
+            "type": "string",
+            "minLength": 20
+          }
+        }
+      },
+      "documento": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 6000,
+        "description": "Camada modelo: conteúdo de um documento do projeto entregue junto com o pedido (por exemplo, texto com tentativa de injeção)."
+      }
     },
-    "if": { "properties": { "camada": { "const": "modelo" } } },
-    "then": { "required": ["pedido"] },
-    "else": { "not": { "required": ["juiz"] } }
+    "if": {
+      "properties": {
+        "camada": {
+          "const": "modelo"
+        }
+      }
+    },
+    "then": {
+      "required": [
+        "pedido",
+        "juiz"
+      ]
+    },
+    "else": {
+      "required": [
+        "esperado"
+      ],
+      "properties": {
+        "esperado": {
+          "type": "array",
+          "minItems": 1
+        }
+      },
+      "not": {
+        "required": [
+          "juiz"
+        ]
+      }
+    }
   }
 }
