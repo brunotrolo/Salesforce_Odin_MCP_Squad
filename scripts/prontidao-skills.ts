@@ -38,6 +38,7 @@ export function rascunho(s: SkillDoCatalogo, repo: string): Record<string, unkno
     skills: [e.principal, ...e.extras].map((n) => ({ path: `.claude/skills/${n}/SKILL.md` })),
     agentes: arquivos.filter((f) => /^\.claude\/agents\/[^/]+\.md$/.test(f) && !/README\.md$/i.test(f)),
     regras: arquivos.filter((f) => /^\.claude\/rules\/[^/]+\.md$/.test(f)),
+    ...(existsSync(join(repo, 'evals/casos.yaml')) ? { avaliacoes: 'evals/' } : {}),
     ...(arquivos.some((f) => f.startsWith(`${dirScripts}/`)) ? { runtime: { dir: dirScripts, node: '>=20', prerequisitos: ['node', 'git'] } } : {}),
   };
 }

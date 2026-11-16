@@ -33,6 +33,7 @@ agentes:
 regras:
   - .claude/rules/karpathy-guidelines.md
   - .claude/rules/salesforce-standards.md
+avaliacoes: evals/
 runtime:
   dir: .claude/skills/sf-archaeologist/scripts
   node: ">=20"

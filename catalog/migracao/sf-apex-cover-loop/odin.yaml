@@ -27,6 +27,7 @@ agentes:
   - .claude/agents/coverage-verifier.md
 regras:
   - .claude/rules/karpathy-guidelines.md
+avaliacoes: evals/
 runtime:
   dir: .claude/skills/apex-test-loop/scripts
   node: ">=20"

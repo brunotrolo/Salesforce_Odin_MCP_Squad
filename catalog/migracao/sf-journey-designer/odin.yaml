@@ -38,3 +38,4 @@ regras:
   - .claude/rules/journey-designer.md
   - .claude/rules/karpathy-guidelines.md
   - .claude/rules/prototipo.md
+avaliacoes: evals/

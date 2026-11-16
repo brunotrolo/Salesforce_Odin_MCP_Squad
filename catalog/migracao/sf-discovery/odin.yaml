@@ -39,6 +39,7 @@ agentes:
 regras:
   - .claude/rules/discovery-governance.md
   - .claude/rules/jira-write.md
+avaliacoes: evals/
 runtime:
   dir: .claude/skills/sf-discover/scripts
   node: ">=20"

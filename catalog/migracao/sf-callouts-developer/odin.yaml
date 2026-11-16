@@ -31,6 +31,7 @@ agentes:
   - .claude/agents/validate-tobe.md
 regras:
   - .claude/rules/karpathy-guidelines.md
+avaliacoes: evals/
 runtime:
   dir: .claude/skills/apex-callouts-developer/scripts
   node: ">=20"

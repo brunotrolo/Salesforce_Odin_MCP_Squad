@@ -31,6 +31,7 @@ agentes:
   - .claude/agents/sf-data-scientist.md
 regras:
   - .claude/rules/data-governance.md
+avaliacoes: evals/
 runtime:
   dir: .claude/skills/sf-data-architect/scripts
   node: ">=20"
