@@ -14,7 +14,7 @@ const store = new FirestoreStore(projeto); const pimenta = await passo('segredo 
 const clientId = process.env.GITHUB_CLIENT_ID ?? '';
 const clientSecret = clientId ? await passo('segredo OAuth do GitHub', () => lerSegredo(projeto, 'odin-oauth-client-secret')).catch(() => '') : '';
 let sts: ReturnType<typeof criarSts>;
-const portal = criarPortal({ store, coletor: coletorStdout, pimenta, adminSegredo: ativacao, emissor, exigirMfa: process.env.MFA_EXIGIR !== 'nao', aprovarDispositivo: (code, userId) => sts.aprovarDispositivo(code, userId), ...(clientId && clientSecret ? { github: { clientId, clientSecret } } : {}) });
+const portal = criarPortal({ store, coletor: coletorStdout, pimenta, adminSegredo: ativacao, emissor, mcpUrl: mcp, exigirMfa: process.env.MFA_EXIGIR !== 'nao', aprovarDispositivo: (code, userId) => sts.aprovarDispositivo(code, userId), ...(clientId && clientSecret ? { github: { clientId, clientSecret } } : {}) });
 sts = criarSts({
   store, assinador, coletor: coletorStdout, emissor, audiencias: [mcp], portalUrl: emissor,
   pimenta, ativacaoSegredo: ativacao, portal: portal.handler,
