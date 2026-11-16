@@ -1,0 +1,55 @@
+name: desempenho
+# Mede partida a frio e carga de 50 usuários nos serviços implantados e guarda o relatório.
+# Só o mantenedor, só na main (identidade federada). Cria e remove dados de teste; não altera a infraestrutura.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: desempenho
+  cancel-in-progress: false
+jobs:
+  desempenho:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PROJETO: salesforcemcpodin
+      REGIAO: southamerica-east1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/177809673592/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: sa-ci-infra@salesforcemcpodin.iam.gserviceaccount.com
+      - run: npm ci --ignore-scripts
+      - name: Endereços e chaves
+        run: |
+          NUM=177809673592
+          echo "PROJECT_ID=$PROJETO" >> "$GITHUB_ENV"
+          echo "URL_STS=https://odin-sts-${NUM}.${REGIAO}.run.app" >> "$GITHUB_ENV"
+          echo "URL_MCP=https://odin-mcp-${NUM}.${REGIAO}.run.app" >> "$GITHUB_ENV"
+          echo "URL_DISJUNTOR=$(gcloud run services describe odin-disjuntor --region=$REGIAO --project=$PROJETO --format='value(status.url)')" >> "$GITHUB_ENV"
+          echo "BUCKET_PACOTES=${PROJETO}-bundles" >> "$GITHUB_ENV"
+          echo "CHAVE_JWT=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/jwt-signing" >> "$GITHUB_ENV"
+          echo "CHAVE_PACOTES=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/bundle-signing" >> "$GITHUB_ENV"
+          S=$(gcloud secrets versions access latest --secret=odin-ativacao-admin --project="$PROJETO")
+          echo "::add-mask::$S"
+          echo "SEGREDO_ATIVACAO=$S" >> "$GITHUB_ENV"
+      - name: Medir
+        run: node scripts/desempenho.ts
+        env:
+          SAIDA: desempenho.md
+      - name: Relatório
+        if: always()
+        run: cat desempenho.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: desempenho
+          path: desempenho.md
