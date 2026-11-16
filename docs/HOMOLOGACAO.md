@@ -34,7 +34,8 @@
 ## Desempenho (workflow `desempenho.yml`, execução #1)
 - **Partida a frio** (primeira chamada após uma revisão nova, sem instância ativa; 3 medições em cada serviço): STS 394, 317 e 168 ms; MCP 330, 309 e 165 ms. **p95 = 394 ms** (meta ≤ 3000 ms).
 - **Carga de 50 usuários simultâneos** (300 chamadas): 226 chamadas/s, p50 141 ms, **p95 322 ms**, máximo 588 ms, **0 erros** (meta p95 ≤ 2000 ms).
-- Medido em chamadas sem autenticação (descoberta, chaves públicas e saúde); a carga autenticada do MCP, com Firestore, ainda não foi medida.
+- **Carga autenticada** (execução #2; 50 usuários, 300 chamadas a `/v1/me` com token assinado pelo KMS e direitos lidos do Firestore): 123 chamadas/s, p50 198 ms, **p95 1259 ms**, máximo 1433 ms, **0 erros** (meta ≤ 2000 ms). A primeira leitura de cada usuário vai ao Firestore, o que explica a cauda; as seguintes usam o cache de 30 s.
+- Na mesma execução, partida a frio p95 306 ms e carga sem login p95 409 ms.
 
 ## Rodada anterior (16/20) e correções
 | Achado | Causa | Correção |
@@ -45,4 +46,4 @@
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
 ## Fora do escopo desta homologação (pendente)
-Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, carga autenticada do MCP, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.

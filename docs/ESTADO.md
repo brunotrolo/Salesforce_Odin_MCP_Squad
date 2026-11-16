@@ -11,6 +11,7 @@
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-16 · **Carga autenticada do MCP medida**: 50 usuários, p95 1259 ms, zero erros (meta 2 s).
 - 2026-11-16 · **Avaliações por skill: infraestrutura pronta** (ADR 0017): `pipeline/avaliar.ts` roda a camada determinística, confere a composição mínima (10 casos: 4 positivos, 3 negativos, 2 de injeção, 1 de limite) e aplica o portão de promoção beta → stable; `npm run avaliar-skill` grava `evals/resultado.json`. **Laço contínuo**: o CI reverifica o projeto a cada 6 horas e uma rotina horária do Claude continua o desenvolvimento sem comando do mantenedor.
 - 2026-11-16 · **Desempenho medido na nuvem** (`desempenho.yml`): partida a frio p95 394 ms (meta 3 s); 50 usuários simultâneos com p95 322 ms e zero erros (meta 2 s).
 - 2026-11-16 · **Skills reais na nuvem** (ADR 0022): 9 das 10 publicadas em rascunho (canal beta, assinadas pelo KMS) pelo workflow `publicar-skills.yml`; Callouts e Data Architect destravados no lint (referências divididas, Unicode oculto removido); H21 na homologação. O Data Architect (repositório privado) espera o segredo `SKILLS_READ_TOKEN`.
@@ -26,7 +27,7 @@
 
 ## Próximo passo
 1. **Mantenedor (única pendência que só você resolve):** criar o segredo `SKILLS_READ_TOKEN` no repositório do Odin (token fine-grained, somente leitura de conteúdo do repositório do Data Architect) para publicar a 10ª skill.
-2. **Claude:** carga autenticada do MCP, portal com login GitHub, GitHub App, avaliações por skill (`evals/`) para chegar ao `stable`, reduzir o papel de `sa-ci-infra`.
+2. **Claude:** portal com login GitHub, GitHub App, avaliações por skill (`evals/`) para chegar ao `stable`, reduzir o papel de `sa-ci-infra`.
 2. **Mantenedor:** rodar `npm run demo`, depois `npm run dev` e conectar o próprio Claude Code (Windows e extensão do VS Code), para a primeira prova real.
 2. **Claude (`/odin-dev`):** migrar as 10 skills reais com o `odin-curador` (F6), começando por uma de cada etapa; portal (ativação com GitHub e segundo fator, console); cofre do sistema; `odin doctor --orgs`.
 3. Depois: implementações de nuvem atrás das interfaces, Terraform no estágio E0 e a F0 com o Claude Code real e o LiteLLM.
