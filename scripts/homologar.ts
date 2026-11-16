@@ -216,7 +216,7 @@ await t('H21', 'Skills reais publicadas: manifesto com assinatura do KMS, hashes
     ok(/odin ensure /.test(desempacotar(pc)['SKILL.md']!.toString('utf8')), `${s.id}: SKILL.md sem o passo odin ensure`);
     publicadas.push(s.id);
   }
-  ok(publicadas.length >= 8, `esperadas ao menos 8 skills reais publicadas, há ${publicadas.length}: ${publicadas}`);
+  ok(publicadas.length >= 10, `esperadas as 10 skills reais publicadas, há ${publicadas.length}: ${publicadas}`);
   return `${publicadas.length} skills reais conferidas: ${publicadas.join(', ')}`;
 });
 // ---- Portal (administração e pessoa) no Cloud Run ----
