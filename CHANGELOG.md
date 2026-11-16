@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Segundo fator, conhecimento com embeddings e observabilidade (ADR 0026)
+- F2: TOTP, códigos de recuperação e passkey no portal, com reconfirmação a cada 15 minutos (H31). F5: `odin update`, `restore-copias`, instalador (H29). F7: busca híbrida com Vertex AI, indexador e medição de recuperação (H30). F8: auditoria em BigQuery, painel, alertas e runbooks. Homologação 31/31.
+
 ### 2026-11-16 · Endurecimento e avaliações (ADR 0025)
 - `sa-ci-infra` sem Owner; disjuntor real; avaliações determinísticas nas 10 skills; pipeline completo encadeado (`pipeline-completo.yml`); publicação por mudança com portão de avaliação e rollback de canal.
 

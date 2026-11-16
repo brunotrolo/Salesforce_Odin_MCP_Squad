@@ -9,13 +9,13 @@ Atualizado em 2026-11-16. Fonte do plano: [PLANO.md](PLANO.md) (seção 16, fase
 |---|---|
 | F0 | Verificações com o Claude Code real (Windows nativo, VS Code, LiteLLM) e ferramentas de manutenção |
 | F1 | Projeto Google Cloud, Terraform, identidade federada, orçamento com disjuntor, Cloud Run |
-| F2 | Identidade: login, segundo fator, emissor de tokens, dispositivos, revogação, portal |
-| F3 | Catálogo, `odin.yaml`, `odin lint`, publicação assinada, canais |
+| F2 | ✅ | Emissor de tokens (KMS), device flow, renovação rotativa com detecção de reuso, revogação ≤ 30 s, portal de administração e de pessoa, login com GitHub e **segundo fator próprio**: TOTP, 10 códigos de recuperação de uso único e passkey (WebAuthn), com reconfirmação a cada 15 minutos (H31, ADR 0026). Limites: a atestação da passkey não é verificada; o segredo de administração (emergência) não exige o 2º fator. |
+| F3 | ✅ | `odin.yaml`, catálogo, `odin lint`, pacote determinístico, manifesto assinado pelo KMS, publisher que confere a assinatura. **Publicação automática** a cada push (`pipeline-completo.yml`), só do que mudou, com portão de avaliação, promoção a `stable` e rollback de canal (`canal.yml`); H27 e H28. |
 | F4 | Servidor MCP: ferramentas, autorização por perfil e projeto, auditoria |
-| F5 | Runtime local: CLI, guard, `odin ensure`, desinstalação |
-| F6 | Adaptação das 10 skills (checklist do `odin-curador`, evals) |
-| F7 | Conhecimento (RAG) com citação, projetos isolados, curadoria |
-| F8 | Operação: carga, partida a frio, ensaio do disjuntor, painéis, runbooks |
+| F5 | ✅ 👤 | `setup`, `login`, `token`, `ensure`, `doctor`, `status`, `uninstall`, guard PG-01 a PG-08 e agora `update` (CLI assinado pelo KMS, H29), `restore-copias`, `doctor --limpar-copias` e instalador multiplataforma. O CI roda o demo no Linux e no Windows. Falta só a sua prova no Windows e no VS Code reais. Não há binário empacotado: o CLI roda no Node, sem dependências de terceiros. |
+| F6 | 🟡 | As 10 skills têm contrato (`odin.yaml`, `odin ensure`), avaliações determinísticas (≥ 10 casos) e estão **em `stable`** na nuvem, com versão assinada e evento de promoção (H27). Falta: checklist do `odin-curador` (regras dos `CLAUDE.md`, hooks como políticas, bibliotecas compartilhadas, revisão das intenções) e avaliações **com modelo**, que dependem do seu acesso ao modelo. |
+| F7 | ✅ | Busca híbrida (embeddings `text-embedding-005` da Vertex AI + léxica) com citação, isolamento por projeto, filtro de injeção, propostas com aprovação no portal, indexador no pipeline e **medição de recuperação na nuvem** (H30: recall@5 ≥ 80%, fora do assunto recusado; piso de similaridade calibrado com notas reais). A fonte está em `conhecimento/` deste repositório porque o `odin-knowledge` não pôde ser criado (403 da integração). |
+| F8 | ✅ | Carga de 50 usuários (p95 322 a 1259 ms, zero erros), partida a frio p95 394 ms, disjuntor testado de verdade, **auditoria em BigQuery** (`odin_auditoria`, 400 dias), painel operacional, 3 alertas (5xx, latência, negações) e runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Os alertas ainda não têm canal de e-mail configurado. |
 | F9 | Validação pessoal pelo mantenedor com as 10 skills |
 | F10 | Preparação para o time (Portão 2) e corte único |
 
@@ -36,28 +36,24 @@ Legenda: ✅ pronto e homologado · 🟡 parcial · ⬜ não feito · 👤 depen
 | F9 | ⬜ 👤 | Uso real por você, como PO e como dev. |
 | F10 | ⬜ 👤 | Portão 2: organização GitHub com 2FA, projeto `prod` em E1, segundo super-admin, jurídico (LGPD), pentest, guia de onboarding, repositório de suporte, ensaio do corte com 2 ou 3 pessoas. |
 
-## 3. O que já foi homologado no Google Cloud (26 verificações, todas verdes)
-H01 serviços no ar · H02 descoberta e chaves (JWKS) · H03 rotas sem token recusadas · H04 semente de catálogo e perfis · H05 publicação assinada pelo KMS · H06 publicação adulterada recusada · H07 ativação de dispositivo · H08 MCP (7 ferramentas, atalhos, roteamento, negado fora do perfil) · H09 conhecimento com citação e filtro de injeção · H10 `odin ensure` por URL assinada · H11 integridade no uso · H12 guard · H13 renovação rotativa e reuso · H14 tokens inválidos recusados · H15 modo degradado · H16 disjuntor protegido por identidade · H17 job no Cloud Run · H18 revogação em ~18 s · H19 desinstalação · H21 as 10 skills reais publicadas e conferidas · H22 a H25 portal (admin, convite, pessoa + CLI, propostas) · H26 login com GitHub · H20 limpeza.
+## 3. O que já foi homologado no Google Cloud (31 verificações, todas verdes)
+H01 serviços no ar · H02 descoberta e chaves (JWKS) · H03 rotas sem token recusadas · H04 semente de catálogo e perfis · H05 publicação assinada pelo KMS · H06 publicação adulterada recusada · H07 ativação de dispositivo · H08 MCP (7 ferramentas, atalhos, roteamento, negado fora do perfil) · H09 conhecimento com citação e filtro de injeção · H10 `odin ensure` por URL assinada · H11 integridade no uso · H12 guard · H13 renovação rotativa e reuso · H14 tokens inválidos recusados · H15 modo degradado · H16 disjuntor protegido por identidade · H17 job no Cloud Run · H18 revogação em ~18 s · H19 desinstalação · H21 as 10 skills reais publicadas e conferidas · H22 a H25 portal (admin, convite, pessoa + CLI, propostas) · H26 login com GitHub · H27 as 10 skills em stable com nota ≥ 90 · H28 canais e rollback de ponta a ponta · H29 CLI assinado e `odin update` · H30 conhecimento com embeddings da Vertex AI · H31 segundo fator (TOTP, recuperação, passkey, reset) · H20 limpeza.
 
 Também medidos: desempenho (acima) e o **teste real do disjuntor** (execução #2 do `disjuntor-real.yml`).
 
 ## 4. Em andamento agora
-Troca do papel **Owner** de `sa-ci-infra` por papéis mínimos (ADR 0025): o Owner já foi removido; falta confirmar que o `infra.yml` e a homologação continuam verdes sem ele e então aceitar o ADR.
+Nada em andamento. Último pipeline completo (commit `910dff6`): qualidade, infraestrutura (Terraform aplicado), publicação, **homologação 31/31** e desempenho, todos verdes.
 
 ## 5. O que falta, por quem faz
 **Você (ninguém mais consegue):**
-1. Trocar o `SKILLS_READ_TOKEN` e o segredo do OAuth App (ambos foram vistos no chat) e ativar a verificação em duas etapas na sua conta do GitHub.
-2. Testar o login no portal e o `odin setup` no Windows e no VS Code.
+1. Trocar o `SKILLS_READ_TOKEN` e o segredo do OAuth App (ambos foram vistos no chat), rodar o `infra.yml` de novo e ativar a verificação em duas etapas na conta do GitHub.
+2. Testar o login no portal, o cadastro do 2º fator e o `odin setup` no Windows e no VS Code.
 3. F0 com o Claude Code real e o LiteLLM; F9 (uso real).
 4. F10: organização GitHub, projeto `prod`, segundo super-admin, jurídico, pentest, ensaio do corte.
 
-**Eu (Claude), sem depender de você:**
-1. Fechar o ADR 0025 e confirmar o pipeline sem Owner.
-2. F6: checklist do `odin-curador` nas 10 skills (regras dos `CLAUDE.md`, hooks como políticas, bibliotecas compartilhadas, intenções) e avaliações com modelo, que dependem do seu acesso ao modelo para rodar.
-3. F7: `odin-knowledge`, embeddings e medição de recuperação.
-4. F8: painéis, alertas, auditoria no BigQuery, runbooks.
-5. F5: `update`, `restore-copias`, binário do CLI.
-6. F2: TOTP, passkey e códigos de recuperação (ou decisão formal de manter o 2FA do GitHub).
+**Eu (Claude):**
+1. F6: checklist do `odin-curador` nas 10 skills e avaliações com modelo (dependem do seu acesso ao modelo).
+2. Pendências menores: canal de e-mail para os alertas (precisa de um endereço seu), repositório `odin-knowledge` (precisa de permissão para criar repositórios).
 
 ## 6. Segurança e custo hoje
 - Custo: estágio E0, orçamento de R$ 30 com alertas de 50% a 300%, disjuntor ensaiado.

@@ -55,5 +55,16 @@
 | H16 | credencial federada sem token de identidade | `generateIdToken` pela API do IAM |
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
+## Rodada final (31/31): F2, F3, F5, F6, F7, F8
+Pipeline completo do commit `910dff6` (16/11/2026): qualidade, Terraform, publicação, homologação **31/31** e desempenho, todos verdes.
+| Verificação | O que provou |
+|---|---|
+| H27 | as 10 skills em `stable`, versão assinada, avaliação registrada (nota ≥ 90 em ≥ 10 casos) e evento de promoção |
+| H28 | nova versão em stable chega ao MCP (1 s), rollback efetivo em ~30 s e skill real entregue |
+| H29 | CLI 0.2.0 assinado pelo KMS, `odin update` confere assinatura e hashes e o CLI instalado roda |
+| H30 | embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto |
+| H31 | segundo fator no portal real: sessão nova exige o fator, TOTP sem repetição, código de recuperação de uso único, passkey (WebAuthn com autenticador de software), reset pelo admin |
+Achados e correções desta rodada: H28 reativa um dispositivo depois da revogação do H24; trecho sem embedding passou a valer pela nota lexical (H09); piso de similaridade 0,6 calibrado com as notas reais (respostas certas 0,67 a 0,86; fora do assunto ≤ 0,56); `terraform fmt` do módulo de observabilidade.
+
 ## Fora do escopo desta homologação (pendente)
-skills reais em `stable` (faltam as avaliações por skill), login com GitHub e segundo fator (o portal interino está homologado; falta o OAuth App), teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+Windows e VS Code reais, cadastro do 2º fator com a passkey do seu navegador e F0, F9 e F10 (você); avaliações com modelo e checklist do `odin-curador` na F6; canal de e-mail dos alertas; repositório `odin-knowledge`.
