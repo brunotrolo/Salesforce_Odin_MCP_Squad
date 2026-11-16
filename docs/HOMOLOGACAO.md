@@ -31,6 +31,11 @@
 - Serviços: mínimo 0, máximo 3 instâncias (disjuntor máximo 1). O ingress dos serviços é `all`: STS e MCP são públicos por desenho (autenticam por token); o disjuntor exige identidade.
 - Auditoria no Cloud Logging com 15 tipos de evento; **0** registros com o texto do pedido.
 
+## Desempenho (workflow `desempenho.yml`, execução #1)
+- **Partida a frio** (primeira chamada após uma revisão nova, sem instância ativa; 3 medições em cada serviço): STS 394, 317 e 168 ms; MCP 330, 309 e 165 ms. **p95 = 394 ms** (meta ≤ 3000 ms).
+- **Carga de 50 usuários simultâneos** (300 chamadas): 226 chamadas/s, p50 141 ms, **p95 322 ms**, máximo 588 ms, **0 erros** (meta p95 ≤ 2000 ms).
+- Medido em chamadas sem autenticação (descoberta, chaves públicas e saúde); a carga autenticada do MCP, com Firestore, ainda não foi medida.
+
 ## Rodada anterior (16/20) e correções
 | Achado | Causa | Correção |
 |---|---|---|
