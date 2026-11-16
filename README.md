@@ -9,6 +9,7 @@ Um único servidor MCP para o time inteiro (POs, devs, QA, arquitetos) usar as s
 | 📊 [Relatório de progresso](docs/RELATORIO-DE-PROGRESSO.md) | O que foi feito, o que falta e a ordem recomendada |
 | 🧭 [Status do projeto](docs/STATUS-DO-PROJETO.md) | O plano, o que foi feito, o que foi homologado e o que falta |
 | ✅ [Homologação na nuvem](docs/HOMOLOGACAO.md) | Resultado das verificações no Google Cloud, desempenho e pendências |
+| 🚀 [Guia de onboarding](docs/GUIA-DE-ONBOARDING.md) | Instalar e ativar o Odin em uma página |
 | 🖥️ [Manual do portal](docs/MANUAL-DO-PORTAL.md) | Como usar as páginas de administração e de pessoa |
 | 📐 [Plano](docs/PLANO.md) | Visão geral, fases de construção, riscos, revisões |
 | 🎬 [Apresentação interativa](apresentacao/odin-apresentacao.html) | Visão lúdica para apresentar: ideia, mapa, publicação, pedido de ponta a ponta, segurança, conhecimento, protótipo do portal e roteiro (arquivo completo para baixar e abrir no navegador, inclusive no celular; o index.html é a versão publicada como página) |

@@ -36,6 +36,8 @@ jobs:
         run: npm test
       - name: Documentação, skills, contratos e conformidade
         run: npm run verificar
+      - name: Demonstração ponta a ponta (CLI, guard, MCP e STS locais)
+        run: npm run demo
       - name: ADR obrigatório para documentos protegidos
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
         run: node scripts/verificar-docs.mjs --base origin/${{ github.base_ref }}

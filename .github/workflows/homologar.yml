@@ -40,6 +40,7 @@ jobs:
           echo "BUCKET_PACOTES=${PROJETO}-bundles" >> "$GITHUB_ENV"
           echo "CHAVE_JWT=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/jwt-signing" >> "$GITHUB_ENV"
           echo "CHAVE_PACOTES=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/bundle-signing" >> "$GITHUB_ENV"
+          echo "CHAVE_CLI=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/cli-signing" >> "$GITHUB_ENV"
           S=$(gcloud secrets versions access latest --secret=odin-ativacao-admin --project="$PROJETO")
           echo "::add-mask::$S"
           echo "SEGREDO_ATIVACAO=$S" >> "$GITHUB_ENV"

@@ -96,6 +96,8 @@ jobs:
           echo "PROJECT_ID=$PROJETO" >> "$GITHUB_ENV"
           echo "BUCKET_PACOTES=${PROJETO}-bundles" >> "$GITHUB_ENV"
           echo "CHAVE_PACOTES=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/bundle-signing" >> "$GITHUB_ENV"
+          echo "CHAVE_CLI=projects/$PROJETO/locations/$REGIAO/keyRings/odin/cryptoKeys/cli-signing" >> "$GITHUB_ENV"
           echo "ODIN_REPOS=$PWD/repos" >> "$GITHUB_ENV"
           echo "URL_EXECUCAO=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> "$GITHUB_ENV"
+      - run: node scripts/publicar-cli.ts
       - run: node scripts/publicar-skills.ts

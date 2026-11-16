@@ -8,6 +8,8 @@ import { caminhos, gravarConfig, lerConfig, lerJsonArquivo, VERSAO_CLI, type Con
 import { CofreArquivo } from './cofre.ts';
 import { ativar, cabecalhos } from './credenciais.ts';
 import { divergencias, ensure } from './ensure.ts';
+import { atualizarCli } from './atualizar.ts';
+import { arquivarCopias, copiasNoProjeto, removerCopias, restaurarCopias } from './copias.ts';
 import { conferirInstalacao, desinstalar, instalar } from './instalacao.ts';
 
 const AJUDA = `odin ${VERSAO_CLI}
@@ -15,6 +17,9 @@ const AJUDA = `odin ${VERSAO_CLI}
   odin login                                              ativa de novo (credencial vencida ou revogada)
   odin ensure <skill>                                     verifica, instala e libera uma skill (usado pelas skills)
   odin doctor                                             confere a instalação e aponta o que corrigir
+  odin doctor --limpar-copias [--sim]                     arquiva e remove as cópias antigas de skills deste projeto
+  odin restore-copias                                     devolve as cópias arquivadas deste projeto (por 30 dias)
+  odin update                                             atualiza o CLI e as skills instaladas
   odin status                                             quem sou, minhas skills e versões instaladas
   odin token                                              cabeçalhos para o Claude Code (uso interno)
   odin logout | odin uninstall                            sai deste dispositivo | remove o Odin desta máquina`;
@@ -55,6 +60,13 @@ export async function principal(argv: string[], sair: (m: string) => void = cons
         return 0;
       }
       case 'doctor': {
+        if (args.includes('--limpar-copias')) {
+          const c0 = caminhos(); const inst0 = lerJsonArquivo<Record<string, { versao: string }>>(join(c0.cache, 'instalados.json')) ?? {}; const declaradas: string[] = [];
+          for (const [s, v] of Object.entries(inst0)) { const mf = lerJsonArquivo<{ entrega?: { copias?: string[] } }>(join(c0.runtime, s, v.versao, 'manifesto.json')); declaradas.push(...(mf?.entrega?.copias ?? [])); }
+          const achadas = copiasNoProjeto(process.cwd(), declaradas); if (!achadas.length) { sair('Nenhuma cópia antiga de skills neste projeto.'); return 0; }
+          achadas.forEach((a) => sair(`  ${a}`)); if (!args.includes('--sim')) { sair(`${achadas.length} arquivo(s) de cópias antigas. Rode de novo com --sim para arquivar e remover (dá para devolver com odin restore-copias por 30 dias).`); return 1; }
+          const a = arquivarCopias(process.cwd(), achadas); removerCopias(process.cwd(), achadas); sair(`Arquivei ${a.n} arquivo(s) em ${a.pacote} e removi as cópias do projeto. Para devolver: odin restore-copias.`); return 0;
+        }
         const c = caminhos(); const problemas = [...conferirInstalacao()];
         try { const r = await fetch(`${new URL(lerConfig().mcp).origin}/v1/me`, { headers: await cabecalhos() }); if (!r.ok) problemas.push(`o servidor recusou o acesso (${r.status})`); } catch (e) { problemas.push((e as Error).message); }
         for (const skill of existsSync(c.runtime) ? readdirSync(c.runtime) : []) {
@@ -66,6 +78,13 @@ export async function principal(argv: string[], sair: (m: string) => void = cons
         if (!problemas.length) { sair('Tudo certo: dispositivo ativo, guard instalado, Claude Code conectado.'); return 0; }
         problemas.forEach((p) => sair(`✗ ${p}`)); sair('Para reinstalar o que é do Odin: odin login'); return 1;
       }
+      case 'update': {
+        const r = await atualizarCli(); sair(r.mensagem);
+        const inst = lerJsonArquivo<Record<string, { versao: string }>>(join(caminhos().cache, 'instalados.json')) ?? {};
+        for (const skill of Object.keys(inst)) { const e = await ensure(skill, { exigirGuard: false }); sair(e.ok ? `  ${skill}: ${e.versao}${e.instalado ? ' (atualizada)' : ''}` : `  ${skill}: ${e.mensagem}`); }
+        return 0;
+      }
+      case 'restore-copias': { const r = restaurarCopias(process.cwd()); sair(`Cópias devolvidas: ${r.restaurados} arquivo(s)${r.pulados ? `; ${r.pulados} já existiam e não foram alterados` : ''}.`); return 0; }
       case 'logout': { const k = new CofreArquivo(); ['refresh', 'acesso', 'chave-dispositivo'].forEach((x) => k.apagar(x)); sair('Você saiu deste dispositivo. Para revogar no servidor, use o portal.'); return 0; }
       case 'uninstall': { desinstalar(); sair('Odin removido desta máquina. Os arquivos do Claude Code voltaram ao que eram.'); return 0; }
       case '--version': case 'version': sair(VERSAO_CLI); return 0;

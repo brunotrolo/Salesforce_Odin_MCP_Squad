@@ -13,7 +13,7 @@ import { AssinadorKms, versaoAtual } from '../packages/shared/src/nuvem/kms.ts';
 import { semearNuvem } from '../packages/shared/src/nuvem/semente.ts';
 import { registrarVersao, promover } from '../apps/jobs/src/publisher.ts';
 import { avaliarDeterministico, conferirComposicao, lerCasos, portaoDePromocao } from '../pipeline/avaliar.ts';
-import { publicar } from '../pipeline/publicar.ts';
+import { publicar, REV_PUBLICADOR } from '../pipeline/publicar.ts';
 import { avaliar } from './prontidao-skills.ts';
 import { RAIZ } from '../dev/ambiente.ts';
 
@@ -34,7 +34,8 @@ for (const x of avaliar(RAIZ, env('ODIN_REPOS'))) {
   try {
     const hoje = sha(x.repo); const versoes = (await store.list('catalog_versions', (v) => v.skill === id)).sort((a, b) => Number(a.publicadoEm) - Number(b.publicadoEm)); const ultima = versoes[versoes.length - 1];
     let versao = String(ultima?.versao ?? '');
-    if ((ultima?.manifesto as { fonte?: { sha?: string } } | undefined)?.fonte?.sha === hoje) { linhas.push(`| ${id} | sem mudança | ${versao} já publicada para ${hoje.slice(0, 7)} |`); }
+    const mUltima = ultima?.manifesto as { fonte?: { sha?: string }; pipeline?: { rev?: string } } | undefined;
+    if (mUltima?.fonte?.sha === hoje && mUltima?.pipeline?.rev === REV_PUBLICADOR) { linhas.push(`| ${id} | sem mudança | ${versao} já publicada para ${hoje.slice(0, 7)} |`); }
     else {
       versao = `1.0.${versoes.length + 1}`;
       await publicar({ repo: x.repo, versao, canal: 'beta', fonte: { repo: `brunotrolo/${x.skill.repo}`, sha: hoje }, assinador: chave, armazenamento, bucket: env('BUCKET_PACOTES'), ...(rascunho ? { odinYaml: x.yaml, rascunho: true } : {}), pipeline: { run: process.env.URL_EXECUCAO ?? 'https://github.com/brunotrolo/Salesforce_Odin_MCP_Squad/actions', sha: process.env.GITHUB_SHA ?? hoje } });

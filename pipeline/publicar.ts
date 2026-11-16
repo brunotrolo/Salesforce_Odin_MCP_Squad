@@ -7,6 +7,9 @@ import { canonico, sha256hex, type Assinador } from '../packages/shared/src/chav
 import { empacotar, hashesDosArquivos, type Arquivos } from '../packages/shared/src/pacote.ts';
 import { lint, type OdinYaml, type ResultadoLint } from '../packages/lint/src/lint.ts';
 
+/** Muda quando o formato do manifesto muda: força republicar as skills mesmo sem mudança no repositório. */
+export const REV_PUBLICADOR = '2';
+
 export interface OpcoesPublicacao {
   repo: string; versao: string; canal: 'beta' | 'stable'; fonte: { repo: string; sha: string }; pipeline?: { run: string; sha: string };
   assinador: Assinador; armazenamento: Armazenamento; bucket?: string; odinYaml?: string; idsExistentes?: string[]; agora?: Date; runtimeMinCli?: string;
@@ -42,10 +45,10 @@ export async function publicar(o: OpcoesPublicacao): Promise<Publicado> {
   const base = `pacotes/${odin.id}/${o.versao}`; const bucket = o.bucket ?? 'odin-bundles-local';
   const manifesto = {
     schema: 'odin.bundle/1', skill: odin.id, versao: o.versao, canal: o.canal, fonte: o.fonte,
-    pipeline: o.pipeline ?? { run: 'https://localhost/execucao-local', sha: o.fonte.sha },
+    pipeline: { ...(o.pipeline ?? { run: 'https://localhost/execucao-local', sha: o.fonte.sha }), rev: REV_PUBLICADOR },
     pacotes: { conteudo: { uri: `gs://${bucket}/${base}/conteudo.odinpkg`, sha256: sha256hex(pc) }, runtime: { uri: `gs://${bucket}/${base}/runtime.odinpkg`, sha256: sha256hex(pr) } },
     arquivos: { ...hashesDosArquivos(conteudo, 'conteudo'), ...hashesDosArquivos(runtime, 'runtime') },
-    entrega: { prerequisitos: odin.runtime?.prerequisitos ?? [], agentes: Object.keys(runtime).filter((k) => k.startsWith('agentes/')).map((k) => k.slice(8)), colecoes: odin.conhecimento ?? [], politicas: odin.politicas ?? [], ...(odin.runtime?.node ? { node: odin.runtime.node } : {}) },
+    entrega: { copias: [...new Set([...odin.skills.map((s) => s.path.replace(/\/SKILL\.md$/, '')), ...r.arquivos.agentes, ...r.arquivos.regras])], prerequisitos: odin.runtime?.prerequisitos ?? [], agentes: Object.keys(runtime).filter((k) => k.startsWith('agentes/')).map((k) => k.slice(8)), colecoes: odin.conhecimento ?? [], politicas: odin.politicas ?? [], ...(odin.runtime?.node ? { node: odin.runtime.node } : {}) },
     runtime_min_cli: o.runtimeMinCli ?? '0.1.0', emitido_em: (o.agora ?? new Date()).toISOString().replace(/\.\d{3}Z$/, 'Z'), kid: o.assinador.kid,
   };
   const assinatura = Buffer.from(await o.assinador.assinar(Buffer.from(canonico(manifesto)))).toString('base64');

@@ -16,6 +16,7 @@ import { CofreArquivo } from '../packages/cli/src/cofre.ts';
 import { cabecalhos } from '../packages/cli/src/credenciais.ts';
 import { ensure } from '../packages/cli/src/ensure.ts';
 import { principal } from '../packages/cli/src/odin.ts';
+import { atualizarCli } from '../packages/cli/src/atualizar.ts';
 import { executarGuard } from '../packages/guard/src/guard.ts';
 import { coletorMemoria } from '../packages/shared/src/auditoria.ts';
 import { AssinadorLocal, b64u } from '../packages/shared/src/chaves.ts';
@@ -53,7 +54,8 @@ async function tokenDeIdentidade(audiencia: string): Promise<string> {
 const casa = mkdtempSync(join(tmpdir(), 'odin-homolog-casa-')); const projeto = mkdtempSync(join(tmpdir(), 'odin-homolog-proj-'));
 const keyJwt = await new AssinadorKms('jwt-kms-a', await versaoAtual(env('CHAVE_JWT'))).carregar();
 const keyPacotes = await new AssinadorKms('bundle-2026-a', await versaoAtual(env('CHAVE_PACOTES'))).carregar();
-const arquivoChaves = join(casa, 'chaves-de-pacote.json'); writeFileSync(arquivoChaves, JSON.stringify([keyPacotes.publica()]));
+const keyCli = await new AssinadorKms('cli-2026-a', await versaoAtual(env('CHAVE_CLI'))).carregar();
+const arquivoChaves = join(casa, 'chaves-de-pacote.json'); writeFileSync(arquivoChaves, JSON.stringify([keyPacotes.publica(), keyCli.publica()]));
 Object.assign(process.env, { ODIN_TESTE_HOME: casa, ODIN_CHAVES_DE_PACOTE: arquivoChaves, ODIN_BIN: 'odin', ODIN_SESSAO: 'homolog-1' });
 for (const v of ['ODIN_HOME', 'CLAUDE_CONFIG_DIR', 'ODIN_CLAUDE_JSON']) delete process.env[v];
 const USUARIO = 'usr_homolog';
@@ -305,6 +307,15 @@ await t('H28', 'Canais de ponta a ponta: nova versão em stable chega ao MCP, ro
   const real = await conectar(); try { const r = await chamar(real, 'odin_carregar_skill', { skill: 'sf-test' }); ok(!r.isError && /odin ensure sf-test/.test(r.content[0]!.text), `skill real em stable não foi entregue: ${r.content?.[0]?.text?.slice(0, 120)}`); } finally { await real.close(); }
   await store.delete('catalog_versions', `odin-ambiente@${nova}`); // limpeza da versão de teste
   return `nova versão no MCP em ${sobe} s, rollback efetivo em ${desce} s`;
+});
+await t('H29', 'CLI assinado: o servidor entrega a versão vigente, `odin update` confere a assinatura do KMS e os hashes, instala e o CLI instalado roda', async () => {
+  const r = await fetch(`${MCP}/v1/cli`); ok(r.status === 200, `/v1/cli respondeu ${r.status}`); const pub = json(await r.text());
+  ok(pub.manifesto.kid === 'cli-2026-a' && !!pub.assinatura && !!pub.url, 'manifesto do CLI incompleto');
+  const res = await atualizarCli('0.0.1'); ok(res.atualizou, res.mensagem);
+  const entrada = join(casa, '.odin', 'cli', res.versao, 'packages', 'cli', 'src', 'odin.ts'); ok(existsSync(entrada), 'CLI não foi extraído');
+  const { spawnSync } = await import('node:child_process'); const v = spawnSync(process.execPath, [entrada, '--version'], { encoding: 'utf8' }); ok(v.status === 0 && v.stdout.includes(res.versao), `o CLI instalado não rodou: ${v.stderr}`);
+  ok((await atualizarCli(res.versao)).atualizou === false, 'não deveria atualizar de novo');
+  return `CLI ${res.versao} assinado pelo KMS, instalado e executado`;
 });
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);

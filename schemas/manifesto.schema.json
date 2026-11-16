@@ -66,6 +66,10 @@
         },
         "sha": {
           "$ref": "#/$defs/gitSha"
+        },
+        "rev": {
+          "type": "string",
+          "description": "Revisão do publicador que gerou o manifesto (força republicação quando o formato muda)."
         }
       }
     },
@@ -162,6 +166,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "copias": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Caminhos relativos ao projeto das cópias antigas desta skill (usados por `odin doctor --limpar-copias`)."
         }
       }
     }

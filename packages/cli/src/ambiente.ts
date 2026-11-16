@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { ChavePublica } from '../../shared/src/chaves.ts';
 
-export const VERSAO_CLI = '0.1.0';
+export const VERSAO_CLI = '0.2.0';
 export interface Config { emissor: string; sts: string; mcp: string; portal: string; audiencias: string[]; chavesDePacote: ChavePublica[]; deviceId?: string }
 
 export function caminhos() {

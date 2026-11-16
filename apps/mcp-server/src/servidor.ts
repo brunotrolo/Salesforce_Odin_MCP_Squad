@@ -141,6 +141,12 @@ export function criarMcp(cfg: ConfigMcp) {
       if (!dados) throw new OdinErro('versao_indisponivel', 'Pacote não encontrado.');
       res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': String(dados.length), 'cache-control': 'no-store' }); res.end(dados); return;
     }
+    if (req.method === 'GET' && partes[1] === 'cli' && !partes[2]) { // versão vigente do CLI: pública e assinada (o CLI confere com a âncora fixada)
+      const v = await cfg.store.get('catalog_versions', 'odin-cli@current');
+      if (!v) throw new OdinErro('versao_indisponivel', 'O CLI ainda não foi publicado.');
+      const m = v.manifesto as { pacote: { uri: string }; versao: string };
+      return responder(res, 200, { manifesto: v.manifesto, assinatura: v.assinatura, url: `${cfg.urlPublica}/v1/download/${assinarCaminho(`cli/${m.versao}/cli.odinpkg`)}` });
+    }
     const c = await autenticar(req, rid);
     const ok = (acao: string, extra: object = {}) => auditar(cfg.coletor, 'odin-mcp', { ator: c.direitos.userId, dispositivo: c.dispositivo, acao, resultado: 'ok', request_id: rid, ip: c.ip, ...extra });
     if (req.method === 'GET' && partes[1] === 'me') {
