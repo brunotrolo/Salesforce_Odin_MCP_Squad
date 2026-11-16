@@ -4,10 +4,10 @@
 > **Última atualização:** 2026-11-16
 
 ## Agora
-- **Fase:** desenvolvimento **local primeiro** (decisão 53, ADR 0020). O caminho completo já roda e é testado na máquina: `npm run demo` mostra tudo em segundos; `npm run dev` sobe o Odin para o Claude Code local.
+- **Fase:** **nuvem homologada** (25/25, [HOMOLOGACAO.md](HOMOLOGACAO.md)): serviços no Cloud Run, 9 skills reais em beta e o portal interino. Localmente, `npm run demo` e `npm run dev` continuam funcionando.
 - **Pronto e testado (44 testes, CI em Linux e Windows):** emissor de tokens (`apps/sts`), servidor MCP com as 7 ferramentas e a API `/v1` (`apps/mcp-server`), roteador e catálogo das 10 skills (`packages/router`, `catalog/`), `odin lint` e pipeline de publicação assinada (`packages/lint`, `pipeline/`), publisher que confere a assinatura (`apps/jobs`), guard com PG-01 a PG-08 (`packages/guard`), CLI (`packages/cli`), skill de apoio `odin-ambiente`.
 - **Skills reais:** 8 das 10 já passam no `odin lint` e sobem no Odin local em modo rascunho (`npm run dev`, com os repositórios clonados ao lado); Data Architect e Apex Callouts Developer estão bloqueadas por problemas reais listados em [MIGRACAO-SKILLS.md](MIGRACAO-SKILLS.md).
-- **Ainda não existe:** login do portal com GitHub e segundo fator (o portal interino por segredo e convite existe), implementações de nuvem no código (Firestore, Cloud Storage, KMS, Vertex AI: a infraestrutura já existe, falta o código usá-la), disjuntor de custo (função), serviços no Cloud Run, cofre do sistema, binário do CLI, migração das 10 skills reais (F6), avaliações de comportamento.
+- **Ainda não existe:** login do portal com GitHub e segundo fator (o portal interino por segredo e convite existe), Data Architect na nuvem (falta o segredo `SKILLS_READ_TOKEN`), avaliações de comportamento por skill (a infraestrutura existe; faltam os casos), Vertex AI e binário do CLI.
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
