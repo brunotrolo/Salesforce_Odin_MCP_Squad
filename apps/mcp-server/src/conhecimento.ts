@@ -14,7 +14,7 @@ const INJECAO = /\b(ignore|desconsidere|esque[cç]a)\b.{0,40}\b(instru[cç][oõ]
 export class Conhecimento {
   private store: Store; private denso?: EmbedderDenso; private corte: number;
   /** `denso` (Vertex AI) ativa a busca híbrida; sem ele (ou se falhar) a busca é só lexical. `corte` é a nota mínima da busca híbrida. */
-  constructor(store: Store, denso?: EmbedderDenso, corte = Number(process.env.KB_CORTE_HIBRIDO ?? 0.45)) { this.store = store; this.denso = denso; this.corte = corte; }
+  constructor(store: Store, denso?: EmbedderDenso, corte = Number(process.env.KB_CORTE_HIBRIDO ?? 0.5)) { this.store = store; this.denso = denso; this.corte = corte; }
 
   /** Ingestão: recusa conhecimento confidencial neste armazenamento e texto com instrução dirigida a agentes. */
   async ingerir(t: Trecho): Promise<void> {
@@ -36,12 +36,12 @@ export class Conhecimento {
     const comVetor = cand.filter((t) => Array.isArray(t.vetor));
     if (this.denso && comVetor.length) {
       try {
-        const [qv] = await this.denso.incorporar([consulta], 'consulta');
-        // Trecho com embedding: nota híbrida acima do corte. Trecho sem embedding (ex.: proposta aprovada no portal): vale a nota lexical, para nunca sumir da busca.
-        const todos = lex.map(({ t, n }) => ({ t, n: Array.isArray(t.vetor) ? 0.65 * cosseno(qv!, t.vetor as number[]) + 0.35 * Math.min(1, n) : n, ok: Array.isArray(t.vetor) ? undefined : n > 0.05 }))
-          ;
-        if (process.env.KB_DIAGNOSTICO === '1') console.error(JSON.stringify({ kb_sem_corte: consulta.slice(0, 40), topo: [...todos].sort((a, b) => b.n - a.n).slice(0, 3).map((x) => [x.t.documento, Number(x.n.toFixed(3))]) }));
-        pontuado = todos.filter((x) => (x.ok === undefined ? x.n >= this.corte : x.ok)).sort((a, b) => b.n - a.n);
+        const [qv] = await this.denso.incorporar([consulta], 'consulta'); const maxLex = Math.max(...lex.map((x) => x.n), 1e-9);
+        // Trecho com embedding: nota híbrida acima do corte E (alguma palavra em comum OU similaridade semântica muito alta), para a pergunta fora do assunto não herdar o "mais parecido".
+        // Trecho sem embedding (ex.: proposta aprovada no portal): vale a nota lexical, para nunca sumir da busca.
+        const todos = lex.map(({ t, n }) => { const cos = Array.isArray(t.vetor) ? cosseno(qv!, t.vetor as number[]) : 0; return { t, cos, bruta: n, n: Array.isArray(t.vetor) ? 0.65 * cos + 0.35 * (n / maxLex) : n, ok: Array.isArray(t.vetor) ? undefined : n > 0.05 }; });
+        if (process.env.KB_DIAGNOSTICO === '1') console.error(JSON.stringify({ kb_sem_corte: consulta.slice(0, 40), topo: [...todos].sort((a, b) => b.n - a.n).slice(0, 3).map((x) => [x.t.documento, Number(x.n.toFixed(3)), Number(x.cos.toFixed(3)), Number(x.bruta.toFixed(3))]) }));
+        pontuado = todos.filter((x) => (x.ok === undefined ? x.n >= this.corte && (x.bruta >= 0.05 || x.cos >= 0.8) : x.ok)).sort((a, b) => b.n - a.n);
       } catch { /* sem a Vertex AI, vale a busca lexical */ }
     }
     if (process.env.KB_DIAGNOSTICO === '1') console.error(JSON.stringify({ kb: consulta.slice(0, 40), topo: pontuado.slice(0, 3).map((x) => [x.t.documento, Number(x.n.toFixed(3))]) }));
