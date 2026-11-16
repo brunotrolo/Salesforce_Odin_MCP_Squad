@@ -21,6 +21,11 @@ As skills têm hooks `PreToolUse` próprios (por exemplo, o Deep Debugger nega m
 | Entregar o `settings.json` da skill | Vai contra o isolamento (a skill mexeria na configuração da pessoa). |
 | Reescrever cada hook em TypeScript dentro do Odin | Duplica a regra; o módulo da skill reaproveita o mesmo código que a skill já testa. |
 
+## Complementos (decididos na migração)
+- A política pode **ler** arquivos do projeto (por exemplo, o plano aprovado do Discovery), mas não grava nem abre rede.
+- Hooks `PostToolUse` de verificação (rodar `selftest`, `test-skill.sh`, build do protótipo) **não** viram política: são autoverificação coberta pelo CI de cada skill; em runtime, o equivalente é um passo explícito no `SKILL.md`.
+- As regras `permissions.deny` do `settings.json` (que o Odin não entrega) passam a ser políticas quando a skill precisa delas: o Archaeologist ganhou a política de somente leitura da org.
+
 ## Consequências
 - Os hooks das 10 skills podem migrar um a um (o Deep Debugger é o primeiro).
 - Código da skill roda dentro do guard: por isso é função pura, assinada pelo KMS, conferida pelo `odin ensure` e testada em CI.

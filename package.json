@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs tests/*.test.ts",
-    "verificar": "node scripts/verificar-docs.mjs && node scripts/verificar-skills.mjs && node scripts/verificar-schemas.mjs && node scripts/conformidade.mjs && node scripts/avaliar-roteamento.ts && tsc -p .",
+    "verificar": "node scripts/verificar-docs.mjs && node scripts/verificar-skills.mjs && node scripts/verificar-schemas.mjs && node scripts/verificar-libs.mjs && node scripts/conformidade.mjs && node scripts/avaliar-roteamento.ts && tsc -p .",
     "verificar:docs": "node scripts/verificar-docs.mjs",
     "verificar:skills": "node scripts/verificar-skills.mjs",
     "verificar:schemas": "node scripts/verificar-schemas.mjs",

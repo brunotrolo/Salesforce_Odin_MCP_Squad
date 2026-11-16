@@ -8,10 +8,11 @@ import { caracteresOcultos } from '../../../scripts/lib/unicode.mjs';
 import { estimarTokens } from '../../shared/src/http.ts';
 import { MAX_TOOL_RESPONSE_TOKENS, SKILL_TARGET_TOKENS } from '../../shared/src/limites.ts';
 import { casaPadrao } from '../../router/src/router.ts';
+import { conferirUso, LIBS_PADRAO } from './libs.ts';
 
 export interface OdinYaml {
   id: string; nome: string; dominio: string; dono: string; descricao: string; intencoes: Array<string | { texto: string; negativa?: boolean }>;
-  skills: Array<{ path: string }>; agentes?: string[]; regras?: string[]; proximo?: string[]; conhecimento?: string[]; politicas?: string[]; avaliacoes?: string;
+  usa?: string[]; skills: Array<{ path: string }>; agentes?: string[]; regras?: string[]; proximo?: string[]; conhecimento?: string[]; politicas?: string[]; avaliacoes?: string;
   runtime?: { dir: string; node?: string; dependencias?: string; prerequisitos?: string[] };
 }
 export interface ResultadoLint { erros: string[]; avisos: string[]; odin?: OdinYaml; arquivos: { skills: string[]; agentes: string[]; regras: string[]; referencias: string[]; runtime: string[] } }
@@ -30,7 +31,7 @@ export function listar(dir: string): string[] {
 }
 
 /** Lê e confere um repositório de skill. `odinYaml` permite um contrato fora do repositório (rascunho de migração). */
-export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: string[]; rascunho?: boolean } = {}): ResultadoLint {
+export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: string[]; rascunho?: boolean; libsDir?: string } = {}): ResultadoLint {
   const r: ResultadoLint = { erros: [], avisos: [], arquivos: { skills: [], agentes: [], regras: [], referencias: [], runtime: [] } };
   const caminhoYaml = o.odinYaml ?? join(repo, 'odin.yaml');
   if (!existsSync(caminhoYaml)) { r.erros.push('odin.yaml não encontrado'); return r; }
@@ -50,6 +51,7 @@ export function lint(repo: string, o: { odinYaml?: string; idsExistentes?: strin
   r.arquivos.referencias = todos.filter((f) => f.startsWith(`${dirPrincipal}/references/`));
   if (odin.runtime) { r.arquivos.runtime = todos.filter((f) => f.startsWith(`${odin.runtime!.dir.replace(/\/$/, '')}/`)); if (!r.arquivos.runtime.length) r.erros.push(`runtime.dir vazio ou inexistente: ${odin.runtime.dir}`); }
 
+  for (const ref of odin.usa ?? []) { const u = conferirUso(o.libsDir ?? LIBS_PADRAO, ref); if (u.erro) r.erros.push(u.erro); }
   for (const id of odin.politicas ?? []) {
     const arq = `${odin.runtime?.dir.replace(/\/$/, '') ?? ''}/politicas/${id}.mjs`;
     if (!odin.runtime) r.erros.push(`politicas: "${id}" exige runtime.dir (a política vai dentro do runtime assinado)`);

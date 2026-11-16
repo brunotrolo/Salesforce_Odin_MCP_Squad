@@ -1,0 +1,10 @@
+# Pacote de biblioteca de terceiros (ADR 0028). Fonte única: as skills declaram `usa: [lib-agent-skills@^1]`.
+id: lib-agent-skills
+versao: 1.0.0
+grupo: agent-skills   # caminho de origem nos repositórios das skills: .claude/skills/agent-skills/<item>
+origem: Addy Osmani (agent-skills)
+licenca: MIT
+itens:
+  - code-review-and-quality
+  - security-and-hardening
+  - test-driven-development

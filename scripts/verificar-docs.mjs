@@ -18,7 +18,7 @@ function listarMd(raiz) {
   const out = [];
   const andar = (d) => {
     for (const f of readdirSync(d)) {
-      if (['.git', 'node_modules', '.odin-dev', 'fixtures'].includes(f)) continue;
+      if (['.git', 'node_modules', '.odin-dev', 'fixtures', 'libs'].includes(f)) continue;
       const p = join(d, f);
       if (statSync(p).isDirectory()) andar(p);
       else if (f.endsWith('.md')) out.push(p);

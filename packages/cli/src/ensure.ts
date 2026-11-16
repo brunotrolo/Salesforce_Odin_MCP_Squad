@@ -32,11 +32,12 @@ function apontarCurrent(dirSkill: string, versao: string): void {
   rmSync(atual, { recursive: true, force: true });
   symlinkSync(join(dirSkill, versao), atual, 'junction'); // junção no Windows (sem privilégio); link simbólico nos demais
 }
-function materializarAgentes(dirVersao: string, skill: string): void {
+function materializarAgentes(dirVersao: string, skill: string, runtimeAtual: string): void {
   const destino = join(caminhos().claude, 'agents'); mkdirSync(destino, { recursive: true });
   const origem = join(dirVersao, 'agentes'); const novos = existsSync(origem) ? readdirSync(origem) : [];
   for (const f of readdirSync(destino)) if (f.startsWith(`odin-${skill}-`) && !novos.includes(f)) rmSync(join(destino, f), { force: true });
-  for (const f of novos) writeFileSync(join(destino, f), readFileSync(join(origem, f)));
+  const caminho = runtimeAtual.replace(/\\/g, '/'); // os agentes são cópias locais: o marcador vira o caminho real do runtime
+  for (const f of novos) writeFileSync(join(destino, f), readFileSync(join(origem, f), 'utf8').replaceAll('{{ODIN_RUNTIME}}', caminho));
 }
 async function instalar(skill: string, m: Manifesto, sig: string, h: Record<string, string>, mcp: string): Promise<void> {
   const base = new URL(mcp).origin;
@@ -98,7 +99,7 @@ export async function ensure(skill: string, o: { exigirGuard?: boolean } = {}): 
     try { await instalar(skill, m, sig, h!, cfg.mcp); instalado = true; } catch (e) { telemetria.push({ tipo: 'ensure_falha', skill, versao }); await enviar(telemetria, h!, cfg.mcp); return { ok: false, skill, mensagem: `Falha ao instalar a skill: ${(e as Error).message}.` }; }
   }
   apontarCurrent(dirSkill, versao);
-  materializarAgentes(dirVersao, skill);
+  materializarAgentes(dirVersao, skill, join(dirSkill, 'current'));
   gravarAtomico(join(c.cache, 'sessoes', `${sessaoAtual()}.json`), JSON.stringify({ ...fixadas, [skill]: versao }));
   if (modo === 'online') { gravarAtomico(join(c.cache, 'instalados.json'), JSON.stringify({ ...estado, [skill]: { versao, contato: Date.now() } })); telemetria.push({ tipo: 'ensure_ok', skill, versao }); await enviar(telemetria, h!, cfg.mcp); }
   return { ok: true, skill, versao, runtime: join(dirSkill, 'current'), modo, ...(instalado ? { instalado } : {}), ...(reparado ? { reparado } : {}) };

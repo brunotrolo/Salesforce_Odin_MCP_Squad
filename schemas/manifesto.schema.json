@@ -167,6 +167,16 @@
             "type": "string"
           }
         },
+        "libs": {
+          "type": "array",
+          "description": "Bibliotecas de terceiros incluídas no runtime assinado (ADR 0028).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "versao"],
+            "properties": { "id": { "type": "string" }, "versao": { "type": "string" }, "licenca": { "type": "string" } }
+          }
+        },
         "copias": {
           "type": "array",
           "items": {

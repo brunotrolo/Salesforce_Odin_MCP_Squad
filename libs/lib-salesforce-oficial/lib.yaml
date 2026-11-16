@@ -1,0 +1,21 @@
+# Pacote de biblioteca de terceiros (ADR 0028). Fonte única: as skills declaram `usa: [lib-salesforce-oficial@^1]`.
+id: lib-salesforce-oficial
+versao: 1.0.0
+grupo: salesforce   # caminho de origem nos repositórios das skills: .claude/skills/salesforce/<item>
+origem: Salesforce, Inc. (skills oficiais de plataforma)
+licenca: Apache-2.0
+itens:
+  - automation-flow-generate
+  - design-systems-slds-apply
+  - design-systems-slds-validate
+  - experience-accessibility-validate
+  - experience-lwc-generate
+  - experience-lwc-security-validate
+  - integration-connectivity-generate
+  - platform-apex-generate
+  - platform-apex-test-generate
+  - platform-custom-field-generate
+  - platform-custom-object-generate
+  - platform-flexipage-generate
+  - platform-metadata-deploy
+  - platform-permission-set-generate

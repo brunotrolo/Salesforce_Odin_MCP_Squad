@@ -1,0 +1,11 @@
+# Pacote de biblioteca de terceiros (ADR 0028). Fonte única: as skills declaram `usa: [lib-mattpocock@^1]`.
+id: lib-mattpocock
+versao: 1.0.0
+grupo: mattpocock   # caminho de origem nos repositórios das skills: .claude/skills/mattpocock/<item>
+origem: Matt Pocock (skills)
+licenca: MIT
+itens:
+  - engineering/code-review
+  - engineering/diagnosing-bugs
+  - engineering/to-spec
+  - productivity/grilling

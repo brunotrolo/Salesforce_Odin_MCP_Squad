@@ -7,15 +7,15 @@
 
 | Etapa | Skill | Situação | Bloqueios | Avisos | `SKILL.md` principal | Arquivos entregues |
 |---|---|---|---|---|---|---|
-| 1 | Archaeologist | Publicável em rascunho | 0 | 1 | ~2194 tokens | 8 |
-| 2 | Discovery-to-Backlog | Publicável em rascunho | 0 | 0 | ~2280 tokens | 42 |
-| 3 | Data Architect | Publicável em rascunho | 0 | 4 | ~2460 tokens | 40 |
+| 1 | Archaeologist | Publicável em rascunho | 0 | 1 | ~2194 tokens | 9 |
+| 2 | Discovery-to-Backlog | Publicável em rascunho | 0 | 0 | ~2280 tokens | 43 |
+| 3 | Data Architect | Publicável em rascunho | 0 | 4 | ~2460 tokens | 41 |
 | 3 | Journey Designer | Publicável em rascunho | 0 | 1 | ~453 tokens | 11 |
-| 4 | Journey Developer | Publicável em rascunho | 0 | 1 | ~1629 tokens | 22 |
-| 4 | LWC Developer | Publicável em rascunho | 0 | 0 | ~4432 tokens | 15 |
-| 4 | Apex Callouts Developer | Publicável em rascunho | 0 | 2 | ~4854 tokens | 38 |
-| 5 | Apex Cover Loop | Publicável em rascunho | 0 | 0 | ~3676 tokens | 14 |
-| 5 | Test Automator | Publicável em rascunho | 0 | 0 | ~2094 tokens | 45 |
+| 4 | Journey Developer | Publicável em rascunho | 0 | 1 | ~1629 tokens | 25 |
+| 4 | LWC Developer | Publicável em rascunho | 0 | 0 | ~4432 tokens | 16 |
+| 4 | Apex Callouts Developer | Publicável em rascunho | 0 | 2 | ~4854 tokens | 39 |
+| 5 | Apex Cover Loop | Publicável em rascunho | 0 | 0 | ~3676 tokens | 15 |
+| 5 | Test Automator | Publicável em rascunho | 0 | 0 | ~2094 tokens | 46 |
 | 6 | Deep Debugger | Publicável em rascunho | 0 | 0 | ~3255 tokens | 15 |
 
 **Publicável em rascunho** = passa no `odin lint` com o contrato gerado; o pipeline insere o passo `odin ensure`. Para sair do rascunho falta o checklist do `odin-curador`: contrato no repositório da skill, regras do `CLAUDE.md` movidas, hooks como políticas do guard, bibliotecas de terceiros num pacote compartilhado, 20 intenções revisadas e avaliações de comportamento.
@@ -24,18 +24,18 @@
 
 ### Archaeologist (`sf-archaeologist`)
 
-Entrega: 1 `SKILL.md`, 4 agentes, 2 regras, 0 referências, 1 arquivos de runtime.
+Entrega: 1 `SKILL.md`, 4 agentes, 2 regras, 0 referências, 2 arquivos de runtime.
 
 Avisos:
 - .claude/rules/salesforce-standards.md: 7101 tokens (alvo de 5000)
 
 ### Discovery-to-Backlog (`sf-discovery`)
 
-Entrega: 4 `SKILL.md`, 7 agentes, 2 regras, 9 referências, 20 arquivos de runtime.
+Entrega: 4 `SKILL.md`, 7 agentes, 2 regras, 9 referências, 21 arquivos de runtime.
 
 ### Data Architect (`sf-data-architect`)
 
-Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 25 referências, 9 arquivos de runtime.
+Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 25 referências, 10 arquivos de runtime.
 
 Avisos:
 - .claude/skills/sf-data-architect/references/data-mapping/Case_DataMapping_Completo.md: 7911 tokens (alvo de 5000)
@@ -52,18 +52,18 @@ Avisos:
 
 ### Journey Developer (`sf-journey-developer`)
 
-Entrega: 2 `SKILL.md`, 9 agentes, 5 regras, 5 referências, 1 arquivos de runtime.
+Entrega: 2 `SKILL.md`, 9 agentes, 5 regras, 5 referências, 4 arquivos de runtime.
 
 Avisos:
 - .claude/agents/sf-deploy-gate.md: 5930 tokens (alvo de 5000)
 
 ### LWC Developer (`sf-lwc-developer`)
 
-Entrega: 3 `SKILL.md`, 0 agentes, 1 regras, 7 referências, 4 arquivos de runtime.
+Entrega: 3 `SKILL.md`, 0 agentes, 1 regras, 7 referências, 5 arquivos de runtime.
 
 ### Apex Callouts Developer (`sf-callouts-developer`)
 
-Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 31 referências, 1 arquivos de runtime.
+Entrega: 1 `SKILL.md`, 4 agentes, 1 regras, 31 referências, 2 arquivos de runtime.
 
 Avisos:
 - .claude/skills/apex-callouts-developer/references/docs/tobe-arquitetura-integracoes.md: 6764 tokens (alvo de 5000)
@@ -71,11 +71,11 @@ Avisos:
 
 ### Apex Cover Loop (`sf-apex-cover-loop`)
 
-Entrega: 1 `SKILL.md`, 1 agentes, 1 regras, 9 referências, 2 arquivos de runtime.
+Entrega: 1 `SKILL.md`, 1 agentes, 1 regras, 9 referências, 3 arquivos de runtime.
 
 ### Test Automator (`sf-test`)
 
-Entrega: 2 `SKILL.md`, 4 agentes, 2 regras, 7 referências, 30 arquivos de runtime.
+Entrega: 2 `SKILL.md`, 4 agentes, 2 regras, 7 referências, 31 arquivos de runtime.
 
 ### Deep Debugger (`sf-deep-debugger`)
 

@@ -375,6 +375,19 @@ await t('H32', 'Política de guard por skill: o Deep Debugger entrega a polític
   } finally { if (antes.h === undefined) delete process.env.ODIN_TESTE_HOME; else process.env.ODIN_TESTE_HOME = antes.h; if (antes.o === undefined) delete process.env.ODIN_HOME; else process.env.ODIN_HOME = antes.o; }
   return `política entregue no runtime assinado (${String(arq!.length)} bytes), aplicada pelo guard real depois do ensure`;
 });
+await t('H33', 'Bibliotecas compartilhadas: as skills que usam libs entregam os arquivos no runtime assinado, com hash no manifesto e caminhos reescritos', async () => {
+  const { sha256hex } = await import('../packages/shared/src/chaves.ts'); const { desempacotar } = await import('../packages/shared/src/pacote.ts'); const resumo: string[] = [];
+  for (const id of ['sf-journey-designer', 'sf-journey-developer']) {
+    const s = (await store.get('catalog_skills', id)) as { canais?: { beta?: string; stable?: string } } | null; const v = s?.canais?.stable ?? s?.canais?.beta; ok(!!v, `${id} sem versão publicada`);
+    const base = `pacotes/${id}/${v}`; const m = json((await armazenamento.ler(`${base}/manifesto.json`))!.toString('utf8'));
+    const libs = (m.entrega.libs ?? []).map((l: { id: string }) => l.id); ok(['lib-salesforce-oficial', 'lib-agent-skills', 'lib-mattpocock'].every((l) => libs.includes(l)), `${id}: manifesto sem as libs (${libs})`);
+    const rt = desempacotar((await armazenamento.ler(`${base}/runtime.odinpkg`))!); const chaves = Object.keys(rt).filter((k) => k.startsWith('libs/')); ok(chaves.length > 300, `${id}: poucos arquivos de libs (${chaves.length})`);
+    ok(chaves.every((k) => m.arquivos[`runtime/${k}`] === `sha256:${sha256hex(rt[k]!)}`), `${id}: hash de arquivo de lib fora do manifesto assinado`);
+    const velhos = Object.entries(rt).filter(([k, b]) => (k.startsWith('agentes/') || k.startsWith('conteudo/')) && /\.claude\/skills\/(salesforce|agent-skills|mattpocock)\//.test(b.toString('utf8'))).map(([k]) => k); ok(!velhos.length, `${id}: caminho antigo de lib em ${velhos.slice(0, 3)}`);
+    resumo.push(`${id}: ${chaves.length} arquivos de libs`);
+  }
+  return resumo.join('; ');
+});
 await t('H30', 'Conhecimento com embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto, substituído e vigência respeitados', async () => {
   const denso = new EmbedderVertex(PROJETO, process.env.VERTEX_REGIAO ?? 'us-central1'); const kb = new Conhecimento(store, denso);
   const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 20, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');
