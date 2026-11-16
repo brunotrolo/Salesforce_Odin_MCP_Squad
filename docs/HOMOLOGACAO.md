@@ -1,6 +1,6 @@
 # Homologação na nuvem
 
-**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 21/21** · Execução `homologar.yml` #3 (commit `ed2ac31`); 20/20 na execução #2 (`2a7dcd0`) · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
+**Data:** 2026-11-16 · **Projeto:** `salesforcemcpodin` (E0, `southamerica-east1`) · **Resultado: 25/25** · Execução `homologar.yml` #4 (commit `1531c99`, com o portal); 21/21 na #3 e 20/20 na #2 · [ADR 0021](adr/0021-implementacoes-de-nuvem-servicos-no-cloud-run-e-homologacao.md)
 
 | # | Verificação | Resultado |
 |---|---|---|
@@ -24,12 +24,16 @@
 | H18 | Revogação efetiva em 18 s (cache de 30 s) e sem renovar | ✓ |
 | H19 | Desinstalação devolve o Claude Code ao que era | ✓ |
 | H21 | Skills reais publicadas (9): assinatura do KMS, hashes dos pacotes e passo `odin ensure` conferidos ([ADR 0022](adr/0022-publicacao-das-skills-reais-na-nuvem-sem-github-app.md)) | ✓ |
+| H22 | Portal admin: entrada só com o segredo, cookie `HttpOnly` + `Secure` + `SameSite=Strict`, CSP, POST sem CSRF recusado, dados de admin ocultos sem sessão ([ADR 0023](adr/0023-portal-interino-de-administracao-e-de-pessoa-no-servico-do-e.md)) | ✓ |
+| H23 | Portal admin: cria pessoa (nome escapado) e convite de uso único; a pessoa entra pelo convite; reuso e convite inventado recusados; pessoa não vê a administração | ✓ |
+| H24 | Portal pessoa + CLI: ativa o dispositivo digitando o código do `odin setup` na página, o token funciona no MCP, a pessoa revoga o próprio dispositivo (não o de outra pessoa) e o token cai | ✓ |
+| H25 | Portal admin: catálogo com as versões publicadas, proposta aprovada vira conhecimento, suspensão derruba a conta, revogação global gravada | ✓ |
 | H20 | Limpeza dos dados de teste | ✓ |
 
 ## Controles de custo e privacidade observados
 - Orçamento `salesforcemcpodin-budget` de R$ 30 ativo (há também dois alertas antigos da conta).
 - Serviços: mínimo 0, máximo 3 instâncias (disjuntor máximo 1). O ingress dos serviços é `all`: STS e MCP são públicos por desenho (autenticam por token); o disjuntor exige identidade.
-- Auditoria no Cloud Logging com 15 tipos de evento; **0** registros com o texto do pedido.
+- Auditoria no Cloud Logging com 20 tipos de evento, incluindo `portal.admin_login`, `portal.convite`, `portal.dispositivo.ativar`, `portal.dispositivo.revogar` e `portal.csrf`; **0** registros com o texto do pedido.
 
 ## Desempenho (workflow `desempenho.yml`, execução #1)
 - **Partida a frio** (primeira chamada após uma revisão nova, sem instância ativa; 3 medições em cada serviço): STS 394, 317 e 168 ms; MCP 330, 309 e 165 ms. **p95 = 394 ms** (meta ≤ 3000 ms).
@@ -46,4 +50,4 @@
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
 ## Fora do escopo desta homologação (pendente)
-Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), portal e login GitHub, teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), login com GitHub e segundo fator (o portal interino está homologado; falta o OAuth App), teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
