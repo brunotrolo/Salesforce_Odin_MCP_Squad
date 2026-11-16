@@ -27,7 +27,8 @@ try {
   const r = await fetch(DISJ, { method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${await idToken(DISJ)}` }, body: JSON.stringify({ message: { data: Buffer.from(JSON.stringify({ costAmount: 95, budgetAmount: 30 })).toString('base64') } }) });
   const corpo = (await r.json().catch(() => ({}))) as { fechou?: boolean; servicos?: string[] }; ok(r.status === 200 && corpo.fechou === true, `o disjuntor respondeu ${r.status} e fechou=${corpo.fechou}`);
   for (const [s, u] of Object.entries(SERVICOS)) { const seg = await ate(async () => (await saude(u)) !== 200, 120_000); ok(seg >= 0 && ingress(s) === 'internal', `${s} fechado para a internet em ${seg} s (ingress=${ingress(s)})`); }
-  ok((await fetch(`${DISJ}/saude`)).status === 200, 'o próprio disjuntor continua de pé (protegido por identidade)');
+  ok((await fetch(`${DISJ}/saude`)).status >= 401, 'o disjuntor recusa chamada sem identidade');
+  ok((await fetch(`${DISJ}/saude`, { headers: { Authorization: `Bearer ${await idToken(DISJ)}` } })).status === 200, 'o disjuntor continua de pé para quem tem identidade');
 } finally {
   L.push('', '## Reabertura');
   try { reabrir(); for (const [s, u] of Object.entries(SERVICOS)) { const seg = await ate(async () => (await saude(u)) === 200, 180_000); ok(seg >= 0 && ingress(s) === 'all', `${s} reaberto em ${seg} s (ingress=${ingress(s)})`); } }
