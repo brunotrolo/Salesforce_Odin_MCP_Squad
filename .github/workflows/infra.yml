@@ -63,6 +63,17 @@ jobs:
               openssl rand -base64 36 | tr -d '\n' | gcloud secrets create "$s" --project="$PROJETO" --data-file=- \
                 --replication-policy=user-managed --locations=southamerica-east1
           done
+      - name: Segredo do OAuth App do GitHub (do segredo do repositório para o Secret Manager, sem passar pelo Terraform)
+        env:
+          OAUTH_SECRET: ${{ secrets.MCP_OAUTH_CLIENT_SECRET }}
+        run: |
+          S=odin-oauth-client-secret
+          if [ -z "$OAUTH_SECRET" ]; then echo "MCP_OAUTH_CLIENT_SECRET não definido: o login com GitHub fica desligado"; exit 0; fi
+          gcloud secrets describe "$S" --project="$PROJETO" >/dev/null 2>&1 || \
+            gcloud secrets create "$S" --project="$PROJETO" --replication-policy=user-managed --locations=southamerica-east1
+          ATUAL=$(gcloud secrets versions access latest --secret="$S" --project="$PROJETO" 2>/dev/null || true)
+          if [ "$ATUAL" != "$OAUTH_SECRET" ]; then printf '%s' "$OAUTH_SECRET" | gcloud secrets versions add "$S" --project="$PROJETO" --data-file=-; fi
+          echo "TF_VAR_github_client_id=Ov23liVZtZccy5kv9dGC" >> "$GITHUB_ENV"
       - name: Construir e publicar a imagem
         if: inputs.construir == 'SIM'
         working-directory: .

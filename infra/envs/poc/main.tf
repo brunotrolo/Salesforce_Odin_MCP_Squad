@@ -12,6 +12,11 @@ locals {
   estagio = "e0"
 }
 
+variable "github_client_id" {
+  type        = string
+  default     = ""
+  description = "Client ID do OAuth App do GitHub (público; o segredo fica no Secret Manager)."
+}
 variable "project_id" {
   type    = string
   default = "salesforcemcpodin"
@@ -107,6 +112,7 @@ module "run" {
   max_instance_count = 3
   sa                 = module.security.sa
   chave_jwt          = module.security.chaves.jwt_signing
+  github_client_id   = var.github_client_id
   chave_pacotes      = module.security.chaves.bundle_signing
   bucket_pacotes     = module.data.buckets.bundles
   topico_orcamento   = module.finops.topico

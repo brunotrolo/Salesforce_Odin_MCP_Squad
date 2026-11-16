@@ -7,6 +7,10 @@ variable "min_instance_count" { type = number }
 variable "max_instance_count" { type = number }
 variable "sa" { type = map(string) }
 variable "chave_jwt" { type = string }
+variable "github_client_id" {
+  type    = string
+  default = ""
+}
 variable "chave_pacotes" { type = string }
 variable "bucket_pacotes" { type = string }
 variable "topico_orcamento" { type = string }
@@ -14,7 +18,7 @@ variable "topico_orcamento" { type = string }
 locals {
   url_sts           = "https://odin-sts-${var.project_number}.${var.region}.run.app"
   url_mcp           = "https://odin-mcp-${var.project_number}.${var.region}.run.app"
-  segredos          = ["odin-pimenta", "odin-segredo-url", "odin-ativacao-admin"]
+  segredos          = ["odin-pimenta", "odin-segredo-url", "odin-ativacao-admin", "odin-oauth-client-secret"]
   servicos_publicos = ["odin-sts", "odin-mcp"]
 }
 
@@ -31,6 +35,11 @@ resource "google_secret_manager_secret_iam_member" "sts_pimenta" {
 }
 resource "google_secret_manager_secret_iam_member" "sts_ativacao" {
   secret_id = data.google_secret_manager_secret.s["odin-ativacao-admin"].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${var.sa["sa-sts"]}"
+}
+resource "google_secret_manager_secret_iam_member" "sts_oauth" {
+  secret_id = data.google_secret_manager_secret.s["odin-oauth-client-secret"].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.sa["sa-sts"]}"
 }
@@ -85,6 +94,10 @@ resource "google_cloud_run_v2_service" "sts" {
         name  = "CHAVE_JWT"
         value = var.chave_jwt
       }
+      env {
+        name  = "GITHUB_CLIENT_ID"
+        value = var.github_client_id
+      }
       startup_probe {
         http_get { path = "/saude" }
         period_seconds    = 3
@@ -92,7 +105,7 @@ resource "google_cloud_run_v2_service" "sts" {
       }
     }
   }
-  depends_on = [google_project_iam_member.datastore, google_secret_manager_secret_iam_member.sts_pimenta, google_secret_manager_secret_iam_member.sts_ativacao]
+  depends_on = [google_project_iam_member.datastore, google_secret_manager_secret_iam_member.sts_pimenta, google_secret_manager_secret_iam_member.sts_ativacao, google_secret_manager_secret_iam_member.sts_oauth]
 }
 
 resource "google_cloud_run_v2_service" "mcp" {

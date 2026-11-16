@@ -13,6 +13,8 @@ import { revogacaoGlobal, revogarDispositivo, suspenderPessoa } from '../../sts/
 export interface ConfigPortal {
   store: Store; coletor: Coletor; pimenta: string; adminSegredo: string; emissor: string;
   aprovarDispositivo: (code: string, userId: string) => Promise<{ nome: string }>; agora?: () => number;
+  /** Login com GitHub (OAuth App). Sem isto o portal só tem o segredo de administração e os convites. */
+  github?: { clientId: string; clientSecret: string; http?: typeof fetch };
 }
 interface Sessao { p: 'admin' | 'usuario'; s: string; e: number; c: string }
 
@@ -29,6 +31,9 @@ export function criarPortal(cfg: ConfigPortal) {
   const limite = new LimiteDeTaxa(agora); const kb = new Conhecimento(cfg.store);
   const hashConvite = (t: string) => createHmac('sha256', cfg.pimenta).update(`convite:${t}`).digest('hex');
 
+  const gh = cfg.github; const http = gh?.http ?? fetch; const callbackUrl = `${cfg.emissor}/auth/github/callback`;
+  const botaoGithub = gh ? '<p><a href="/auth/github/login" style="display:inline-block;background:#24292f;color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none">Entrar com GitHub</a></p>' : '';
+  const cookieEstado = (v: string, ttl: number) => `odin_oauth=${v}; HttpOnly; Secure; SameSite=Lax; Path=/auth/github; Max-Age=${ttl}`;
   const criarSessao = (p: Sessao['p'], s: string, ttlS: number): string => { const corpo = Buffer.from(JSON.stringify({ p, s, e: seg() + ttlS, c: randomBytes(12).toString('base64url') } satisfies Sessao)).toString('base64url'); return `${corpo}.${assinar(corpo)}`; };
   const cookie = (valor: string, ttlS: number) => `${COOKIE}=${valor}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${ttlS}`;
   function sessaoDe(req: IncomingMessage): Sessao | null {
@@ -59,15 +64,46 @@ input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px s
   /** Devolve true quando a rota é do portal. */
   async function handler(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     const url = new URL(req.url ?? '/', 'http://local'); const p = url.pathname;
-    if (!(p === '/' || p === '/sair' || p === '/convite' || p === '/conta' || p.startsWith('/conta/') || p === '/admin' || p.startsWith('/admin/'))) return false;
+    if (!(p === '/' || p === '/sair' || p.startsWith('/auth/github/') || p === '/convite' || p === '/conta' || p.startsWith('/conta/') || p === '/admin' || p.startsWith('/admin/'))) return false;
     const rid = novoRequestId(); const ip = ipDe(req);
     try {
       const sess = sessaoDe(req); const post = req.method === 'POST';
       const form = post ? await lerFormulario(req) : {};
       if (post && p !== '/convite' && p !== '/admin/entrar' && !(sess && igual(String(form.csrf ?? ''), sess.c))) { aud(rid, ip, sess?.s ?? 'anonimo', 'portal.csrf', 'negado'); return html(res, 403, pagina('Sessão inválida', '<p>Sua sessão expirou ou o formulário não é válido. <a href="/">Voltar ao início</a>.</p>')), true; }
 
-      if (p === '/' && req.method === 'GET') return html(res, 200, pagina('Odin', '<div class="card"><p><b>Administração</b>: quem cuida do acesso, das skills e do conhecimento.</p><p><a href="/admin">Entrar como administrador</a></p></div><div class="card"><p><b>Pessoas</b>: use o link de convite que um administrador enviou para você. No terminal, rode <code>odin setup</code> e informe o código aqui, em <b>Minha conta</b>.</p></div>')), true;
+      if (p === '/' && req.method === 'GET') return html(res, 200, pagina('Odin', `<div class="card"><p><b>Administração</b>: quem cuida do acesso, das skills e do conhecimento.</p><p><a href="/admin">Entrar como administrador</a></p></div><div class="card"><p><b>Entrar com a sua conta</b></p>${botaoGithub || '<p>Em breve.</p>'}</div><div class="card"><p><b>Pessoas</b>: use o link de convite que um administrador enviou para você. No terminal, rode <code>odin setup</code> e informe o código aqui, em <b>Minha conta</b>.</p></div>`)), true;
       if (p === '/sair' && post) { aud(rid, ip, sess?.s ?? 'anonimo', 'portal.saida'); return ir(res, '/', { 'set-cookie': cookie('', 0) }), true; }
+
+      // ---- login com GitHub ----
+      if (p === '/auth/github/login' && req.method === 'GET') {
+        if (!gh) return html(res, 404, pagina('Login com GitHub', '<p>O login com GitHub ainda não está configurado.</p>')), true;
+        limite.consumir(`gl:${ip}`, 20); const estado = randomBytes(18).toString('base64url');
+        const u = new URL('https://github.com/login/oauth/authorize'); u.search = new URLSearchParams({ client_id: gh.clientId, redirect_uri: callbackUrl, scope: 'read:user', state: estado, allow_signup: 'false' }).toString();
+        res.writeHead(302, { location: u.toString(), 'set-cookie': cookieEstado(`${estado}.${assinar(`estado:${estado}`)}`, 600), 'cache-control': 'no-store' }); res.end(); return true;
+      }
+      if (p === '/auth/github/callback' && req.method === 'GET') {
+        if (!gh) return html(res, 404, pagina('Login com GitHub', '<p>O login com GitHub ainda não está configurado.</p>')), true;
+        limite.consumir(`gc:${ip}`, 20);
+        const c = (req.headers.cookie ?? '').split(/;\s*/).find((x) => x.startsWith('odin_oauth='))?.slice('odin_oauth='.length) ?? ''; const [est, sg] = c.split('.');
+        const negar = (motivo: string, msg: string) => { aud(rid, ip, 'anonimo', 'portal.github_login', 'negado', motivo); return html(res, 400, pagina('Não foi possível entrar', `<p class="no">${esc(msg)}</p><p><a href="/">Voltar ao início</a></p>`), { 'set-cookie': cookieEstado('', 0) }), true; };
+        if (!est || !sg || !igual(sg, assinar(`estado:${est}`)) || !igual(est, String(url.searchParams.get('state') ?? ''))) return negar('estado', 'A tentativa de login não é válida ou expirou. Comece de novo.');
+        const code = String(url.searchParams.get('code') ?? ''); if (!code) return negar('sem_codigo', 'O GitHub não autorizou o login.');
+        let gid = 0, glogin = '';
+        try {
+          const tr = await http('https://github.com/login/oauth/access_token', { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ client_id: gh.clientId, client_secret: gh.clientSecret, code, redirect_uri: callbackUrl }) });
+          const tk = (await tr.json()) as { access_token?: string; error?: string }; if (!tk.access_token) return negar(String(tk.error ?? 'troca'), 'O GitHub recusou o código de login.');
+          const ur = await http('https://api.github.com/user', { headers: { authorization: `Bearer ${tk.access_token}`, accept: 'application/vnd.github+json', 'user-agent': 'odin-portal' } });
+          const u = (await ur.json()) as { id?: number; login?: string }; gid = Number(u.id ?? 0); glogin = String(u.login ?? ''); if (!gid || !glogin) return negar('usuario', 'Não foi possível ler a sua conta do GitHub.');
+        } catch { return negar('rede', 'Não foi possível falar com o GitHub agora. Tente de novo.'); }
+        const todos = await cfg.store.list('users'); let pessoa = todos.find((x) => Number(x.githubId) === gid);
+        if (!pessoa) { pessoa = todos.find((x) => Number(x.githubId) === 0 && String(x.githubLogin ?? '').toLowerCase() === glogin.toLowerCase()); if (pessoa) await cfg.store.update('users', pessoa.id, (x) => (x ? { ...x, githubId: gid, githubLogin: glogin } : null)); }
+        if (!pessoa || pessoa.status !== 'ativo') { aud(rid, ip, `gh:${gid}`, 'portal.github_login', 'negado', 'nao_cadastrado'); return html(res, 403, pagina('Acesso não liberado', `<p class="no">A conta GitHub <b>${esc(glogin)}</b> não está cadastrada no Odin. Peça a um administrador para criar a sua pessoa com este login.</p><p><a href="/">Voltar ao início</a></p>`), { 'set-cookie': cookieEstado('', 0) }), true; }
+        const eAdmin = (await perfisDe(pessoa.id)).includes('mantenedor'); const ttl = eAdmin ? 2 * 3600 : 8 * 3600; const destino = eAdmin ? '/admin' : '/conta';
+        aud(rid, ip, pessoa.id, 'portal.github_login');
+        // 200 com atualização automática (e não 303): o cookie Strict só vale em navegação iniciada pelo próprio site.
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': CSP, 'set-cookie': [cookie(criarSessao(eAdmin ? 'admin' : 'usuario', pessoa.id, ttl), ttl), cookieEstado('', 0)] });
+        res.end(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${destino}"><title>Entrando</title><p>Entrando… <a href="${destino}">Continuar</a></p></html>`); return true;
+      }
 
       // ---- convite de pessoa ----
       if (p === '/convite') {
@@ -87,8 +123,8 @@ input,select,button{font:inherit;padding:6px 10px;border-radius:6px;border:1px s
         aud(rid, ip, 'admin', 'portal.admin_login'); return ir(res, '/admin', { 'set-cookie': cookie(criarSessao('admin', 'admin', 2 * 3600), 2 * 3600) }), true;
       }
       if (p === '/admin' || p.startsWith('/admin/')) {
-        if (!sess || sess.p !== 'admin') return html(res, 200, pagina('Administração', '<form method="post" action="/admin/entrar"><p><label>Segredo de administração<br><input name="segredo" type="password" required autocomplete="off"></label></p><button>Entrar</button></form><p>Em breve: login com GitHub e segundo fator.</p>')), true;
-        const nav = navAdmin(sess.c); const A = 'admin';
+        if (!sess || sess.p !== 'admin') return html(res, 200, pagina('Administração', `<form method="post" action="/admin/entrar"><p><label>Segredo de administração<br><input name="segredo" type="password" required autocomplete="off"></label></p><button>Entrar</button></form>${botaoGithub ? `<hr><p>Ou entre com a sua conta:</p>${botaoGithub}` : ''}<p><small>O segredo é o acesso de emergência; o login com GitHub usa a verificação em duas etapas da sua conta do GitHub.</small></p>`)), true;
+        const nav = navAdmin(sess.c); const A = sess.s;
         if (p === '/admin' && !post) {
           const [u, d, pr, sk] = await Promise.all([cfg.store.list('users'), cfg.store.list('devices'), cfg.store.list('proposals', (x) => x.status === 'na_fila'), cfg.store.list('catalog_skills')]);
           return html(res, 200, pagina('Painel', `<div class="card"><p>Pessoas ativas: <b>${u.filter((x) => x.status === 'ativo').length}</b> de ${u.length} · Dispositivos ativos: <b>${d.filter((x) => x.status === 'ativo').length}</b> · Skills no catálogo: <b>${sk.length}</b> · Propostas na fila: <b>${pr.length}</b></p></div>

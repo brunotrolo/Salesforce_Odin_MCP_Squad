@@ -11,8 +11,10 @@ const projeto = exigir('PROJECT_ID'); const emissor = exigir('EMISSOR'); const m
 // Versão fixa da chave (a conta só pode assinar e ver a chave pública, não listar versões). Rotação = mudar VERSAO_CHAVE_JWT.
 const assinador = await passo('kms', () => new AssinadorKms('jwt-kms-a', `${exigir('CHAVE_JWT')}/cryptoKeyVersions/${process.env.VERSAO_CHAVE_JWT ?? '1'}`).carregar());
 const store = new FirestoreStore(projeto); const pimenta = await passo('segredo pimenta', () => lerSegredo(projeto, 'odin-pimenta')); const ativacao = await passo('segredo ativação', () => lerSegredo(projeto, 'odin-ativacao-admin'));
+const clientId = process.env.GITHUB_CLIENT_ID ?? '';
+const clientSecret = clientId ? await passo('segredo OAuth do GitHub', () => lerSegredo(projeto, 'odin-oauth-client-secret')).catch(() => '') : '';
 let sts: ReturnType<typeof criarSts>;
-const portal = criarPortal({ store, coletor: coletorStdout, pimenta, adminSegredo: ativacao, emissor, aprovarDispositivo: (code, userId) => sts.aprovarDispositivo(code, userId) });
+const portal = criarPortal({ store, coletor: coletorStdout, pimenta, adminSegredo: ativacao, emissor, aprovarDispositivo: (code, userId) => sts.aprovarDispositivo(code, userId), ...(clientId && clientSecret ? { github: { clientId, clientSecret } } : {}) });
 sts = criarSts({
   store, assinador, coletor: coletorStdout, emissor, audiencias: [mcp], portalUrl: emissor,
   pimenta, ativacaoSegredo: ativacao, portal: portal.handler,

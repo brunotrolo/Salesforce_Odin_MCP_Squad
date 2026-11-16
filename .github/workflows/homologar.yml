@@ -32,6 +32,7 @@ jobs:
         run: |
           NUM=177809673592
           echo "PROJECT_ID=$PROJETO" >> "$GITHUB_ENV"
+          echo "GITHUB_CLIENT_ID=Ov23liVZtZccy5kv9dGC" >> "$GITHUB_ENV"
           echo "URL_STS=https://odin-sts-${NUM}.${REGIAO}.run.app" >> "$GITHUB_ENV"
           echo "URL_MCP=https://odin-mcp-${NUM}.${REGIAO}.run.app" >> "$GITHUB_ENV"
           echo "URL_DISJUNTOR=$(gcloud run services describe odin-disjuntor --region=$REGIAO --project=$PROJETO --format='value(status.url)')" >> "$GITHUB_ENV"

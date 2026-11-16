@@ -22,6 +22,7 @@ import { assinarJwt } from '../packages/shared/src/jwt.ts';
 import { FirestoreStore } from '../packages/shared/src/nuvem/firestore.ts';
 import { ArmazenamentoGcs } from '../packages/shared/src/nuvem/gcs.ts';
 import { AssinadorKms, versaoAtual } from '../packages/shared/src/nuvem/kms.ts';
+import { lerSegredo } from '../packages/shared/src/nuvem/segredos.ts';
 import { semearNuvem } from '../packages/shared/src/nuvem/semente.ts';
 import { Conhecimento } from '../apps/mcp-server/src/conhecimento.ts';
 import { publicar } from '../pipeline/publicar.ts';
@@ -266,6 +267,20 @@ await t('H25', 'Portal admin: skills do catálogo com versões, propostas aprova
   await admin.req('/admin/pessoas/acao', formWeb({ csrf: csrfAdmin, id: pessoaPortal, acao: 'suspender' })); ok((await pessoaWeb.req('/conta')).status === 403, 'pessoa suspensa ainda abre a conta');
   const antes = await store.get('revocations', 'global'); await admin.req('/admin/global', formWeb({ csrf: csrfAdmin })); const depois = await store.get('revocations', 'global'); ok(Number(depois?.desde) > Number(antes?.desde ?? 0), 'revogação global não gravada');
   await store.set('revocations', 'global', { desde: 0 }); // não derrubar quem usa de verdade
+});
+await t('H26', 'Login com GitHub: redireciona ao OAuth App certo, estado protegido, credenciais do OAuth App aceitas pelo GitHub', async () => {
+  const idOauth = process.env.GITHUB_CLIENT_ID; ok(!!idOauth, 'falta GITHUB_CLIENT_ID no workflow');
+  const r = await fetch(`${STS}/auth/github/login`, { redirect: 'manual' }); ok(r.status === 302, `login ${r.status}`);
+  const loc = new URL(r.headers.get('location') ?? 'http://x'); ok(loc.origin + loc.pathname === 'https://github.com/login/oauth/authorize', `destino ${loc.origin}${loc.pathname}`);
+  ok(loc.searchParams.get('client_id') === idOauth, 'client_id diferente do OAuth App'); ok(loc.searchParams.get('redirect_uri') === `${STS}/auth/github/callback`, `redirect_uri ${loc.searchParams.get('redirect_uri')}`); ok(loc.searchParams.get('scope') === 'read:user', 'escopo além de read:user');
+  const ck = r.headers.get('set-cookie') ?? ''; ok(/HttpOnly/.test(ck) && /Secure/.test(ck) && /SameSite=Lax/.test(ck), 'cookie de estado sem proteção'); const estado = loc.searchParams.get('state') ?? ''; ok(estado.length >= 20, 'estado curto');
+  ok((await fetch(`${STS}/auth/github/callback?code=x&state=${estado}`, { redirect: 'manual' })).status === 400, 'callback sem o cookie de estado deveria ser recusado');
+  ok((await fetch(`${STS}/auth/github/callback?code=x&state=falso`, { redirect: 'manual', headers: { cookie: ck.split(';')[0]! } })).status === 400, 'estado falso aceito');
+  const pagina = await fetch(loc.toString()); ok(pagina.status === 200, `o GitHub não reconheceu o OAuth App (${pagina.status})`);
+  const segredoOauth = await lerSegredo(PROJETO, 'odin-oauth-client-secret');
+  const tr = await fetch('https://github.com/login/oauth/access_token', { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, body: JSON.stringify({ client_id: idOauth, client_secret: segredoOauth, code: 'codigo-invalido-de-homologacao' }) });
+  const tk = (await tr.json()) as { error?: string }; ok(tk.error === 'bad_verification_code', `o GitHub respondeu "${tk.error}" (esperado bad_verification_code: credenciais válidas, código inválido)`);
+  return 'OAuth App reconhecido e segredo do Secret Manager aceito pelo GitHub';
 });
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);

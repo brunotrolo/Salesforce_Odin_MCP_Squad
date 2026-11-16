@@ -89,3 +89,44 @@ test('portal: tentativas erradas de segredo são limitadas por IP e o segredo ce
   assert.equal(limitado, true, 'deveria limitar as tentativas');
   assert.equal((await fetch(`${base}/admin/entrar`, { ...form({ segredo: SEGREDO }), redirect: 'manual' })).status, 429); srv.close();
 });
+
+async function subirGithub(respostas: { token?: Record<string, unknown>; usuario?: Record<string, unknown> }) {
+  const store = new MemoryStore(); const { coletor, eventos } = coletorMemoria(); const chamadas: string[] = [];
+  await store.set('profiles', 'mantenedor', { skills: [], colecoes: {}, canais: ['stable', 'beta'] }); await store.set('profiles', 'dev', { skills: [], colecoes: {}, canais: ['stable'] });
+  await store.set('squads', 'squad-a', { nome: 'Squad A', projetos: [] });
+  await store.set('users', 'usr_mant', { githubId: 111, githubLogin: 'maint', nome: 'Maint', status: 'ativo', policyVersion: 1 }); await store.set('memberships', 'm1', { userId: 'usr_mant', squadId: 'squad-a', perfis: ['mantenedor'] });
+  await store.set('users', 'usr_dev', { githubId: 0, githubLogin: 'Pessoa-Dev', nome: 'Dev', status: 'ativo', policyVersion: 1 }); await store.set('memberships', 'm2', { userId: 'usr_dev', squadId: 'squad-a', perfis: ['dev'] });
+  const http = (async (url: string | URL | Request, init?: RequestInit) => { const u = String(url); chamadas.push(u); const corpo = u.includes('access_token') ? (respostas.token ?? { access_token: 'tk' }) : (respostas.usuario ?? { id: 111, login: 'maint' }); return new Response(JSON.stringify(corpo), { status: 200 }); }) as typeof fetch;
+  const portal = criarPortal({ store, coletor, pimenta: 'pimenta-de-teste', adminSegredo: SEGREDO, emissor: 'https://odin.exemplo', aprovarDispositivo: async () => ({ nome: 'x' }), github: { clientId: 'Ov23teste', clientSecret: 'segredo-oauth', http } });
+  const srv = createServer((req, res) => { void portal.handler(req, res).then((ok) => { if (!ok) { res.writeHead(404); res.end(); } }); });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r)); return { store, srv, base: `http://127.0.0.1:${(srv.address() as AddressInfo).port}`, eventos, chamadas };
+}
+async function entrarGithub(base: string, cookies = jar()) {
+  const r = await fetch(`${base}/auth/github/login`, { redirect: 'manual' }); const loc = new URL(r.headers.get('location')!); const estadoCookie = r.headers.get('set-cookie')!.split(';')[0]!;
+  const cb = await fetch(`${base}/auth/github/callback?code=abc&state=${loc.searchParams.get('state')}`, { redirect: 'manual', headers: { cookie: estadoCookie } });
+  return { r, loc, cb, sessao: (cb.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('odin_sessao='))?.split(';')[0] ?? '' };
+}
+
+test('login com GitHub: redireciona com estado assinado, administrador entra no /admin e o segredo do OAuth nunca vai à tela', async () => {
+  const { base, srv, eventos, chamadas } = await subirGithub({}); const { r, loc, cb, sessao } = await entrarGithub(base);
+  assert.equal(r.status, 302); assert.equal(loc.origin + loc.pathname, 'https://github.com/login/oauth/authorize');
+  assert.equal(loc.searchParams.get('client_id'), 'Ov23teste'); assert.equal(loc.searchParams.get('redirect_uri'), 'https://odin.exemplo/auth/github/callback'); assert.equal(loc.searchParams.get('scope'), 'read:user');
+  assert.match(r.headers.get('set-cookie')!, /HttpOnly; Secure; SameSite=Lax/);
+  assert.equal(cb.status, 200); const corpo = await cb.text(); assert.match(corpo, /url=\/admin/); assert.doesNotMatch(corpo, /segredo-oauth/); assert.ok(sessao.length > 20);
+  assert.match(await (await fetch(`${base}/admin`, { headers: { cookie: sessao } })).text(), /Pessoas ativas/);
+  assert.ok(eventos.some((e) => e.acao === 'portal.github_login' && e.resultado === 'ok')); assert.deepEqual(chamadas.map((c) => new URL(c).host), ['github.com', 'api.github.com']);
+  assert.doesNotMatch(JSON.stringify(eventos), /segredo-oauth|tk/); srv.close();
+});
+
+test('login com GitHub: pessoa convidada pelo login entra na conta (vincula o id); desconhecido, estado falso e erro do GitHub são recusados', async () => {
+  const dev = await subirGithub({ usuario: { id: 222, login: 'pessoa-dev' } }); const e1 = await entrarGithub(dev.base);
+  assert.match(await e1.cb.text(), /url=\/conta/); assert.equal(Number((await dev.store.get('users', 'usr_dev'))!.githubId), 222);
+  assert.equal((await fetch(`${dev.base}/admin`, { headers: { cookie: e1.sessao } })).status, 200); assert.doesNotMatch(await (await fetch(`${dev.base}/admin/pessoas`, { headers: { cookie: e1.sessao } })).text(), /Nova pessoa/); dev.srv.close();
+  const desc = await subirGithub({ usuario: { id: 999, login: 'estranho' } }); const e2 = await entrarGithub(desc.base); assert.equal(e2.cb.status, 403); assert.equal(e2.sessao, ''); desc.srv.close();
+  const s = await subirGithub({}); const r = await fetch(`${s.base}/auth/github/login`, { redirect: 'manual' }); const ck = r.headers.get('set-cookie')!.split(';')[0]!;
+  assert.equal((await fetch(`${s.base}/auth/github/callback?code=abc&state=falso`, { headers: { cookie: ck } })).status, 400);
+  assert.equal((await fetch(`${s.base}/auth/github/callback?code=abc&state=${new URL(r.headers.get('location')!).searchParams.get('state')}`)).status, 400); // sem o cookie
+  s.srv.close();
+  const err = await subirGithub({ token: { error: 'bad_verification_code' } }); const e3 = await entrarGithub(err.base); assert.equal(e3.cb.status, 400); assert.equal(e3.sessao, ''); err.srv.close();
+  const sem = await subir(); assert.equal((await fetch(`${sem.base}/auth/github/login`, { redirect: 'manual' })).status, 404); sem.srv.close();
+});
