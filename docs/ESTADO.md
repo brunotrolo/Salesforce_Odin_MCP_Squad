@@ -4,10 +4,10 @@
 > **Última atualização:** 2026-11-16
 
 ## Agora
-- **Fase:** **nuvem homologada** (25/25, [HOMOLOGACAO.md](HOMOLOGACAO.md)): serviços no Cloud Run, 9 skills reais em beta e o portal interino. Localmente, `npm run demo` e `npm run dev` continuam funcionando.
+- **Fase:** **nuvem homologada** (25/25, [HOMOLOGACAO.md](HOMOLOGACAO.md)): serviços no Cloud Run, as 10 skills reais em beta e o portal com login GitHub. Localmente, `npm run demo` e `npm run dev` continuam funcionando.
 - **Pronto e testado (44 testes, CI em Linux e Windows):** emissor de tokens (`apps/sts`), servidor MCP com as 7 ferramentas e a API `/v1` (`apps/mcp-server`), roteador e catálogo das 10 skills (`packages/router`, `catalog/`), `odin lint` e pipeline de publicação assinada (`packages/lint`, `pipeline/`), publisher que confere a assinatura (`apps/jobs`), guard com PG-01 a PG-08 (`packages/guard`), CLI (`packages/cli`), skill de apoio `odin-ambiente`.
-- **Skills reais:** 8 das 10 já passam no `odin lint` e sobem no Odin local em modo rascunho (`npm run dev`, com os repositórios clonados ao lado); Data Architect e Apex Callouts Developer estão bloqueadas por problemas reais listados em [MIGRACAO-SKILLS.md](MIGRACAO-SKILLS.md).
-- **Ainda não existe:** login do portal com GitHub e segundo fator (o portal interino por segredo e convite existe), Data Architect na nuvem (falta o segredo `SKILLS_READ_TOKEN`), avaliações de comportamento por skill (a infraestrutura existe; faltam os casos), Vertex AI e binário do CLI.
+- **Skills reais:** as 10 passam no `odin lint` e estão publicadas na nuvem em rascunho (canal beta); para chegar ao `stable` falta o checklist do `odin-curador` e as avaliações de comportamento ([MIGRACAO-SKILLS.md](MIGRACAO-SKILLS.md)).
+- **Ainda não existe:** login do portal com GitHub e segundo fator (o portal interino por segredo e convite existe), avaliações de comportamento por skill (a infraestrutura existe; faltam os casos), Vertex AI e binário do CLI.
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
@@ -16,7 +16,7 @@
 - 2026-11-16 · **Carga autenticada do MCP medida**: 50 usuários, p95 1259 ms, zero erros (meta 2 s).
 - 2026-11-16 · **Avaliações por skill: infraestrutura pronta** (ADR 0017): `pipeline/avaliar.ts` roda a camada determinística, confere a composição mínima (10 casos: 4 positivos, 3 negativos, 2 de injeção, 1 de limite) e aplica o portão de promoção beta → stable; `npm run avaliar-skill` grava `evals/resultado.json`. **Laço contínuo**: o CI reverifica o projeto a cada 6 horas e uma rotina horária do Claude continua o desenvolvimento sem comando do mantenedor.
 - 2026-11-16 · **Desempenho medido na nuvem** (`desempenho.yml`): partida a frio p95 394 ms (meta 3 s); 50 usuários simultâneos com p95 322 ms e zero erros (meta 2 s).
-- 2026-11-16 · **Skills reais na nuvem** (ADR 0022): 9 das 10 publicadas em rascunho (canal beta, assinadas pelo KMS) pelo workflow `publicar-skills.yml`; Callouts e Data Architect destravados no lint (referências divididas, Unicode oculto removido); H21 na homologação. O Data Architect (repositório privado) espera o segredo `SKILLS_READ_TOKEN`.
+- 2026-11-16 · **Skills reais na nuvem** (ADR 0022): as 10 publicadas em rascunho (canal beta, assinadas pelo KMS) pelo workflow `publicar-skills.yml`; Callouts e Data Architect destravados no lint (referências divididas, Unicode oculto removido); H21 na homologação. O Data Architect (privado) usa o segredo `SKILLS_READ_TOKEN`.
 - 2026-11-16 · **Nuvem homologada 20/20** ([HOMOLOGACAO.md](HOMOLOGACAO.md), ADR 0021): STS, MCP, disjuntor e jobs no Cloud Run com Firestore, Cloud Storage, KMS e Secret Manager; correções de `/saude`, dispositivo recém-ativado e token de identidade do disjuntor.
 - 2026-11-16 · **F1 aplicada no Google Cloud** (projeto `salesforcemcpodin`, número 177809673592, região `southamerica-east1`, estágio E0): ponte por identidade federada (sem chave; só o mantenedor, só na `main`), orçamento de R$ 30 (cerca de US$ 5) com alertas de 50% a 300% e tópico `budget-alerts`, 10 contas de serviço, 4 chaves do KMS em software, Firestore, 3 buckets privados, repositório de imagens com limpeza, 20 APIs. 53 recursos criados pelo workflow `infra.yml`.
 - 2026-11-15 · ADR 0020: primeiro código. Caminho completo local de ponta a ponta, com demonstração (`npm run demo`) e servidor local (`npm run dev`).
@@ -28,7 +28,7 @@
 - 2026-11-14 · Rodadas 13 a 15: decisões do mantenedor integradas; GitHub Free (decisão 41).
 
 ## Próximo passo
-1. **Mantenedor (única pendência que só você resolve):** criar o segredo `SKILLS_READ_TOKEN` no repositório do Odin (token fine-grained, somente leitura de conteúdo do repositório do Data Architect) para publicar a 10ª skill.
+1. **Mantenedor:** ao fim da homologação, trocar o `SKILLS_READ_TOKEN` e o segredo do OAuth App (ambos foram vistos no chat de trabalho) e testar no Windows e no VS Code.
 2. **Claude:** portal com login GitHub, GitHub App, avaliações por skill (`evals/`) para chegar ao `stable`, reduzir o papel de `sa-ci-infra`.
 2. **Mantenedor:** rodar `npm run demo`, depois `npm run dev` e conectar o próprio Claude Code (Windows e extensão do VS Code), para a primeira prova real.
 2. **Claude (`/odin-dev`):** migrar as 10 skills reais com o `odin-curador` (F6), começando por uma de cada etapa; portal (ativação com GitHub e segundo fator, console); cofre do sistema; `odin doctor --orgs`.

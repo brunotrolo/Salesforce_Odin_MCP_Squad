@@ -23,7 +23,7 @@
 | H17 | Job `odin-jobs` no Cloud Run registra o tick | ✓ |
 | H18 | Revogação efetiva em 18 s (cache de 30 s) e sem renovar | ✓ |
 | H19 | Desinstalação devolve o Claude Code ao que era | ✓ |
-| H21 | Skills reais publicadas (9): assinatura do KMS, hashes dos pacotes e passo `odin ensure` conferidos ([ADR 0022](adr/0022-publicacao-das-skills-reais-na-nuvem-sem-github-app.md)) | ✓ |
+| H21 | Skills reais publicadas (as 10, com o Data Architect): assinatura do KMS, hashes dos pacotes e passo `odin ensure` conferidos ([ADR 0022](adr/0022-publicacao-das-skills-reais-na-nuvem-sem-github-app.md)) | ✓ |
 | H22 | Portal admin: entrada só com o segredo, cookie `HttpOnly` + `Secure` + `SameSite=Strict`, CSP, POST sem CSRF recusado, dados de admin ocultos sem sessão ([ADR 0023](adr/0023-portal-interino-de-administracao-e-de-pessoa-no-servico-do-e.md)) | ✓ |
 | H23 | Portal admin: cria pessoa (nome escapado) e convite de uso único; a pessoa entra pelo convite; reuso e convite inventado recusados; pessoa não vê a administração | ✓ |
 | H24 | Portal pessoa + CLI: ativa o dispositivo digitando o código do `odin setup` na página, o token funciona no MCP, a pessoa revoga o próprio dispositivo (não o de outra pessoa) e o token cai | ✓ |
@@ -50,4 +50,4 @@
 | Custos | formato de projeção do gcloud | `--format=json` com `jq` |
 
 ## Fora do escopo desta homologação (pendente)
-Data Architect na nuvem (repositório privado: falta o segredo `SKILLS_READ_TOKEN`), skills reais em `stable` (faltam as avaliações por skill), login com GitHub e segundo fator (o portal interino está homologado; falta o OAuth App), teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
+skills reais em `stable` (faltam as avaliações por skill), login com GitHub e segundo fator (o portal interino está homologado; falta o OAuth App), teste do disjuntor com custo real, Windows e VS Code reais pelo mantenedor, redução do papel de `sa-ci-infra`.
