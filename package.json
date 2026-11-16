@@ -21,7 +21,8 @@
     "homologar": "node scripts/homologar.ts",
     "demo": "node dev/demo.ts",
     "odin": "node packages/cli/src/odin.ts",
-    "prontidao": "node scripts/prontidao-skills.ts"
+    "prontidao": "node scripts/prontidao-skills.ts",
+    "avaliar-skill": "node scripts/avaliar-skill.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
