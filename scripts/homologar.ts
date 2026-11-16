@@ -219,13 +219,66 @@ await t('H21', 'Skills reais publicadas: manifesto com assinatura do KMS, hashes
   ok(publicadas.length >= 8, `esperadas ao menos 8 skills reais publicadas, há ${publicadas.length}: ${publicadas}`);
   return `${publicadas.length} skills reais conferidas: ${publicadas.join(', ')}`;
 });
+// ---- Portal (administração e pessoa) no Cloud Run ----
+const sessaoWeb = () => { let c = ''; return { async req(path: string, init: RequestInit = {}) { const r = await fetch(`${STS}${path}`, { ...init, redirect: 'manual', headers: { ...(init.headers as object), ...(c ? { cookie: c } : {}) } }); const sc = r.headers.get('set-cookie'); if (sc) { const v = sc.split(';')[0]!; c = v.endsWith('=') ? '' : v; } return r; } }; };
+const formWeb = (o: Record<string, string>) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(o).toString() });
+const csrfWeb = (h: string) => /name="csrf" value="([^"]+)"/.exec(h)?.[1] ?? '';
+const admin = sessaoWeb(); const pessoaWeb = sessaoWeb(); let pessoaPortal = ''; let conviteToken = ''; let csrfAdmin = '';
+await t('H22', 'Portal admin: login só com o segredo, sessão com CSRF, cookie seguro e cabeçalhos de proteção', async () => {
+  const r0 = await admin.req('/admin'); ok(r0.status === 200 && /Segredo de administração/.test(await r0.text()), 'sem login deveria pedir o segredo');
+  ok((await admin.req('/admin/entrar', formWeb({ segredo: 'errado' }))).status === 403, 'segredo errado aceito');
+  const ok1 = await admin.req('/admin/entrar', formWeb({ segredo: SEGREDO })); ok(ok1.status === 303, `login ${ok1.status}`);
+  const ck = ok1.headers.get('set-cookie') ?? ''; ok(/HttpOnly/.test(ck) && /Secure/.test(ck) && /SameSite=Strict/.test(ck), `cookie sem proteção: ${ck.replace(/=[^;]+/, '=…')}`);
+  const painel = await admin.req('/admin'); const h = await painel.text(); csrfAdmin = csrfWeb(h); ok(/Pessoas ativas/.test(h) && !!csrfAdmin, 'painel não abriu');
+  ok(/default-src 'none'/.test(painel.headers.get('content-security-policy') ?? ''), 'sem CSP');
+  ok((await admin.req('/admin/global', formWeb({ csrf: 'falso' }))).status === 403, 'POST sem CSRF válido aceito');
+  ok((await sessaoWeb().req('/admin/pessoas')).status === 200 && !/Nova pessoa/.test(await (await sessaoWeb().req('/admin/pessoas')).text()), 'dados de admin sem sessão');
+});
+await t('H23', 'Portal admin: cria pessoa e convite de uso único; a pessoa entra pelo convite e o reuso é recusado', async () => {
+  const r = await admin.req('/admin/pessoas/criar', formWeb({ csrf: csrfAdmin, nome: 'Pessoa Portal Homolog <b>', login: '', squad: 'squad-mantenedores', perfil: 'mantenedor' })); const h = await r.text();
+  ok(r.status === 200 && !/<b>/.test(h.replace(/<b>[^<]*<\/b>/g, '')) , 'nome não foi escapado'); const m = /\/convite\?t=([A-Za-z0-9_-]+)/.exec(h); ok(!!m, 'sem link de convite'); conviteToken = m![1]!;
+  pessoaPortal = (await store.list('users', (u) => /Pessoa Portal Homolog/.test(String(u.nome))))[0]!.id; ok(!!pessoaPortal, 'pessoa não criada');
+  ok((await pessoaWeb.req(`/convite?t=${conviteToken}`)).status === 200, 'convite válido recusado');
+  ok((await pessoaWeb.req('/convite', formWeb({ t: conviteToken }))).status === 303, 'não entrou com o convite');
+  ok((await sessaoWeb().req('/convite', formWeb({ t: conviteToken }))).status === 400, 'convite reutilizado');
+  ok((await sessaoWeb().req('/convite?t=inventado')).status === 400, 'convite inventado aceito');
+  const c = await (await pessoaWeb.req('/conta')).text(); ok(/Olá, Pessoa Portal Homolog/.test(c) && /sf-test/.test(c), 'conta sem o nome ou as skills');
+  ok(!/Nova pessoa/.test(await (await pessoaWeb.req('/admin/pessoas')).text()), 'pessoa viu a administração');
+});
+await t('H24', 'Portal pessoa + CLI: ativa o dispositivo no portal, usa o token no MCP e revoga o próprio dispositivo', async () => {
+  const c0 = await (await pessoaWeb.req('/conta')).text(); const csrf = csrfWeb(c0); let aprovou = false; const linhas: string[] = [];
+  const cod = await principal(['setup', '--servidor', STS], (l) => { linhas.push(l); const m = /código:\s+([A-Z]{4}-[A-Z]{4})/.exec(l); if (!m) return; void (async () => { const r = await pessoaWeb.req('/conta/ativar', formWeb({ csrf, code: m[1]! })); aprovou = r.status === 200; })(); });
+  ok(cod === 0 && aprovou, `setup ${cod}: ${linhas.join(' | ')}`); const novo = lerConfig().deviceId!; ok(!!novo, 'sem deviceId');
+  const h = await cabecalhos(); const me = await fetch(`${MCP}/v1/me`, { headers: h }); ok(me.status === 200, `token do portal recusado: ${me.status}`);
+  const lista = await (await pessoaWeb.req('/conta')).text(); ok(lista.includes(novo === '' ? 'x' : 'Meus dispositivos') && /ativo/.test(lista), 'dispositivo não aparece na conta');
+  ok((await admin.req('/admin/dispositivos')).status === 200, 'lista de dispositivos do admin');
+  const rv = await pessoaWeb.req('/conta/dispositivos/revogar', formWeb({ csrf: csrfWeb(lista), id: novo })); ok(rv.status === 303, `revogar ${rv.status}`);
+  const alheio = (await store.list('devices', (d) => d.userId === USUARIO))[0]; if (alheio) ok((await pessoaWeb.req('/conta/dispositivos/revogar', formWeb({ csrf: csrfWeb(lista), id: alheio.id }))).status === 403, 'revogou dispositivo de outra pessoa');
+  const t0 = Date.now(); let negou = false; while (Date.now() - t0 < 50_000) { if ((await fetch(`${MCP}/v1/me`, { headers: h })).status === 401) { negou = true; break; } await new Promise((r) => setTimeout(r, 2000)); }
+  ok(negou, 'o token continuou valendo depois da revogação pela pessoa'); return `revogação efetiva em ${Math.round((Date.now() - t0) / 1000)} s`;
+});
+await t('H25', 'Portal admin: skills do catálogo com versões, propostas aprovadas viram conhecimento, suspensão derruba a conta, revogação global', async () => {
+  const sk = await (await admin.req('/admin/skills')).text(); ok(/0\.1\.0-rascunho/.test(sk) && /sf-test/.test(sk), 'catálogo sem as versões publicadas');
+  await store.set('proposals', 'prop_homolog_portal', { texto: 'Padrão de homologação do portal: revisar a fila toda semana.', colecao: 'tecnico', projeto: 'global', fonte: 'homologacao', tipo: 'padrao', status: 'na_fila', criadaEm: Date.now(), userId: USUARIO });
+  ok(/Padrão de homologação do portal/.test(await (await admin.req('/admin/propostas')).text()), 'proposta não apareceu');
+  await admin.req('/admin/propostas/decidir', formWeb({ csrf: csrfAdmin, id: 'prop_homolog_portal', decisao: 'aprovar' })); ok((await store.get('proposals', 'prop_homolog_portal'))?.status === 'aprovada', 'proposta não aprovada');
+  ok((await store.list('kb_chunks', (x) => x.documento === 'PROPOSTA-prop_homolog_portal')).length === 1, 'proposta aprovada não virou conhecimento');
+  await admin.req('/admin/pessoas/acao', formWeb({ csrf: csrfAdmin, id: pessoaPortal, acao: 'suspender' })); ok((await pessoaWeb.req('/conta')).status === 403, 'pessoa suspensa ainda abre a conta');
+  const antes = await store.get('revocations', 'global'); await admin.req('/admin/global', formWeb({ csrf: csrfAdmin })); const depois = await store.get('revocations', 'global'); ok(Number(depois?.desde) > Number(antes?.desde ?? 0), 'revogação global não gravada');
+  await store.set('revocations', 'global', { desde: 0 }); // não derrubar quem usa de verdade
+});
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);
   for (const c of ['memberships']) for (const d of await store.list(c, (x) => x.userId === USUARIO)) await store.delete(c, d.id);
   for (const d of await store.list('proposals', (x) => x.userId === USUARIO)) await store.delete('proposals', d.id);
   for (const d of await store.list('kb_chunks', (x) => /^HOMOLOG/.test(String(x.documento)))) await store.delete('kb_chunks', d.id);
   for (const d of await store.list('device_codes', () => true)) await store.delete('device_codes', d.id);
-  for (const [c, i] of [['users', USUARIO], ['projects', 'projeto-homolog']] as const) await store.delete(c, i);
+  for (const d of await store.list('devices', (x) => x.userId === pessoaPortal)) await store.delete('devices', d.id);
+  for (const d of await store.list('memberships', (x) => x.userId === pessoaPortal)) await store.delete('memberships', d.id);
+  for (const d of await store.list('invites', (x) => x.userId === pessoaPortal)) await store.delete('invites', d.id);
+  for (const d of await store.list('kb_chunks', (x) => /^PROPOSTA-prop_homolog/.test(String(x.documento)))) await store.delete('kb_chunks', d.id);
+  await store.delete('proposals', 'prop_homolog_portal');
+  for (const [c, i] of [['users', USUARIO], ['users', pessoaPortal], ['projects', 'projeto-homolog']] as const) if (i) await store.delete(c, i);
 });
 
 const falhas = resultados.filter((r) => !r.ok);

@@ -25,6 +25,8 @@ export interface ConfigSts {
   ativacaoSegredo?: string;
   /** Documento de descoberta lido pelo CLI (/.well-known/odin-configuration); na nuvem quem publica é o portal. */
   descoberta?: Record<string, unknown>;
+  /** Páginas do portal (administração e pessoa), montadas antes das rotas do emissor; devolve true quando atendeu. */
+  portal?: (req: IncomingMessage, res: ServerResponse) => Promise<boolean>;
 }
 
 const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
@@ -146,6 +148,7 @@ ${pedeSegredo ? '<p><label>Segredo de ativação<br><input name="segredo" type="
     const rid = novoRequestId(); const ip = ipDe(req);
     const url = new URL(req.url ?? '/', 'http://local');
     try {
+      if (cfg.portal && await cfg.portal(req, res)) return;
       const rota = `${req.method} ${url.pathname}`;
       if (rota === 'GET /healthz' || rota === 'GET /saude') return responder(res, 200, { ok: true });
       if (rota === 'GET /.well-known/jwks.json') return responder(res, 200, { keys: [{ ...cfg.assinador.publica().jwk, kid: cfg.assinador.kid, use: 'sig', alg: 'ES256' }] }, { 'cache-control': 'public, max-age=600' });
