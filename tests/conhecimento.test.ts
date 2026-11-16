@@ -38,7 +38,7 @@ test('indexar: grava trechos com vetor, mascara PII, marca o substituído e remo
   const d1 = pasta({ 'tecnico/a.md': doc('', '# Antigo\n\n## Regra\nUse o contato ana@exemplo.com.br.\n'), 'tecnico/b.md': doc('substitui: [TEC-TST-001]\n').replace('TEC-TST-001\ntipo', 'TEC-TST-002\ntipo').replace('substitui: [TEC-TST-001]\n---', 'substitui: [TEC-TST-001]\n---') });
   const r = await indexar({ dir: d1, store, denso: falso }); assert.equal(r.documentos, 2); assert.equal(r.mascarados, 1); assert.equal(r.substituidos, 1);
   const todos = await store.list('kb_chunks'); assert.ok(todos.every((c) => Array.isArray(c.vetor))); assert.ok(!JSON.stringify(todos).includes('ana@exemplo'));
-  const kb = new Conhecimento(store, falso, 0); const r1 = await kb.buscar('regra do texto', { colecoes: ['tecnico'], projetos: [], limite: 5 }); assert.ok(r1.every((x) => x.citacao.documento !== 'TEC-TST-001'), 'o substituído não volta');
+  const kb = new Conhecimento(store, falso, 0, 0); const r1 = await kb.buscar('regra do texto', { colecoes: ['tecnico'], projetos: [], limite: 5 }); assert.ok(r1.every((x) => x.citacao.documento !== 'TEC-TST-001'), 'o substituído não volta');
   const d2 = pasta({ 'tecnico/b.md': doc('substitui: []\n').replace('TEC-TST-001\ntipo', 'TEC-TST-002\ntipo') }); const r2 = await indexar({ dir: d2, store, denso: falso }); assert.equal(r2.removidos, 1); assert.equal((await store.list('kb_chunks')).length, 1);
 });
 
@@ -52,7 +52,7 @@ test('busca: isolamento por projeto antes da similaridade, vigência encerrada n
 });
 
 test('avaliação de recuperação: a base de demonstração atinge a meta (recall@5 ≥ 80%) e recusa pergunta fora do assunto', async () => {
-  const store = new MemoryStore(); await indexar({ dir: FONTE, store, denso: falso }); const kb = new Conhecimento(store, falso, 0.55);
+  const store = new MemoryStore(); await indexar({ dir: FONTE, store, denso: falso }); const kb = new Conhecimento(store, falso, 0.55, 0);
   const rel = await medirRecuperacao(kb, lerPerguntas(join(RAIZ, 'catalog/avaliacao-conhecimento.yaml')), ['projeto-atlas']);
   console.log(`  recall@5 ${(rel.recall * 100).toFixed(0)}% (${rel.acertos}/${rel.total}); fora do assunto ${rel.semRespostaOk}/${rel.semRespostaTotal}; falhas: ${rel.falhas.join(' | ')}`);
   assert.ok(rel.recall >= 0.8, `recall ${rel.recall}`); for (const [c, v] of Object.entries(rel.porColecao)) assert.ok(v.recall >= 0.6, `coleção ${c}: ${v.recall}`);
