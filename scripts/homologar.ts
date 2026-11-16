@@ -358,7 +358,9 @@ await t('H29', 'CLI assinado: o servidor entrega a versão vigente, `odin update
 await t('H30', 'Conhecimento com embeddings da Vertex AI: recall@5 ≥ 80% (total e por coleção), perguntas fora do assunto recusadas, isolamento por projeto, substituído e vigência respeitados', async () => {
   const denso = new EmbedderVertex(PROJETO, process.env.VERTEX_REGIAO ?? 'us-central1'); const kb = new Conhecimento(store, denso);
   const chunks = (await store.list('kb_chunks', (x: any) => x.origem === 'odin-knowledge')) as Array<Record<string, any>>; ok(chunks.length >= 20, `poucos trechos indexados: ${chunks.length}`); ok(chunks.every((c) => Array.isArray(c.vetor) && c.vetor.length === 256), 'trecho sem embedding de 256 dimensões');
+  process.env.KB_DIAGNOSTICO = '1';
   const rel = await medirRecuperacao(kb, lerPerguntas(join(RAIZ, 'catalog/avaliacao-conhecimento.yaml')), ['projeto-atlas']);
+  delete process.env.KB_DIAGNOSTICO;
   const linhas = Object.entries(rel.porColecao).map(([c, v]) => `${c} ${Math.round(v.recall * 100)}%`).join(', ');
   ok(rel.recall >= 0.8, `recall@5 ${Math.round(rel.recall * 100)}% abaixo de 80% (${linhas}). Falhas: ${rel.falhas.slice(0, 4).join(' | ')}`);
   for (const [c, v] of Object.entries(rel.porColecao)) ok(v.recall >= 0.6, `coleção ${c} com recall ${Math.round(v.recall * 100)}%`);
