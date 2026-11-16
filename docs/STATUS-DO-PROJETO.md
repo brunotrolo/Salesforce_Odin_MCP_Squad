@@ -15,7 +15,7 @@ Atualizado em 2026-11-16. Fonte do plano: [PLANO.md](PLANO.md) (seção 16, fase
 | F5 | ✅ 👤 | `setup`, `login`, `token`, `ensure`, `doctor`, `status`, `uninstall`, guard PG-01 a PG-08 e agora `update` (CLI assinado pelo KMS, H29), `restore-copias`, `doctor --limpar-copias` e instalador multiplataforma. O CI roda o demo no Linux e no Windows. Falta só a sua prova no Windows e no VS Code reais. Não há binário empacotado: o CLI roda no Node, sem dependências de terceiros. |
 | F6 | 🟡 | As 10 skills têm contrato (`odin.yaml`, `odin ensure`), avaliações determinísticas (≥ 10 casos) e estão **em `stable`** na nuvem, com versão assinada e evento de promoção (H27). Falta: checklist do `odin-curador` (regras dos `CLAUDE.md`, hooks como políticas, bibliotecas compartilhadas, revisão das intenções) e avaliações **com modelo**, que dependem do seu acesso ao modelo. |
 | F7 | ✅ | Busca híbrida (embeddings `text-embedding-005` da Vertex AI + léxica) com citação, isolamento por projeto, filtro de injeção, propostas com aprovação no portal, indexador no pipeline e **medição de recuperação na nuvem** (H30: recall@5 ≥ 80%, fora do assunto recusado; piso de similaridade calibrado com notas reais). A fonte está em `conhecimento/` deste repositório porque o `odin-knowledge` não pôde ser criado (403 da integração). |
-| F8 | ✅ | Carga de 50 usuários (p95 322 a 1259 ms, zero erros), partida a frio p95 394 ms, disjuntor testado de verdade, **auditoria em BigQuery** (`odin_auditoria`, 400 dias), painel operacional, 3 alertas (5xx, latência, negações) e runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Os alertas ainda não têm canal de e-mail configurado. |
+| F8 | ✅ | Carga de 50 usuários (p95 322 a 1259 ms, zero erros), partida a frio p95 394 ms, disjuntor testado de verdade, **auditoria em BigQuery** (`odin_auditoria`, 400 dias), painel operacional, 3 alertas (5xx, latência, negações) e runbooks `docs/RUNBOOKS-OPERACIONAIS.md`. Os alertas chegam por e-mail ao endereço do mantenedor (variável `ALERTA_EMAIL` do repositório; sem ela vale o endereço padrão do `infra.yml`). |
 | F9 | Validação pessoal pelo mantenedor com as 10 skills |
 | F10 | Preparação para o time (Portão 2) e corte único |
 
@@ -53,7 +53,7 @@ Nada em andamento. Último pipeline completo (commit `910dff6`): qualidade, infr
 
 **Eu (Claude):**
 1. F6: checklist do `odin-curador` nas 10 skills e avaliações com modelo (dependem do seu acesso ao modelo).
-2. Pendências menores: canal de e-mail para os alertas (precisa de um endereço seu), repositório `odin-knowledge` (precisa de permissão para criar repositórios).
+2. Pendência menor: repositório `odin-knowledge` (precisa de permissão para criar repositórios).
 
 ## 6. Segurança e custo hoje
 - Custo: estágio E0, orçamento de R$ 30 com alertas de 50% a 300%, disjuntor ensaiado.

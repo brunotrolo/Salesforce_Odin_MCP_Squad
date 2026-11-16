@@ -12,6 +12,12 @@ locals {
   estagio = "e0"
 }
 
+variable "email_alerta" {
+  type        = string
+  default     = ""
+  description = "E-mail que recebe os alertas do Cloud Monitoring (5xx, latência, negações)."
+}
+
 variable "github_client_id" {
   type        = string
   default     = ""
@@ -74,10 +80,11 @@ module "finops" {
 }
 
 module "observabilidade" {
-  source     = "../../modules/observabilidade"
-  project_id = var.project_id
-  region     = var.region
-  depends_on = [module.apis]
+  source       = "../../modules/observabilidade"
+  project_id   = var.project_id
+  region       = var.region
+  email_alerta = var.email_alerta
+  depends_on   = [module.apis]
 }
 
 module "security" {
