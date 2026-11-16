@@ -481,7 +481,7 @@ Mudanças, iguais para todas:
 
 | Recurso | Uso | Observação |
 |---|---|---|
-| Projeto `odin-poc` (depois `odin-prod`) | Isolamento | Terraform recria tudo; cada projeto num estágio de custo (E0, E1, E2) |
+| Projeto `salesforcemcpodin` (depois `odin-prod`) | Isolamento | Terraform recria tudo; cada projeto num estágio de custo (E0, E1, E2) |
 | Região `southamerica-east1` | Latência e residência de dados | Conferir disponibilidade e preço dos serviços na região |
 | Cloud Run (serviços): `odin-mcp`, `odin-sts`, `odin-portal` | Atender pessoas | **Mínimo de 0 e máximo de 3 instâncias** em E0 e E1; instância quente só por gatilho medido |
 | Cloud Run (jobs): `odin-publisher`, `odin-indexer`, `odin-jobs` | Publicar, indexar, rotinas | Uma imagem, três contas de serviço; sem porta e sem custo parado |
@@ -700,6 +700,7 @@ O plano passou por quinze rodadas de revisão contra os objetivos (fricção, go
 | 14 | Segurança | GitHub Free (decisão 41) tira proteções que a segurança supunha | Compensações em segurança 05 e arquitetura 03 (7.1, 7.4); risco R18 |
 | 15 | Continuidade | Outro chat não conheceria as regras nem o estado do projeto | ADR 0016: `CLAUDE.md`, `docs/ESTADO.md`, ADRs, skills `odin-dev`/`odin-curador`/`odin-arquiteto`/`odin-operacao`, revisores, hook `guard-docs`, verificações e CI (seções 19 e 22.4) |
 | 19 | Implementação | Começou o desenvolvimento, local primeiro; a implementação mostrou ajustes necessários no desenho | ADR 0020: serviços atrás de interfaces com implementação local e de nuvem; prova de vida do guard pelo próprio `odin ensure` (7.4); pacote `.odinpkg`; manifesto com `entrega`; TypeScript executado direto pelo Node; decisão 53 |
+| 20 | Homologação | A nuvem real foi homologada (20/20) e achou 4 ajustes | ADR 0021: projeto `salesforcemcpodin`; serviços no Cloud Run; `/saude`; recarga de direitos para dispositivo recém-ativado; ativação interina por segredo até o portal |
 | 18 | Escopo | Entraram 5 skills novas (Archaeologist, LWC Developer, Apex Callouts Developer, Apex Cover Loop, Deep Debugger); faltava a ordem das 10 no ciclo | ADR 0019: [PIPELINE.md](PIPELINE.md) com 6 etapas, encadeamento, fronteiras e perfis; 11 atalhos; F6 passa a 4,5 semanas (total de cerca de 18); decisões 49 a 52 |
 | 17 | Custo e arquitetura | "Produção" superdimensionada para 20 pessoas (centenas de dólares por mês); 5 serviços + 2 jobs + Pub/Sub, com o Pub/Sub entregando a um job (impossível); sem teto de gasto; MCP sem regra para fluxo aberto; trechos ainda supondo proteção de branch; contratos só em prosa | ADR 0018: estágios E0, E1 e E2 com gatilhos (arquitetura 05), 3 serviços + 3 jobs, sem webhooks nem Pub/Sub de aplicação, publisher confere a assinatura, teto de 3 instâncias e disjuntor, MCP com resposta JSON, `schemas/` validados no CI, governança do repositório, CF-11 a CF-14; riscos R20 a R23; decisões 42 a 48 |
 | 16 | Qualidade e segurança | Comparação com práticas de mercado (skills por MCP): faltavam avaliação de comportamento por skill, recusa de Unicode oculto, integridade do runtime no uso e diretriz de economia de contexto | ADR 0017: `evals/` e portão de promoção (8.3, 8.4), Unicode oculto no lint, no RAG e no CI deste repositório (8.3, 11.3, 22.5), `ensure` confere hashes na primeira chamada (7.2, DT-19), alvo de 5.000 tokens e scripts que devolvem resumo (10); risco R19 |
@@ -809,7 +810,7 @@ Não é preciso "um MCP para criar o MCP": essas três são skills comuns do Cla
 ### 23.1 Portão 1: pronto para começar a F0
 - [x] Decisões do mantenedor registradas ([DECISOES.md](DECISOES.md)).
 - [x] Arquitetura de solução, funcional, técnica, segurança e portal escritas e alinhadas.
-- [ ] Projeto `odin-poc` criado (decisão 1).
+- [ ] Projeto `salesforcemcpodin` criado (decisão 1).
 - [ ] Roteiro da F0 (`docs/F0-ROTEIRO.md`) entregue.
 - [ ] Máquina de teste Windows nativo com Claude Code na extensão do VS Code e no terminal, com acesso ao LiteLLM real.
 

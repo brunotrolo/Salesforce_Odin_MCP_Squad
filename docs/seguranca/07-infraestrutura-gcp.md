@@ -3,7 +3,7 @@
 > [Índice da segurança](README.md) · Inventário completo em [03 Técnica](../arquitetura/03-arquitetura-tecnica.md)
 
 ## 1. Projeto e organização
-- **Um projeto por ambiente** (`odin-poc`, depois `odin-prod`), cada um num **estágio de custo** (E0, E1 ou E2; [arquitetura 05](../arquitetura/05-custos-e-finops.md)). Os controles desta página valem em todos os estágios, salvo quando a linha diz o estágio.
+- **Um projeto por ambiente** (`salesforcemcpodin`, depois `odin-prod`), cada um num **estágio de custo** (E0, E1 ou E2; [arquitetura 05](../arquitetura/05-custos-e-finops.md)). Os controles desta página valem em todos os estágios, salvo quando a linha diz o estágio.
 - **Produção numa organização GCP**, com estas políticas de organização:
   - `iam.disableServiceAccountKeyCreation` (nenhuma chave de conta de serviço);
   - `iam.allowedPolicyMemberDomains` (só identidades da empresa);

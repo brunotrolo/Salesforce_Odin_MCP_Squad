@@ -96,7 +96,7 @@ npm run prontidao   # regenera docs/MIGRACAO-SKILLS.md
 |---|---|
 | **Portal** (login com GitHub, segundo fator, console, consumo, histórico das skills) | A ativação hoje usa uma página de desenvolvimento que escolhe uma pessoa fictícia |
 | **Implementações de nuvem** (Firestore, Cloud Storage, Cloud KMS, Vertex AI) | Estão atrás de interfaces; hoje só a versão local existe |
-| **Terraform e projeto `odin-poc`** | Nada criado no Google Cloud; custo zero até agora |
+| **Terraform e projeto `salesforcemcpodin`** | Criados e homologados em 2026-11-16 (20/20, ver [HOMOLOGACAO.md](HOMOLOGACAO.md)) |
 | **Claude Code real** (Windows nativo, extensão do VS Code, LiteLLM, `headersHelper`) | Os testes usam o cliente oficial do MCP; ninguém conectou um Claude Code de verdade |
 | **Cofre do sistema** (Credential Manager, Keychain, libsecret) | Hoje arquivo com permissão restrita, só para desenvolvimento (risco R25) |
 | **Binário do CLI** e instalador servido pelo portal | Hoje roda por Node |
@@ -133,7 +133,7 @@ Login com GitHub, segundo fator (TOTP; passkey para administradores), ativação
 Cofre do sistema atrás da interface `Cofre`; `odin doctor --orgs` para classificar orgs como sandbox; empacotamento do CLI como executável único; indexador do conhecimento a partir do repositório `odin-knowledge`; testes em Windows nativo no CI para o guard e o CLI com PowerShell.
 
 ### Passo E. Levar para a nuvem (mantenedor + Claude, estágio E0)
-1. Mantenedor cria o projeto `odin-poc` no Google Cloud.
+1. ~~Mantenedor cria o projeto `salesforcemcpodin` no Google Cloud.~~ Feito.
 2. Terraform da F1: orçamento, disjuntor de custo, limpeza do Artifact Registry, Workload Identity Federation restrita ao mantenedor, `run.app`.
 3. Implementações de nuvem atrás das interfaces, testadas com emuladores.
 4. F0 no Claude Code real contra o servidor na nuvem: partida a frio, preços na região, LiteLLM.
@@ -148,7 +148,7 @@ Organização GitHub com 2FA; projeto `prod` no estágio E1; segundo super-admin
 | Rodar o Passo A e relatar o resultado | Fecha os maiores riscos de uma vez |
 | Revisar as decisões 42 a 52 (tomadas por delegação) | Estágios de custo, sem WAF e sem webhooks no time, 10 skills, 11 atalhos |
 | Confirmar os perfis propostos para as skills novas ([PIPELINE.md](PIPELINE.md), seção 6) | O catálogo usa essa proposta |
-| Criar o projeto `odin-poc` | Libera o Passo E |
+| Criar o projeto `salesforcemcpodin` | Libera o Passo E |
 | Definir quem será o segundo super-admin e o responsável jurídico | Exigências do Portão 2 |
 
 ## 6. Riscos mais relevantes agora

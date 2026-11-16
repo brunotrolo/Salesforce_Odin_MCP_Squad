@@ -4,6 +4,9 @@ Mudanças relevantes do projeto, da mais recente para a mais antiga. Decisões t
 
 ## Não lançado (pré-F0: plano, arquitetura e ferramentas de manutenção)
 
+### 2026-11-16 · Nuvem homologada 20/20 (ADR 0021)
+- STS, MCP, disjuntor e jobs no Cloud Run; correções de `/saude`, dispositivo recém-ativado e token de identidade do disjuntor; relatório em `docs/HOMOLOGACAO.md`.
+
 ### 2026-11-16 · F1 aplicada no Google Cloud
 - Projeto `salesforcemcpodin` (E0): identidade federada do GitHub sem chave, orçamento com alertas, contas de serviço, KMS, Firestore, buckets e repositório de imagens (53 recursos, Terraform em `infra/`, workflow `infra.yml`).
 

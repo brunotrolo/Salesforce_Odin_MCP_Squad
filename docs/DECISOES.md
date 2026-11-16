@@ -6,7 +6,7 @@
 ## A. Prova de conceito e ambiente
 | # | Decisão | Consequência |
 |---|---|---|
-| 1 | Projeto `odin-poc` em `southamerica-east1`, criado pelo mantenedor | O Terraform da F1 assume esse ID |
+| 1 | Projeto `salesforcemcpodin` em `southamerica-east1`, criado pelo mantenedor | O Terraform da F1 assume esse ID |
 | 2 | F0 por **roteiro**: o Claude prepara o roteiro e o servidor de teste; o mantenedor executa na máquina dele | Entregável novo: `docs/F0-ROTEIRO.md` |
 | 3 | F0 usa o **LiteLLM real** do time | Testa o risco R11 (busca de ferramentas via gateway) de verdade |
 | 4 | PoC na conta pessoal do GitHub; **organização criada antes de liberar ao time** | Times → squads e 2FA obrigatório só depois da organização |
