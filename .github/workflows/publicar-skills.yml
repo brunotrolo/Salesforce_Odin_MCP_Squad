@@ -17,7 +17,6 @@ jobs:
     env:
       PROJETO: salesforcemcpodin
       REGIAO: southamerica-east1
-      TEM_TOKEN: ${{ secrets.SKILLS_READ_TOKEN != '' && 'sim' || 'nao' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -30,57 +29,65 @@ jobs:
           service_account: sa-ci-infra@salesforcemcpodin.iam.gserviceaccount.com
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: brunotrolo/Salesforce_Data_Architect
+          path: repos/Salesforce_Data_Architect
+          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
+        continue-on-error: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
           repository: brunotrolo/Salesforce_Test_Automator
           path: repos/Salesforce_Test_Automator
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Discovery-to-Backlog
           path: repos/Salesforce_Discovery-to-Backlog
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Journey_Designer
           path: repos/Salesforce_Journey_Designer
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Journey_Developer
           path: repos/Salesforce_Journey_Developer
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Apex_Callouts_Developer
           path: repos/Salesforce_Apex_Callouts_Developer
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Apex-Cover-Loop
           path: repos/Salesforce_Apex-Cover-Loop
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Deep_Debugger
           path: repos/Salesforce_Deep_Debugger
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_Archaeologist
           path: repos/Salesforce_Archaeologist
           persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: brunotrolo/Salesforce_LWC-Developer
           path: repos/Salesforce_LWC-Developer
           persist-credentials: false
-      - name: Data Architect (repositório privado; só com o segredo SKILLS_READ_TOKEN)
-        if: env.TEM_TOKEN == 'sim'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: brunotrolo/Salesforce_Data_Architect
-          path: repos/Salesforce_Data_Architect
-          token: ${{ secrets.SKILLS_READ_TOKEN }}
-          persist-credentials: false
+          token: ${{ secrets.SKILLS_READ_TOKEN || github.token }}
       - run: npm ci --ignore-scripts
       - name: Publicar
         run: |
