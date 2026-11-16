@@ -2,7 +2,7 @@
 
 > [Índice do portal](README.md) · Todas as telas exigem MFA com menos de 15 min; papéis administrativos exigem passkey ([segurança 02](../seguranca/02-autenticacao-e-mfa.md)).
 
-> **Situação (2026-11-16, ADR 0023):** versão interina no ar em `/admin`, com entrada pelo segredo de administração (sessão de 2 h, CSRF em todo formulário). Telas disponíveis: painel, pessoas (criar, suspender, reativar, convite), dispositivos (revogar), skills e versões, propostas de conhecimento (aprovar/rejeitar) e revogação global. Passkey, MFA e papéis administrativos separados ficam para o login com GitHub.
+> **Situação (2026-11-16, ADR 0023):** versão interina no ar em `/admin`, com entrada pelo segredo de administração (sessão de 2 h, CSRF em todo formulário). Telas disponíveis: painel, pessoas (criar, suspender, reativar, convite), dispositivos (revogar), skills e versões, propostas de conhecimento (aprovar/rejeitar) e revogação global. O login com GitHub existe (ADR 0024): quem tem o perfil `mantenedor` entra como administrador, com auditoria individual. Passkey e papéis administrativos separados ainda não existem; o 2FA é o da conta do GitHub (regra operacional).
 
 ## 1. Quem vê o quê no menu
 

@@ -11,6 +11,7 @@
 - Documentação: plano, decisões (53), arquitetura, segurança, portal, pipeline das skills, contratos em `schemas/`.
 
 ## Feito (resumo, mais recente primeiro)
+- 2026-11-16 · **Login com GitHub no portal** (ADR 0024) e **10 skills reais na nuvem** (Data Architect incluído, via `SKILLS_READ_TOKEN`).
 - 2026-11-16 · **Portal interino** (ADR 0023): `/admin` (segredo de administração) e `/conta` (convite de uso único) no serviço do emissor; testes locais (4) e homologação H22 a H25 na nuvem: **25/25**. Manual: [MANUAL-DO-PORTAL.md](MANUAL-DO-PORTAL.md).
 - 2026-11-16 · **Carga autenticada do MCP medida**: 50 usuários, p95 1259 ms, zero erros (meta 2 s).
 - 2026-11-16 · **Avaliações por skill: infraestrutura pronta** (ADR 0017): `pipeline/avaliar.ts` roda a camada determinística, confere a composição mínima (10 casos: 4 positivos, 3 negativos, 2 de injeção, 1 de limite) e aplica o portão de promoção beta → stable; `npm run avaliar-skill` grava `evals/resultado.json`. **Laço contínuo**: o CI reverifica o projeto a cada 6 horas e uma rotina horária do Claude continua o desenvolvimento sem comando do mantenedor.
