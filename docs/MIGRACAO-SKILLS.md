@@ -14,7 +14,7 @@
 | 4 | Journey Developer | Publicável em rascunho | 0 | 1 | ~1629 tokens | 25 |
 | 4 | LWC Developer | Publicável em rascunho | 0 | 0 | ~4432 tokens | 16 |
 | 4 | Apex Callouts Developer | Publicável em rascunho | 0 | 2 | ~4854 tokens | 39 |
-| 5 | Apex Cover Loop | Publicável em rascunho | 0 | 0 | ~3676 tokens | 15 |
+| 5 | Apex Cover Loop | Publicável em rascunho | 0 | 0 | ~3817 tokens | 15 |
 | 5 | Test Automator | Publicável em rascunho | 0 | 0 | ~2094 tokens | 46 |
 | 6 | Deep Debugger | Publicável em rascunho | 0 | 0 | ~3255 tokens | 15 |
 

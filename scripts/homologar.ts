@@ -375,12 +375,13 @@ await t('H32', 'Política de guard por skill: o Deep Debugger entrega a polític
   } finally { if (antes.h === undefined) delete process.env.ODIN_TESTE_HOME; else process.env.ODIN_TESTE_HOME = antes.h; if (antes.o === undefined) delete process.env.ODIN_HOME; else process.env.ODIN_HOME = antes.o; }
   return `política entregue no runtime assinado (${String(arq!.length)} bytes), aplicada pelo guard real depois do ensure`;
 });
-await t('H33', 'Bibliotecas compartilhadas: as skills que usam libs entregam os arquivos no runtime assinado, com hash no manifesto e caminhos reescritos', async () => {
+await t('H33', 'Bibliotecas compartilhadas: as 4 skills que usam libs entregam os arquivos no runtime assinado, com hash no manifesto e caminhos reescritos', async () => {
   const { sha256hex } = await import('../packages/shared/src/chaves.ts'); const { desempacotar } = await import('../packages/shared/src/pacote.ts'); const resumo: string[] = [];
-  for (const id of ['sf-journey-designer', 'sf-journey-developer']) {
+  const esperadas: Record<string, string[]> = { 'sf-journey-designer': ['lib-salesforce-oficial', 'lib-agent-skills', 'lib-mattpocock'], 'sf-journey-developer': ['lib-salesforce-oficial', 'lib-agent-skills', 'lib-mattpocock'], 'sf-lwc-developer': ['lib-salesforce-oficial'], 'sf-apex-cover-loop': ['lib-salesforce-oficial'] };
+  for (const [id, esperado] of Object.entries(esperadas)) {
     const s = (await store.get('catalog_skills', id)) as { canais?: { beta?: string; stable?: string } } | null; const v = s?.canais?.stable ?? s?.canais?.beta; ok(!!v, `${id} sem versão publicada`);
     const base = `pacotes/${id}/${v}`; const m = json((await armazenamento.ler(`${base}/manifesto.json`))!.toString('utf8'));
-    const libs = (m.entrega.libs ?? []).map((l: { id: string }) => l.id); ok(['lib-salesforce-oficial', 'lib-agent-skills', 'lib-mattpocock'].every((l) => libs.includes(l)), `${id}: manifesto sem as libs (${libs})`);
+    const libs = (m.entrega.libs ?? []).map((l: { id: string }) => l.id); ok(esperado.every((l) => libs.includes(l)), `${id}: manifesto sem as libs (${libs})`);
     const rt = desempacotar((await armazenamento.ler(`${base}/runtime.odinpkg`))!); const chaves = Object.keys(rt).filter((k) => k.startsWith('libs/')); ok(chaves.length > 300, `${id}: poucos arquivos de libs (${chaves.length})`);
     ok(chaves.every((k) => m.arquivos[`runtime/${k}`] === `sha256:${sha256hex(rt[k]!)}`), `${id}: hash de arquivo de lib fora do manifesto assinado`);
     const velhos = Object.entries(rt).filter(([k, b]) => (k.startsWith('agentes/') || k.startsWith('conteudo/')) && /\.claude\/skills\/(salesforce|agent-skills|mattpocock)\//.test(b.toString('utf8'))).map(([k]) => k); ok(!velhos.length, `${id}: caminho antigo de lib em ${velhos.slice(0, 3)}`);

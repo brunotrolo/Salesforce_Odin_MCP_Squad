@@ -50,7 +50,7 @@ Segundo fator do portal (TOTP, códigos de recuperação, passkey; H31), conheci
 Implementado: carregamento de `politicas/<id>.mjs` por sessão, lint e testes. Migrado: Deep Debugger. Faltam os hooks das outras 9 skills.
 
 ## Bibliotecas compartilhadas (ADR 0028)
-`libs/` com 3 pacotes; Journey Designer e Journey Developer usam. Pendente: fundir as cópias divergentes do LWC Developer e do Apex Cover Loop.
+`libs/` com 3 pacotes; Journey Designer e Journey Developer usam. Concluído: as cópias do LWC Developer e do Apex Cover Loop foram fundidas na versão canônica (lib 1.1.0).
 
 ## Avaliação com modelo (ADR 0029)
 Implementada e testada com API simulada; 30 casos de modelo nas 10 skills. Falta rodar `avaliar-modelo.yml` com o segredo `ANTHROPIC_API_KEY` para registrar a nota de referência.

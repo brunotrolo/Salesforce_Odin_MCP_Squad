@@ -6,7 +6,7 @@ import type { Armazenamento } from '../packages/shared/src/armazenamento.ts';
 import { canonico, sha256hex, type Assinador } from '../packages/shared/src/chaves.ts';
 import { empacotar, hashesDosArquivos, type Arquivos } from '../packages/shared/src/pacote.ts';
 import { lint, type OdinYaml, type ResultadoLint } from '../packages/lint/src/lint.ts';
-import { arquivosDaLib, conferirUso, LIBS_PADRAO, reescritasDaLib, type Lib } from '../packages/lint/src/libs.ts';
+import { arquivosDaLib, conferirUso, LIBS_PADRAO, reescreverComLibs, type Lib } from '../packages/lint/src/libs.ts';
 
 /** Muda quando o formato do manifesto muda: força republicar as skills mesmo sem mudança no repositório. */
 export const REV_PUBLICADOR = '2';
@@ -27,10 +27,9 @@ export async function publicar(o: OpcoesPublicacao): Promise<Publicado> {
   const odin = r.odin; const dirPrincipal = odin.skills[0]!.path.replace(/\/SKILL\.md$/, '');
   const dirRuntime = odin.runtime?.dir.replace(/\/$/, '');
   // Contrato de caminhos (plano 8.5): os scripts deixam de viver em .claude/ do projeto.
-  const libs: Lib[] = (odin.usa ?? []).map((ref) => conferirUso(libsDir, ref).lib!).filter(Boolean); const trocas = libs.flatMap(reescritasDaLib);
-  const reescrever = (b: Buffer, f: string): Buffer => {
+  const libs: Lib[] = (odin.usa ?? []).map((ref) => conferirUso(libsDir, ref).lib!).filter(Boolean);   const reescrever = (b: Buffer, f: string): Buffer => {
     if (!/\.(md|json|ya?ml)$/.test(f)) return b;
-    let t = b.toString('utf8'); if (dirRuntime) t = t.replaceAll(dirRuntime, '{{ODIN_RUNTIME}}/scripts'); for (const [de, para] of trocas) t = t.replaceAll(de, para);
+    let t = b.toString('utf8'); if (dirRuntime) t = t.replaceAll(dirRuntime, '{{ODIN_RUNTIME}}/scripts'); t = reescreverComLibs(t, libs);
     return Buffer.from(t);
   };
   const ler = (f: string) => reescrever(readFileSync(join(o.repo, f)), f);

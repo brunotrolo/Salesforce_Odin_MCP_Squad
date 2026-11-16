@@ -32,9 +32,15 @@ export function arquivosDaLib(lib: Lib): Record<string, Buffer> {
   for (const n of ['LICENSE', 'NOTICE']) if (existsSync(join(lib.dir, n))) saida[n] = readFileSync(join(lib.dir, n));
   return saida;
 }
-/** Pares [de, para] que trocam o caminho do repositório de origem pelo caminho do runtime (aplicados do mais longo ao mais curto). */
-export function reescritasDaLib(lib: Lib): Array<[string, string]> {
-  const pares: Array<[string, string]> = [];
-  for (const item of lib.itens) { const para = `{{ODIN_RUNTIME}}/libs/${lib.id}/${item}`; pares.push([`.claude/skills/${lib.grupo}/${item}`, para]); }
-  return pares.sort((x, y) => y[0].length - x[0].length);
+/** Troca os caminhos de origem das libs pelo caminho do runtime: `.claude/skills/<grupo>/<item>` e a forma plana `.claude/skills/<item>`. */
+export function reescreverComLibs(texto: string, libs: Lib[]): string {
+  let t = texto; const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const lib of libs) {
+    for (const item of [...lib.itens].sort((a, b) => b.length - a.length)) {
+      const para = `{{ODIN_RUNTIME}}/libs/${lib.id}/${item}`; const fim = '(?![A-Za-z0-9_-])';
+      t = t.replace(new RegExp(`\\.claude/skills/${esc(lib.grupo)}/${esc(item)}${fim}`, 'g'), para);
+      t = t.replace(new RegExp(`\\.claude/skills/${esc(item)}${fim}`, 'g'), para);
+    }
+  }
+  return t;
 }

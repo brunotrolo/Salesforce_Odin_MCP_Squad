@@ -75,4 +75,4 @@ Pipeline completo do commit `b0f1be5` (16/11/2026): todos os jobs verdes. Novas 
 Também validados nesta rodada: o novo visual do portal (administração e pessoa, com o estado do MCP) nas verificações H22 a H25 e o Terraform com o canal de e-mail dos alertas.
 
 ## Fora do escopo desta homologação (pendente)
-Windows e VS Code reais, passkey do navegador real e F0, F9 e F10 (você); nota de referência da avaliação com modelo (precisa de `ANTHROPIC_API_KEY`); fusão das bibliotecas do LWC Developer e do Apex Cover Loop; repositório `odin-knowledge`.
+Windows e VS Code reais, passkey do navegador real e F0, F9 e F10 (você); nota de referência da avaliação com modelo (precisa de `ANTHROPIC_API_KEY`); repositório `odin-knowledge`.

@@ -24,7 +24,8 @@ As skills Journey Designer e Journey Developer carregam as mesmas bibliotecas de
 
 ## Consequências
 - Cada skill que usa as libs entrega cerca de 1,5 MB a mais no runtime (baixado uma vez por versão).
-- LWC Developer e Apex Cover Loop têm cópias vendorizadas **diferentes** das canônicas; continuam como estão até alguém comparar e fundir (decisão 12). Não usam `usa` ainda.
+- LWC Developer e Apex Cover Loop tinham cópias vendorizadas mais antigas (versão 1.0 do upstream). Foram **fundidas na versão canônica** (a mais nova, 1.1) e passaram a usar `usa: [lib-salesforce-oficial@^1]` (a lib subiu para 1.1.0 com `platform-apex-test-run`, `platform-apex-logs-debug` e `platform-data-manage`). Testes e avaliações das duas skills seguem verdes.
+- O publicador reescreve também a forma plana `.claude/skills/<item>` (usada por LWC e Cover Loop), respeitando o limite do nome do item.
 - Atualizar uma lib exige subir a versão em `libs/` e republicar as skills que a usam.
 
 ## Segurança
