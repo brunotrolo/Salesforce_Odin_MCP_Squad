@@ -202,6 +202,23 @@ await t('H18', 'Revogação: dispositivo revogado perde o acesso em até ~30 s (
 await t('H19', 'Desinstalação devolve o Claude Code ao que era; nada ficou no projeto', async () => {
   ok((await principal(['uninstall'], () => {})) === 0, 'uninstall falhou'); ok(!existsSync(join(casa, '.odin')) && !existsSync(join(casa, '.claude', 'skills', 'odin')), 'sobrou pasta do Odin'); ok(readdirSync(projeto).length === 0, 'projeto sujo');
 });
+await t('H21', 'Skills reais publicadas: manifesto com assinatura do KMS, hashes dos pacotes e contrato de entrada (odin ensure)', async () => {
+  const { verificarAssinatura, canonico, sha256hex } = await import('../packages/shared/src/chaves.ts');
+  const { desempacotar } = await import('../packages/shared/src/pacote.ts');
+  const skills = (await store.list('catalog_skills', () => true)).filter((s: any) => s.id !== 'odin-ambiente');
+  const publicadas: string[] = [];
+  for (const s of skills as Array<{ id: string; canais?: { beta?: string; stable?: string } }>) {
+    const v = s.canais?.beta ?? s.canais?.stable; if (!v) continue;
+    const base = `pacotes/${s.id}/${v}`; const m = json((await armazenamento.ler(`${base}/manifesto.json`))!.toString('utf8'));
+    ok(verificarAssinatura(keyPacotes.publica().jwk, Buffer.from(canonico(m)), Buffer.from((await armazenamento.ler(`${base}/manifesto.sig`))!.toString('utf8'), 'base64')), `${s.id}: assinatura inválida`);
+    const pc = (await armazenamento.ler(`${base}/conteudo.odinpkg`))!, pr = (await armazenamento.ler(`${base}/runtime.odinpkg`))!;
+    ok(sha256hex(pc) === m.pacotes.conteudo.sha256 && sha256hex(pr) === m.pacotes.runtime.sha256, `${s.id}: hash do pacote`);
+    ok(/odin ensure /.test(desempacotar(pc)['SKILL.md']!.toString('utf8')), `${s.id}: SKILL.md sem o passo odin ensure`);
+    publicadas.push(s.id);
+  }
+  ok(publicadas.length >= 8, `esperadas ao menos 8 skills reais publicadas, há ${publicadas.length}: ${publicadas}`);
+  return `${publicadas.length} skills reais conferidas: ${publicadas.join(', ')}`;
+});
 await t('H20', 'Limpeza dos dados de teste (pessoa, dispositivos, propostas, conhecimento, versão adulterada)', async () => {
   for (const d of await store.list('devices', (x) => x.userId === USUARIO)) await store.delete('devices', d.id);
   for (const c of ['memberships']) for (const d of await store.list(c, (x) => x.userId === USUARIO)) await store.delete(c, d.id);
