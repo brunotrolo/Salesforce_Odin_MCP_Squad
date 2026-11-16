@@ -7,10 +7,10 @@ variable "email_alerta" {
 }
 
 resource "google_bigquery_dataset" "auditoria" {
-  dataset_id                 = "odin_auditoria"
-  location                   = var.region
+  dataset_id                  = "odin_auditoria"
+  location                    = var.region
   default_table_expiration_ms = 34560000000 # 400 dias
-  delete_contents_on_destroy = false
+  delete_contents_on_destroy  = false
 }
 
 resource "google_logging_project_sink" "auditoria" {
@@ -96,10 +96,10 @@ resource "google_monitoring_alert_policy" "negacoes" {
 
 resource "google_monitoring_dashboard" "odin" {
   dashboard_json = jsonencode({
-    displayName = "Odin: visão operacional"
+    displayName  = "Odin: visão operacional"
     mosaicLayout = {
       columns = 12
-      tiles = [
+      tiles   = [
         { width = 6, height = 4, widget = { title = "Requisições por serviço", xyChart = { dataSets = [{ timeSeriesQuery = { timeSeriesFilter = { filter = "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\"", aggregation = { alignmentPeriod = "60s", perSeriesAligner = "ALIGN_RATE", groupByFields = ["resource.label.service_name"], crossSeriesReducer = "REDUCE_SUM" } } } }] } } },
         { xPos = 6, width = 6, height = 4, widget = { title = "Latência p95 (ms)", xyChart = { dataSets = [{ timeSeriesQuery = { timeSeriesFilter = { filter = "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"", aggregation = { alignmentPeriod = "60s", perSeriesAligner = "ALIGN_PERCENTILE_95", groupByFields = ["resource.label.service_name"], crossSeriesReducer = "REDUCE_MAX" } } } }] } } },
         { yPos = 4, width = 6, height = 4, widget = { title = "Erros 5xx", xyChart = { dataSets = [{ timeSeriesQuery = { timeSeriesFilter = { filter = "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" metric.label.response_code_class=\"5xx\"", aggregation = { alignmentPeriod = "60s", perSeriesAligner = "ALIGN_SUM", crossSeriesReducer = "REDUCE_SUM" } } } }] } } },
